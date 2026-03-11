@@ -747,7 +747,7 @@ Revenue models include:
 
 # 🌟 Final Vision
 
-**Smart Life Planner ** aims to become a **complete life management platform** combining:
+**Smart Life Planner** aims to become a **complete life management platform** combining:
 
 - productivity  
 - spirituality  
