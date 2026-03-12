@@ -9,7 +9,7 @@
 
 ## 💡 Proposed Concept
 
-**Smart Life Planner ** is a **smart all-in-one productivity and lifestyle platform** designed to help users manage their **work, study, personal growth, and spiritual routines** from a single application.
+**Smart Life Planner** is a **smart all-in-one productivity and lifestyle platform** designed to help users manage their **work, study, personal growth, and spiritual routines** from a single application.
 
 Modern users often rely on multiple apps to manage their daily life:
 
@@ -27,7 +27,7 @@ This fragmentation causes:
 - ❌ distraction  
 - ❌ lack of integration between important parts of daily life  
 
-Smart Life OS solves this problem by combining all these capabilities into **one intelligent and unified system**.
+Smart Life Planner solves this problem by combining all these capabilities into **one intelligent and unified system**.
 
 The application integrates:
 
