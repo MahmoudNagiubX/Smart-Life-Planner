@@ -681,6 +681,243 @@ Supports:
 
 ---
 
+# 🧠 Productivity Methodology (GTD Integration)
+
+Smart Life Planner is heavily inspired by the productivity framework introduced in the book:
+
+**Getting Things Done — David Allen**
+
+This methodology provides a structured workflow for managing tasks, projects, and responsibilities while reducing mental stress.
+
+Core idea:
+
+> Your brain is for **having ideas, not holding them**.
+
+Smart Life Planner transforms this philosophy into a **digital AI-powered system**.
+
+---
+
+# 🔄 GTD Workflow Integration
+
+The GTD methodology consists of **five stages**, which are directly integrated into the Smart Life Planner architecture.
+
+| GTD Step | Description | Implementation |
+|------|------|------|
+| Capture | Collect everything in your mind | Quick Capture System |
+| Clarify | Define what the item means | AI Task Understanding |
+| Organize | Categorize tasks and projects | Smart Task Manager |
+| Reflect | Review system regularly | AI Weekly Review |
+| Engage | Decide what to do next | AI Decision Engine |
+
+---
+
+# 📥 Capture System
+
+Users can capture ideas instantly through multiple input methods.
+
+Supported capture methods:
+
+- typing
+- voice input
+- checklist creation
+- quick reminders
+
+Example:
+```
+Finish machine learning assignment tomorrow evening
+```
+
+The system automatically extracts:
+
+- task title
+- deadline
+- priority
+- estimated effort
+
+This eliminates **mental overload** and ensures **no idea is forgotten**.
+
+---
+
+# 🧠 Clarify System
+
+The application analyzes captured inputs using **Natural Language Processing (NLP)**.
+
+Example input:
+```
+Study control engineering
+```
+
+Converted structure:
+```
+Project: Control Engineering
+Next Action: Review lecture slides
+Estimated Duration: 45 minutes
+Priority: Medium
+```
+
+---
+
+# 📂 Organization System
+
+Tasks are organized automatically into structured categories inspired by GTD.
+
+| Category | Purpose |
+|------|------|
+| Inbox | newly captured tasks |
+| Next Actions | tasks ready to execute |
+| Projects | multi-step objectives |
+| Waiting For | tasks dependent on others |
+| Someday | future ideas |
+| Calendar | time-specific commitments |
+
+---
+
+# 🔁 Reflect System
+
+Smart Life Planner performs automated **weekly productivity reviews**.
+```
+Example summary:
+Tasks completed: 42
+Focus sessions: 18
+Habit success rate: 74%
+
+Suggested improvements:
+Increase study sessions next week.
+```
+
+---
+
+# 🎯 Engage System
+
+The system recommends what users should do next based on:
+
+- available time
+- deadlines
+- priority
+- energy level
+
+Example suggestion:
+```
+You have 30 minutes free.
+
+Suggested task:
+Review Machine Learning Lecture 3
+```
+
+---
+
+# 🤖 AI Intelligence System
+
+Smart Life Planner functions as a **Personal AI Assistant**.
+
+The AI system includes multiple intelligent modules designed to help users manage their lives efficiently.
+
+---
+
+# 🧠 AI Brain Engine
+
+This module converts natural language into structured tasks.
+
+Capabilities include:
+
+- natural language task parsing
+- voice command interpretation
+- automatic deadline detection
+- priority prediction
+
+Example:
+```Add task: finish database assignment tomorrow at 8 PM```
+
+Converted output:
+```
+Task: Database Assignment
+Deadline: Tomorrow 20:00
+Priority: High
+Estimated duration: 90 minutes
+```
+
+---
+
+# ⏱️ AI Smart Scheduler
+
+The scheduler automatically generates daily plans using:
+
+- deadlines
+- habits
+- prayer times
+- working hours
+- focus patterns
+
+Example generated schedule:
+```
+6:00 Fajr
+7:00 Review lecture notes
+9:00 Deep work session
+12:15 Dhuhr
+2:00 Meeting
+5:00 Gym
+7:00 Quran reading
+```
+
+If tasks are missed, the AI **reschedules them automatically**.
+
+---
+
+# 📊 Life Analytics Engine
+
+The analytics system tracks behavioral patterns and productivity trends.
+
+Examples of insights:
+
+- most productive hours
+- average focus duration
+- habit consistency
+- task completion rates
+
+Example:
+```Your most productive time is 9:00–11:00 AM.```
+
+---
+
+# 📍 Context Intelligence System
+
+Tasks are recommended based on environmental context.
+
+| Context Type | Example |
+|------|------|
+| Location | university / home |
+| Device | phone / laptop |
+| Time | morning / night |
+| Energy | high / low focus |
+
+Example:
+```
+You are at university.
+
+Suggested tasks:
+Submit assignment
+Meet project group
+```
+
+---
+
+# 🧠 AI Life Coach
+
+The system assists users with long-term goals.
+
+Example goal:
+```Learn Data Science```
+
+Generated roadmap:
+```
+Python Fundamentals
+Statistics
+Machine Learning
+Projects
+Portfolio Development
+```
+--- 
+
 # 🏗️ System Architecture
 
 The project follows a **modular architecture**.
@@ -741,26 +978,128 @@ Revenue models include:
 - unlimited habits  
 - voice assistant upgrades  
 - cloud sync enhancements  
-- custom themes  
+- custom themes
 
 ---
 
-# 🌟 Final Vision
+# 🚀 Advanced AI Features
 
-**Smart Life Planner** aims to become a **complete life management platform** combining:
-
-- productivity  
-- spirituality  
-- AI  
-- personal planning  
-
-Instead of using multiple apps, users rely on **one intelligent ecosystem** that organizes their entire day.
-
-This creates a powerful and unique product capable of competing in both:
-
-- 📈 productivity software markets  
-- 🌍 lifestyle and personal development applications  
+Smart Life Planner integrates **20 AI-powered capabilities**.
 
 ---
 
-⭐ **Smart Life Planner  = Productivity + AI + Lifestyle + Spiritual Balance**
+# 🧠 AI Assistant Features
+
+1. Natural Language Task Creation  
+2. Voice Brain Dump System  
+3. AI Task Breakdown  
+4. Priority Prediction Engine  
+
+---
+
+# ⏱️ Scheduling Intelligence
+
+5. Automatic Daily Planning  
+6. Dynamic Schedule Adjustment  
+7. Energy-Based Scheduling  
+8. Time Estimation AI  
+
+---
+
+# 📊 Productivity Analytics
+
+9. Productivity Dashboard  
+10. Focus Score Calculation  
+11. Habit Tracking AI  
+12. Burnout Detection  
+
+---
+
+# 📍 Context Awareness
+
+13. Location-Based Tasks  
+14. Device-Based Recommendations  
+15. Time Context Awareness  
+16. Weather-Based Suggestions  
+
+---
+
+# 🤖 Life Coaching
+
+17. Goal Decomposition AI  
+18. Study Planner AI  
+19. Motivation Engine  
+20. Weekly Life Review  
+
+---
+
+# 🧠 AI Algorithms
+
+The system will utilize several algorithms and models.
+
+| Algorithm | Purpose |
+|------|------|
+| NLP parsing | task understanding |
+| priority scoring | ranking tasks |
+| scheduling algorithms | daily planning |
+| habit analysis | behavioral pattern detection |
+| recommendation systems | task suggestions |
+
+Example priority calculation:
+```
+Priority Score =
+(deadline_weight × urgency)
+- (goal_weight × importance)
+- (effort_weight × task_size)
+```
+
+---
+
+# 🌍 Competitive Advantage
+
+Most productivity applications only manage tasks.
+
+Examples include:
+
+- Todoist
+- TickTick
+- Notion
+
+These platforms lack **deep AI automation**.
+
+Smart Life Planner introduces:
+
+- AI scheduling
+- productivity insights
+- life coaching
+- habit intelligence
+- spiritual integration
+
+This transforms the application into a:
+
+**Personal Life Operating System**
+
+---
+
+# 🌟 Final System Vision
+
+Smart Life Planner combines:
+
+- productivity management
+- personal development
+- AI automation
+- lifestyle organization
+- spiritual routines
+
+into a unified intelligent ecosystem.
+
+Goal:
+```
+AI helps users plan their life,
+not just manage tasks.
+```
+
+Smart Life Planner becomes:
+
+**Your Personal AI Life Assistant**
+---
