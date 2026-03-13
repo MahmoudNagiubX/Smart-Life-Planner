@@ -1427,3 +1427,3173 @@ The system integrates:
 - notifications
 
 These modules form the **core operational functionality** of the Smart Life Planner application and serve as the foundation for implementation.
+
+---
+
+# 📘 Smart Life Planner — Software Documentation
+# Step 3.5: Full App Navigation & Screen Flow
+
+---
+
+## 3.5.1 Purpose
+
+This section defines the **navigation architecture**, **screen hierarchy**, and **user flow** of Smart Life Planner.
+
+Its purpose is to ensure that:
+
+- the app structure is logically organized
+- all modules are placed in the correct navigation level
+- developers understand how users move through the system
+- designers understand screen grouping and hierarchy
+- future button-level behavior can be defined consistently
+
+This section acts as the **bridge between features and implementation**.
+
+---
+
+## 3.5.2 Navigation Design Principles
+
+The navigation of Smart Life Planner is designed using the following principles:
+
+### 1. Fast access to core daily actions
+The most frequently used features must be reachable in one tap.
+
+### 2. Minimal friction
+The user should not feel lost inside nested menus.
+
+### 3. Life-centered structure
+The app must feel like one connected life system, not separate unrelated tools.
+
+### 4. Spiritual integration
+Prayer and spiritual routines must be visible in the daily flow, not hidden as secondary features.
+
+### 5. Mobile-first simplicity
+The structure should remain clean and practical for phone screens.
+
+---
+
+## 3.5.3 Navigation Strategy
+
+Smart Life Planner uses a **hybrid navigation structure**:
+
+### A. Primary Navigation
+A **bottom navigation bar** for the top-level app destinations.
+
+### B. Secondary Navigation
+Internal screen navigation using:
+
+- page transitions
+- tabs
+- modals
+- bottom sheets
+- nested flows
+
+### C. Special Flows
+Dedicated guided flows for:
+
+- onboarding
+- authentication
+- first-time setup
+- voice capture actions
+- AI planning actions
+
+---
+
+## 3.5.4 Top-Level Navigation
+
+The application shall use **five top-level destinations** in the bottom navigation bar.
+
+### Final Top-Level Navigation
+
+1. **Home**
+2. **Tasks**
+3. **Focus**
+4. **Prayer**
+5. **Profile**
+
+This structure is chosen because:
+
+- it keeps the most important daily actions visible
+- it gives Prayer a first-class position
+- it avoids overcrowding the bottom navigation
+- it keeps Notes, Habits, Journal, and Analytics inside Home/Profile-driven flows instead of making the main bar too crowded
+
+---
+
+## 3.5.5 Bottom Navigation Structure
+
+### Bottom Navigation Bar
+
+```text
+🏠 Home   |   📋 Tasks   |   ⏱ Focus   |   🕌 Prayer   |   👤 Profile
+```
+### Description of Each Destination
+
+**1. Home**
+The dashboard and daily command center.
+
+**2. Tasks**
+All task management and project organization.
+
+**3. Focus**
+Deep work, Pomodoro, focus sessions, and session history.
+
+**4. Prayer**
+Prayer times, prayer tracking, Quran goals, qibla, and spiritual consistency.
+
+**5. Profile**
+Settings, account, analytics access, preferences, and personalization.
+
+### 3.5.6 Full Screen Hierarchy
+The following is the full screen map of the application.
+
+#### A. Launch & Entry Flow
+**1. Splash Screen**
+Purpose:
+* show app branding
+* initialize app resources
+* check login state
+* check first-launch state
+
+**2. Welcome / Intro Screen**
+Purpose:
+* introduce app value
+* explain key benefits
+* direct user to sign up or sign in
+
+**3. Authentication Flow**
+Includes:
+* Sign Up
+* Sign In
+* Forgot Password
+
+**4. First-Time Setup / Onboarding Flow**
+Includes:
+* choose language
+* choose city/country
+* choose prayer settings
+* set daily goals
+* enable notifications
+* enable microphone permission
+* set preferred work hours
+* set preferred wake/sleep times
+
+**5. Main App Shell**
+After authentication and onboarding, user enters the main application with bottom navigation.
+
+#### B. Main App Shell
+The app shell contains:
+* top app bar or contextual header
+* bottom navigation bar
+* main content area
+* floating action button or quick-add entry where needed
+
+### 3.5.7 Home Flow
+Home is the daily life dashboard.
+
+**Home Main Screen**
+The Home screen shall display:
+* greeting
+* current date
+* today’s top tasks
+* quick capture field
+* next prayer
+* today’s habits
+* focus summary
+* quick journal/reflection prompt
+* productivity summary
+
+**Home Subsections**
+**1. Daily Overview Card**
+Displays the user’s daily status.
+
+**2. Quick Capture Section**
+Allows fast entry of:
+* task
+* note
+* reminder
+
+**3. Next Prayer Widget**
+Displays:
+* next prayer name
+* time
+* countdown
+* quick mark-as-prayed action
+
+**4. Habit Snapshot**
+Displays:
+* today’s habits
+* completion progress
+
+**5. Focus Snapshot**
+Displays:
+* total focus time today
+* current focus streak
+
+**6. Journal Prompt**
+Displays:
+* simple reflection question
+* add-entry shortcut
+
+**Home Secondary Screens**
+**Home → Notes Screen**
+Purpose:
+* manage quick notes
+* search notes
+* edit notes
+* pin notes
+
+**Home → Habits Screen**
+Purpose:
+* full habit list
+* track habits
+* habit progress
+
+**Home → Journal Screen**
+Purpose:
+* daily journaling
+* mood tracking
+* gratitude entries
+
+**Home → Insights Preview Screen**
+Purpose:
+* quick view of summaries and personal patterns
+
+### 3.5.8 Tasks Flow
+Tasks is the full productivity management area.
+
+**Tasks Main Screen**
+The Tasks screen shall display:
+* inbox tasks
+* today tasks
+* upcoming tasks
+* projects
+* task filters
+* priority indicators
+
+**Tasks Main Sections**
+**1. Inbox**
+Raw captured tasks waiting for clarification or organization.
+
+**2. Today**
+Tasks planned for the current day.
+
+**3. Upcoming**
+Future tasks and deadlines.
+
+**4. Projects**
+Grouped tasks by project.
+
+**5. Completed**
+Archived completed tasks.
+
+**Tasks Secondary Screens**
+**Tasks → Create Task Screen**
+Fields:
+* title
+* description
+* deadline
+* priority
+* category
+* recurrence
+* project
+* reminder
+
+**Tasks → Task Details Screen**
+Displays:
+* full task information
+* subtasks
+* notes
+* linked project
+* linked habit if applicable
+Actions:
+* edit
+* delete
+* mark complete
+* start focus session for this task
+
+**Tasks → Project Details Screen**
+Displays:
+* project summary
+* all related tasks
+* project progress
+
+**Tasks → Smart Clarification Screen**
+Used when AI/quick capture creates an incomplete task and asks the user to confirm or refine details.
+
+### 3.5.9 Focus Flow
+Focus is the deep work workspace.
+
+**Focus Main Screen**
+The Focus screen shall display:
+* start focus session button
+* timer presets
+* linked tasks
+* today’s focus time
+* recent sessions
+
+**Focus Main Sections**
+**1. Quick Start**
+Start a focus session immediately.
+
+**2. Task-Linked Focus**
+Choose a task before starting the session.
+
+**3. Session History**
+See previous sessions.
+
+**4. Focus Stats**
+Daily and weekly focus analytics.
+
+**Focus Secondary Screens**
+**Focus → Active Session Screen**
+Displays:
+* timer
+* linked task
+* pause/resume
+* end session
+* break countdown
+
+**Focus → Session Complete Screen**
+Displays:
+* session duration
+* completed cycles
+* linked task update
+* continue break / start another session
+
+**Focus → Focus History Screen**
+Displays:
+* all past sessions
+* time spent
+* productivity trends
+
+### 3.5.10 Prayer Flow
+Prayer is a first-class top-level destination because it is a core differentiator of the app.
+
+**Prayer Main Screen**
+The Prayer screen shall display:
+* today’s prayer times
+* current/next prayer
+* prayer completion status
+* qibla shortcut
+* Quran goal progress
+* Ramadan tools when applicable
+
+**Prayer Main Sections**
+**1. Today’s Prayer Times**
+Displays:
+* Fajr
+* Dhuhr
+* Asr
+* Maghrib
+* Isha
+Each prayer includes:
+* scheduled time
+* completion status
+* mark-as-prayed action
+
+**2. Next Prayer Card**
+Displays:
+* next prayer
+* countdown
+* reminder status
+
+**3. Prayer Progress Section**
+Displays:
+* prayers completed today
+* weekly prayer consistency
+
+**4. Quran Goal Section**
+Displays:
+* daily pages target
+* progress completed
+
+**5. Spiritual Tools Section**
+Displays shortcuts to:
+* qibla
+* dhikr reminders
+* Ramadan mode
+
+**Prayer Secondary Screens**
+**Prayer → Prayer Details Screen**
+Displays:
+* full prayer list for the day
+* each prayer’s completion state
+* optional manual correction
+
+**Prayer → Prayer History Screen**
+Displays:
+* daily and weekly prayer logs
+* completion statistics
+
+**Prayer → Quran Goal Screen**
+Displays:
+* pages target
+* reading progress
+* goal editing options
+
+**Prayer → Qibla Screen**
+Displays:
+* compass
+* qibla direction
+
+**Prayer → Ramadan Mode Screen**
+Displays:
+* fasting status
+* suhoor reminder
+* iftar reminder
+* Ramadan-specific goals
+
+### 3.5.11 Profile Flow
+Profile contains account, settings, advanced tools, and system personalization.
+
+**Profile Main Screen**
+The Profile screen shall display:
+* user information
+* progress summary
+* settings shortcuts
+* analytics shortcut
+* app preferences
+* subscription area in future versions
+
+**Profile Main Sections**
+**1. Account Section**
+Includes:
+* profile info
+* email
+* profile image
+
+**2. Preferences Section**
+Includes:
+* theme
+* language
+* timezone
+* work hours
+* prayer calculation settings
+
+**3. Notifications Section**
+Includes:
+* task reminders
+* habit reminders
+* prayer reminders
+* focus session alerts
+
+**4. Analytics Shortcut**
+Navigates to the full analytics dashboard.
+
+**5. Support & About**
+Includes:
+* help
+* privacy policy
+* app version
+* feedback
+
+**Profile Secondary Screens**
+**Profile → Settings Screen**
+Full app settings.
+
+**Profile → Notifications Settings Screen**
+Granular control of reminders.
+
+**Profile → Analytics Dashboard Screen**
+Displays:
+* completed tasks
+* habit streaks
+* focus hours
+* prayer consistency
+* productivity trends
+
+**Profile → Language & Localization Screen**
+Allows:
+* Arabic/English switch
+* localization options
+
+**Profile → Prayer Settings Screen**
+Allows:
+* prayer calculation method
+* location selection
+* reminder timing
+* athan sound settings
+
+### 3.5.12 Notes, Habits, Journal, and Analytics Placement
+To keep the main navigation clean, these modules are integrated as follows:
+
+**Notes**
+Primary access:
+* Home → Notes
+* Quick capture from dashboard
+* task-linked notes inside Tasks
+
+**Habits**
+Primary access:
+* Home → Habits
+* habit summary on dashboard
+
+**Journal**
+Primary access:
+* Home → Journal
+* daily reflection prompt on dashboard
+
+**Analytics**
+Primary access:
+* Profile → Analytics Dashboard
+* summary cards on Home and Prayer
+This keeps the top-level navigation compact while still making all modules accessible.
+
+### 3.5.13 Floating Action and Quick Entry Strategy
+The system shall support a global quick-add pattern.
+
+**Global Quick Add Entry**
+Available from:
+* Home
+* Tasks
+Quick add can create:
+* task
+* note
+* habit
+* journal entry
+
+**Quick Add Methods**
+* text
+* voice
+* structured manual form
+
+**Suggested UI Behavior**
+A floating action button or prominent quick-add control opens a bottom sheet with action types.
+Example actions:
+* Add Task
+* Add Note
+* Add Habit
+* Add Journal Entry
+* Voice Capture
+
+### 3.5.14 Voice Flow
+Voice interaction is a cross-cutting flow, not a separate main tab.
+
+**Voice Entry Points**
+Voice can be triggered from:
+* Home quick capture
+* Tasks quick add
+* Focus command shortcut
+* Prayer command shortcut
+
+**Example Voice Commands**
+* Add task finish database assignment tomorrow at 8 PM
+* Start a 25-minute focus session
+* What is my next prayer
+* أضف مهمة إنهاء المشروع غداً الساعة ٧
+* ابدأ جلسة تركيز 30 دقيقة
+
+**Voice Processing Flow**
+* User taps microphone
+* Speech is captured
+* Speech is transcribed
+* AI parses intent
+* User sees confirmation
+* System creates action or executes command
+
+### 3.5.15 AI Planning Flow
+AI planning is also a cross-cutting flow.
+
+**Entry Points**
+AI planning can be accessed from:
+* Home daily planning card
+* Tasks smart suggestions
+* Profile insights area
+
+**AI Planning Outputs**
+The AI may provide:
+* suggested next action
+* daily schedule
+* task prioritization
+* habit reminder suggestions
+* prayer-aware time blocking
+
+### 3.5.16 App Navigation Graph
+The navigation graph is divided into three levels.
+
+**Level 1 — Entry Graph**
+* Splash
+* Welcome
+* Authentication
+* Onboarding
+
+**Level 2 — Main Graph**
+* Home
+* Tasks
+* Focus
+* Prayer
+* Profile
+
+**Level 3 — Nested Subgraphs**
+Each top-level destination contains its own internal screens.
+Example:
+
+**Home Subgraph**
+* Home Dashboard
+* Notes
+* Habits
+* Journal
+* Home Insights
+
+**Tasks Subgraph**
+* Inbox
+* Task Details
+* Create/Edit Task
+* Projects
+* Project Details
+
+**Focus Subgraph**
+* Focus Home
+* Active Session
+* Session Complete
+* Focus History
+
+**Prayer Subgraph**
+* Prayer Home
+* Prayer History
+* Quran Goal
+* Qibla
+* Ramadan Mode
+* Prayer Settings
+
+**Profile Subgraph**
+* Profile Home
+* Settings
+* Notifications Settings
+* Analytics
+* Language
+* Account
+
+### 3.5.17 Primary User Journey
+The default daily journey of the user is expected to be:
+* Open app
+* Land on Home dashboard
+* View top tasks and next prayer
+* Add or confirm tasks
+* Start focus session from Home or Tasks
+* Mark habits and prayers during the day
+* Return to dashboard for progress
+* Add journal reflection at night
+* Review insights over time
+This is the intended natural rhythm of the application.
+
+### 3.5.18 Screen Transition Logic
+**Standard Transitions**
+Used for:
+* moving between main screens
+* opening details screens
+
+**Bottom Sheets**
+Used for:
+* quick add
+* quick edit
+* small confirmations
+* voice capture confirmation
+
+**Modal Dialogs**
+Used for:
+* delete confirmation
+* logout confirmation
+* permission prompts
+
+**Nested Flow Navigation**
+Used for:
+* onboarding
+* authentication
+* first-time setup
+* prayer configuration
+
+### 3.5.19 Navigation Rules
+The following navigation rules shall apply:
+
+**Rule 1**
+Bottom navigation destinations must always remain accessible in the main app shell.
+
+**Rule 2**
+Top-level destinations must preserve state when switching whenever practical.
+
+**Rule 3**
+Quick-add actions must require the minimum number of steps.
+
+**Rule 4**
+Prayer information must be visible both:
+* inside the dedicated Prayer screen
+* inside the Home dashboard
+
+**Rule 5**
+AI and voice flows must not feel hidden; they should be accessible from primary workflows.
+
+**Rule 6**
+Important daily modules must feel connected, not isolated.
+
+### 3.5.20 Final Navigation Decision
+The official navigation structure of Smart Life Planner is:
+
+**Top-Level Tabs**
+* Home
+* Tasks
+* Focus
+* Prayer
+* Profile
+
+**Nested Modules**
+* Notes under Home
+* Habits under Home
+* Journal under Home
+* Analytics under Profile
+* Settings under Profile
+* AI Planner accessible from Home and Tasks
+* Voice accessible from quick-capture entry points
+This is the approved structural foundation for the rest of the software design.
+
+### 3.5.21 Step 3.5 Summary
+Smart Life Planner uses a mobile-first hybrid navigation system built around five top-level destinations:
+* Home
+* Tasks
+* Focus
+* Prayer
+* Profile
+This structure ensures that the most important daily flows are immediately accessible while still allowing Notes, Habits, Journal, Analytics, AI planning, and settings to exist in clean nested flows.
+The navigation architecture is intentionally designed to support:
+* productivity
+* personal development
+* deep work
+* spiritual routines
+* AI assistance
+inside one coherent life operating system.
+This section establishes the official screen hierarchy and navigation map that future sections will use for:
+* screen-by-screen behavior
+* button-by-button actions
+* backend endpoint grouping
+* state management
+* database mapping
+
+---
+
+# 📘 Smart Life Planner — Software Documentation
+# Step 3.6: Screen-by-Screen Detailed Behavior
+
+---
+
+## 3.6.1 Purpose
+
+This section defines the detailed behavior of each screen in the Smart Life Planner application.
+
+It explains:
+
+- what each screen contains
+- what the user sees
+- what the user can do
+- what happens after each major action
+- how screens connect to each other
+
+This section is intended to help:
+
+- Flutter developers build screens correctly
+- backend developers understand UI-driven actions
+- UI/UX designers understand required content and interactions
+- testers validate expected screen behavior
+
+This section does **not yet define every button in low-level technical detail**.  
+That will be expanded later in the button-by-button interaction section.
+
+---
+
+## 3.6.2 Screen Behavior Design Rules
+
+All screens in Smart Life Planner must follow these behavior rules:
+
+### Rule 1 — Clear primary action
+Each screen must have one main action that is visually obvious.
+
+### Rule 2 — Minimal friction
+The user should complete common actions in as few steps as possible.
+
+### Rule 3 — Context awareness
+The screen should adapt to user context where applicable, such as:
+- time of day
+- next prayer
+- pending tasks
+- active focus session
+
+### Rule 4 — Consistent state feedback
+The system must always show feedback after important actions such as:
+- saving
+- deleting
+- completing
+- starting focus
+- marking prayer as completed
+
+### Rule 5 — Fast return to core flow
+Users must always be able to return quickly to:
+- Home
+- Tasks
+- Focus
+- Prayer
+- Profile
+
+---
+
+## 3.6.3 Entry Screens
+
+These are the screens shown before the main app shell.
+
+---
+
+## 3.6.3.1 Splash Screen
+
+### Purpose
+The Splash Screen initializes the app.
+
+### User Sees
+- app logo
+- app name
+- loading indicator or branding animation
+
+### System Behavior
+On launch, the app shall:
+
+1. load cached app settings
+2. check authentication status
+3. check onboarding completion
+4. load localization settings
+5. route the user to the correct next screen
+
+### Navigation Logic
+- if first launch → Welcome / Onboarding
+- if user not authenticated → Sign In
+- if user authenticated → Home
+
+---
+
+## 3.6.3.2 Welcome / Intro Screen
+
+### Purpose
+Introduce the value of the app and guide the user into account creation or login.
+
+### User Sees
+- app headline
+- short description
+- benefits summary
+- buttons:
+  - Get Started
+  - Sign In
+
+### Main Actions
+#### Get Started
+Navigates to Sign Up or onboarding start.
+
+#### Sign In
+Navigates to Sign In screen.
+
+---
+
+## 3.6.3.3 Sign Up Screen
+
+### Purpose
+Create a new user account.
+
+### User Sees
+Input fields:
+- full name
+- email
+- password
+- confirm password
+
+Buttons:
+- Create Account
+- Continue with Google (future-ready)
+- Already have an account? Sign In
+
+### Main Behavior
+#### Create Account
+System validates:
+- all required fields completed
+- email format valid
+- password meets rules
+- confirm password matches
+
+If valid:
+- create account
+- save user record
+- navigate to onboarding
+
+If invalid:
+- show clear field-level error messages
+
+---
+
+## 3.6.3.4 Sign In Screen
+
+### Purpose
+Authenticate returning users.
+
+### User Sees
+Input fields:
+- email
+- password
+
+Buttons:
+- Sign In
+- Forgot Password
+- Create Account
+
+### Main Behavior
+#### Sign In
+If credentials are valid:
+- create session
+- navigate to app shell
+
+If invalid:
+- show login error
+
+---
+
+## 3.6.3.5 Forgot Password Screen
+
+### Purpose
+Allow users to recover account access.
+
+### User Sees
+- email field
+- Send Reset Link button
+
+### Main Behavior
+If email exists:
+- send password reset request
+- show success message
+
+If invalid:
+- show error
+
+---
+
+## 3.6.4 Onboarding Screens
+
+These screens personalize the experience before first use.
+
+---
+
+## 3.6.4.1 Language Selection Screen
+
+### Purpose
+Set initial language and localization.
+
+### User Sees
+Options:
+- Arabic
+- English
+
+### Main Behavior
+After selection:
+- save language preference
+- localize future onboarding screens
+- navigate to next onboarding step
+
+---
+
+## 3.6.4.2 Location / City Screen
+
+### Purpose
+Set geographic context for prayer times and localization.
+
+### User Sees
+- country selector
+- city selector or location permission button
+
+### Main Behavior
+User can:
+- allow device location
+- select manually
+
+System stores location for:
+- prayer times
+- timezone
+- regional defaults
+
+---
+
+## 3.6.4.3 Prayer Setup Screen
+
+### Purpose
+Configure initial prayer settings.
+
+### User Sees
+- prayer calculation method dropdown
+- notification preference toggle
+- optional Athan sound toggle
+
+### Main Behavior
+User saves prayer setup.
+System stores:
+- prayer method
+- reminder preference
+- sound preference
+
+---
+
+## 3.6.4.4 Goals Selection Screen
+
+### Purpose
+Understand the user’s primary life goals.
+
+### User Sees
+Selectable goals:
+- Study
+- Work
+- Fitness
+- Self Improvement
+- Spiritual Growth
+
+### Main Behavior
+User selects one or more goals.
+System uses goals to:
+- customize dashboard
+- recommend default habits
+- personalize future suggestions
+
+---
+
+## 3.6.4.5 Daily Routine Setup Screen
+
+### Purpose
+Define preferred daily rhythm.
+
+### User Sees
+Input controls:
+- wake-up time
+- sleep time
+- preferred work hours
+- optional study hours
+
+### Main Behavior
+System saves routine preferences for:
+- daily planning
+- reminder timing
+- focus scheduling
+
+---
+
+## 3.6.4.6 Permissions Screen
+
+### Purpose
+Collect required permissions in context.
+
+### User Sees
+Permission cards for:
+- notifications
+- microphone
+- location
+
+### Main Behavior
+Each permission can be:
+- allowed
+- skipped
+
+If skipped:
+- app still continues
+- related features remain limited until enabled later
+
+---
+
+## 3.6.4.7 Onboarding Complete Screen
+
+### Purpose
+Confirm setup completion.
+
+### User Sees
+- welcome message
+- summary of setup
+- Start Using App button
+
+### Main Behavior
+On tap:
+- mark onboarding complete
+- navigate to Home
+
+---
+
+## 3.6.5 Main App Shell Screens
+
+These are the five top-level destinations.
+
+---
+
+## 3.6.5.1 Home Screen
+
+### Purpose
+Serve as the daily command center.
+
+### User Sees
+Sections:
+- greeting + date
+- quick capture input
+- today’s top tasks
+- next prayer card
+- habit snapshot
+- focus summary
+- journal prompt
+- progress summary
+
+### Main Behaviors
+
+#### A. Quick Capture
+User types or pastes natural language.
+
+Example:
+- Finish database assignment tomorrow at 8 PM
+
+System behavior:
+- parse input
+- detect whether it is a task, note, or reminder
+- if clear enough, save directly
+- if incomplete, open clarification screen
+
+#### B. Open Task Shortcut
+Tapping a task opens Task Details screen.
+
+#### C. Open Next Prayer Card
+Tapping prayer card opens Prayer screen or Prayer Details.
+
+#### D. Open Habit Snapshot
+Navigates to Habits screen.
+
+#### E. Open Journal Prompt
+Navigates to Journal screen.
+
+#### F. Open Focus Summary
+Navigates to Focus screen.
+
+### Empty State Behavior
+If the user has no tasks/habits yet:
+- show setup tips
+- suggest creating first task or habit
+
+---
+
+## 3.6.5.2 Tasks Screen
+
+### Purpose
+Manage all tasks and projects.
+
+### User Sees
+Tabs or filter sections:
+- Inbox
+- Today
+- Upcoming
+- Projects
+- Completed
+
+### Main Behaviors
+
+#### A. Create Task
+User opens create task form.
+System allows adding:
+- title
+- description
+- date
+- time
+- priority
+- recurrence
+- project
+- reminder
+
+#### B. Open Task
+Navigates to Task Details.
+
+#### C. Mark Complete
+Marks task completed.
+System behavior:
+- save completion status
+- update analytics
+- remove from Today if completed
+- optionally show celebration feedback
+
+#### D. Edit Task
+Navigates to edit form with current task data prefilled.
+
+#### E. Delete Task
+Shows confirmation dialog before deletion.
+
+#### F. Project View
+Selecting a project opens Project Details with all related tasks.
+
+### Empty State Behavior
+If no tasks:
+- show “Add your first task”
+- explain quick capture
+
+---
+
+## 3.6.5.3 Focus Screen
+
+### Purpose
+Provide a focused workspace for deep work sessions.
+
+### User Sees
+Sections:
+- quick start timer presets
+- start session button
+- link task option
+- today’s focus time
+- recent sessions
+
+### Main Behaviors
+
+#### A. Quick Start Focus
+Starts focus session immediately with preset duration.
+
+#### B. Task-Linked Focus
+User selects task before starting.
+System links session to task for analytics.
+
+#### C. Open Active Session
+Navigates to Active Session screen.
+
+#### D. Open Session History
+Navigates to Focus History screen.
+
+### Empty State Behavior
+If no focus data:
+- show introduction to focus mode
+- suggest first 25-minute session
+
+---
+
+## 3.6.5.4 Prayer Screen
+
+### Purpose
+Act as the main spiritual dashboard.
+
+### User Sees
+Sections:
+- today’s prayer times
+- next prayer countdown
+- prayer completion status
+- Quran goal
+- qibla shortcut
+- prayer consistency summary
+- Ramadan tools when active
+
+### Main Behaviors
+
+#### A. Mark Prayer Completed
+User taps prayer state.
+System behavior:
+- mark prayer as completed
+- save timestamp if needed
+- update daily/weekly consistency
+- refresh dashboard summary
+
+#### B. Open Prayer History
+Navigates to Prayer History screen.
+
+#### C. Open Quran Goal
+Navigates to Quran Goal screen.
+
+#### D. Open Qibla
+Navigates to Qibla screen.
+
+#### E. Open Ramadan Mode
+Navigates to Ramadan screen when available.
+
+### Empty State Behavior
+If location or prayer setup is missing:
+- show setup prompt
+- direct user to Prayer Settings
+
+---
+
+## 3.6.5.5 Profile Screen
+
+### Purpose
+Provide account controls, settings, and access to analytics.
+
+### User Sees
+Sections:
+- profile header
+- preferences
+- settings shortcuts
+- analytics shortcut
+- notification settings
+- language settings
+- prayer settings
+- support / about
+
+### Main Behaviors
+
+#### A. Open Settings
+Navigates to full settings screen.
+
+#### B. Open Analytics
+Navigates to Analytics Dashboard.
+
+#### C. Open Notification Settings
+Navigates to notifications control screen.
+
+#### D. Open Prayer Settings
+Navigates to prayer configuration screen.
+
+#### E. Sign Out
+Shows confirmation dialog, then signs user out.
+
+---
+
+## 3.6.6 Nested Home Screens
+
+These screens are accessed mainly from Home.
+
+---
+
+## 3.6.6.1 Notes Screen
+
+### Purpose
+Store and manage user notes.
+
+### User Sees
+- note list
+- search bar
+- tags
+- pinned notes
+- add note button
+
+### Main Behaviors
+
+#### A. Create Note
+User creates:
+- text note
+- checklist note
+- voice note
+
+#### B. Open Note
+Navigates to Note Details / Editor.
+
+#### C. Edit Note
+User edits content and saves.
+
+#### D. Delete Note
+Shows confirmation before delete.
+
+#### E. Search Notes
+Filters note list by keyword.
+
+---
+
+## 3.6.6.2 Habits Screen
+
+### Purpose
+Track recurring personal habits.
+
+### User Sees
+- today’s habits
+- completion status
+- current streaks
+- add habit button
+- analytics summary
+
+### Main Behaviors
+
+#### A. Mark Habit Complete
+System:
+- stores completion
+- updates streak
+- refreshes summary
+
+#### B. Create Habit
+User enters:
+- title
+- frequency
+- reminder
+- category
+
+#### C. Open Habit Details
+Shows habit history and analytics.
+
+---
+
+## 3.6.6.3 Journal Screen
+
+### Purpose
+Support reflection and emotional awareness.
+
+### User Sees
+- daily journal entries
+- add entry button
+- mood selector
+- gratitude section
+
+### Main Behaviors
+
+#### A. Create Entry
+User writes or records journal content.
+
+#### B. Select Mood
+User chooses mood state.
+System stores mood for analytics.
+
+#### C. Add Gratitude
+User enters gratitude items.
+
+#### D. View Past Entries
+User opens historical entries.
+
+---
+
+## 3.6.7 Task Detail Screens
+
+---
+
+## 3.6.7.1 Create / Edit Task Screen
+
+### Purpose
+Create or update a task.
+
+### User Sees
+Fields:
+- title
+- description
+- date
+- time
+- priority
+- project
+- recurrence
+- reminder
+- notes
+
+### Main Behaviors
+
+#### Save
+If valid:
+- persist task
+- return to previous screen
+- refresh relevant task lists
+
+#### Cancel
+Discard unsaved changes after confirmation if needed.
+
+---
+
+## 3.6.7.2 Task Details Screen
+
+### Purpose
+Show complete task information.
+
+### User Sees
+- title
+- description
+- due date
+- priority
+- subtasks
+- notes
+- project
+- linked focus sessions
+
+### Main Behaviors
+
+#### A. Mark Complete
+Completes task and returns updated status.
+
+#### B. Add Subtask
+Adds a child item under task.
+
+#### C. Start Focus
+Navigates to focus session with task linked.
+
+#### D. Edit
+Opens edit task screen.
+
+#### E. Delete
+Removes task after confirmation.
+
+---
+
+## 3.6.7.3 Project Details Screen
+
+### Purpose
+Show grouped progress for a project.
+
+### User Sees
+- project title
+- tasks in project
+- completion progress
+- due tasks
+- add task button
+
+### Main Behaviors
+- create task inside project
+- open project tasks
+- edit project metadata later if supported
+
+---
+
+## 3.6.7.4 Smart Clarification Screen
+
+### Purpose
+Resolve incomplete or ambiguous quick-capture input.
+
+### User Sees
+Extracted fields from AI parsing, such as:
+- proposed task title
+- suggested deadline
+- suggested priority
+
+### Main Behaviors
+
+#### Confirm
+Accept parsed structure and save.
+
+#### Edit Before Save
+Modify extracted fields.
+
+#### Cancel
+Discard action.
+
+---
+
+## 3.6.8 Focus Detail Screens
+
+---
+
+## 3.6.8.1 Active Session Screen
+
+### Purpose
+Run the current focus session.
+
+### User Sees
+- countdown timer
+- linked task
+- pause button
+- resume button
+- end session button
+
+### Main Behaviors
+
+#### Pause
+Temporarily pauses timer.
+
+#### Resume
+Continues paused timer.
+
+#### End Session
+Stops session early or at completion.
+System stores:
+- duration
+- completion status
+- linked task association
+
+---
+
+## 3.6.8.2 Session Complete Screen
+
+### Purpose
+Provide completion feedback after a session.
+
+### User Sees
+- session summary
+- duration completed
+- linked task
+- options:
+  - start break
+  - start another session
+  - return to focus home
+
+### Main Behaviors
+System updates:
+- analytics
+- streaks if applicable
+- task-linked productivity data
+
+---
+
+## 3.6.8.3 Focus History Screen
+
+### Purpose
+Show previous focus sessions.
+
+### User Sees
+- session list
+- total time
+- dates
+- optional linked tasks
+
+### Main Behaviors
+User can:
+- review past sessions
+- inspect productivity trends
+
+---
+
+## 3.6.9 Prayer Detail Screens
+
+---
+
+## 3.6.9.1 Prayer Details Screen
+
+### Purpose
+Show all prayers for the day in one structured view.
+
+### User Sees
+- Fajr
+- Dhuhr
+- Asr
+- Maghrib
+- Isha
+- time
+- completion state
+
+### Main Behaviors
+User can:
+- mark individual prayers completed
+- unmark if correction is needed
+
+---
+
+## 3.6.9.2 Prayer History Screen
+
+### Purpose
+Display prayer completion over time.
+
+### User Sees
+- daily logs
+- weekly logs
+- completion percentages
+- streak indicators if used
+
+### Main Behaviors
+User can:
+- review consistency
+- filter by time period later
+
+---
+
+## 3.6.9.3 Quran Goal Screen
+
+### Purpose
+Track Quran reading targets.
+
+### User Sees
+- daily pages target
+- completed pages
+- progress bar
+- edit goal button
+
+### Main Behaviors
+
+#### Update Progress
+Stores reading progress.
+
+#### Edit Goal
+Changes daily or weekly target.
+
+---
+
+## 3.6.9.4 Qibla Screen
+
+### Purpose
+Provide qibla direction.
+
+### User Sees
+- compass UI
+- qibla indicator
+- calibration hint if needed
+
+### Main Behaviors
+Uses device sensors if available.
+
+---
+
+## 3.6.9.5 Ramadan Screen
+
+### Purpose
+Provide Ramadan-specific support.
+
+### User Sees
+- fasting status
+- suhoor reminder
+- iftar reminder
+- Ramadan goals
+
+### Main Behaviors
+User can:
+- enable Ramadan reminders
+- log fasting completion
+- review Ramadan progress
+
+---
+
+## 3.6.10 Profile Detail Screens
+
+---
+
+## 3.6.10.1 Settings Screen
+
+### Purpose
+Manage app-wide behavior.
+
+### User Sees
+- theme settings
+- language
+- work hours
+- notification defaults
+- privacy settings later
+
+### Main Behaviors
+Changes are saved and applied immediately where possible.
+
+---
+
+## 3.6.10.2 Notification Settings Screen
+
+### Purpose
+Control reminder behavior.
+
+### User Sees
+Toggles for:
+- task reminders
+- habit reminders
+- focus alerts
+- prayer reminders
+- sound/vibration preferences
+
+### Main Behaviors
+System updates notification rules accordingly.
+
+---
+
+## 3.6.10.3 Prayer Settings Screen
+
+### Purpose
+Configure prayer-related logic.
+
+### User Sees
+- prayer method
+- location
+- reminder timing
+- Athan sound setting
+
+### Main Behaviors
+Changes recalculate prayer data and refresh related screens.
+
+---
+
+## 3.6.10.4 Language & Localization Screen
+
+### Purpose
+Switch language and display behavior.
+
+### User Sees
+- Arabic
+- English
+
+### Main Behaviors
+System:
+- stores language
+- updates UI direction and localization
+- refreshes visible text
+
+---
+
+## 3.6.10.5 Analytics Dashboard Screen
+
+### Purpose
+Provide unified personal analytics.
+
+### User Sees
+- completed tasks
+- focus hours
+- habit streaks
+- prayer consistency
+- productivity score
+- trend summaries
+
+### Main Behaviors
+User can:
+- review behavior patterns
+- compare weekly progress
+- identify strengths and weak points
+
+---
+
+## 3.6.11 Quick Add and Global Action Behavior
+
+### Purpose
+Allow the user to add important items from anywhere with minimal friction.
+
+### Access Points
+Quick Add is available from:
+- Home
+- Tasks
+
+### User Sees
+Action choices:
+- Add Task
+- Add Note
+- Add Habit
+- Add Journal Entry
+- Voice Capture
+
+### Main Behavior
+Selecting an option opens:
+- a small form
+- a bottom sheet
+- or a voice capture state
+
+System saves item and refreshes related screen.
+
+---
+
+## 3.6.12 Voice Capture Behavior
+
+### Purpose
+Allow natural voice interaction in Arabic and English.
+
+### Entry Points
+Voice capture can start from:
+- Home quick capture
+- Tasks quick add
+- Focus shortcut
+- Prayer shortcut
+
+### User Sees
+- microphone active state
+- listening indicator
+- transcribed text preview
+- confirm/edit/cancel options
+
+### Main Behavior
+System pipeline:
+1. capture speech
+2. transcribe audio
+3. detect intent
+4. parse fields
+5. show confirmation
+6. execute action
+
+### Example Supported Commands
+- Add task finish AI assignment tomorrow
+- Start a 25 minute focus session
+- What is my next prayer
+- أضف مهمة إنهاء المشروع غداً
+- ابدأ جلسة تركيز 30 دقيقة
+
+---
+
+## 3.6.13 AI Planning Behavior
+
+### Purpose
+Provide intelligent daily assistance.
+
+### Entry Points
+Accessible from:
+- Home
+- Tasks
+- Analytics summaries later
+
+### User Sees
+- suggested next task
+- daily planning card
+- recommended schedule blocks
+- prayer-aware time suggestions
+
+### Main Behavior
+System uses:
+- tasks
+- habits
+- deadlines
+- prayer times
+- work hours
+- previous patterns
+
+to generate assistive recommendations.
+
+Important:
+The AI should suggest, not force, decisions in the MVP.
+
+---
+
+## 3.6.14 Cross-Screen Feedback Behavior
+
+After important actions, the system shall show feedback.
+
+### Examples
+- task created successfully
+- note saved
+- prayer marked completed
+- focus session started
+- focus session ended
+- habit completed
+
+### Feedback Style
+Use:
+- snackbars
+- success messages
+- small animations
+- progress updates
+
+---
+
+## 3.6.15 Empty States and Recovery States
+
+The app must guide the user when there is little or no data.
+
+### Empty State Examples
+- no tasks yet
+- no notes yet
+- no habits yet
+- no journal entries yet
+- prayer setup missing
+- microphone permission denied
+
+### Required Behavior
+Each empty state must:
+- explain what the feature does
+- offer a primary next action
+- avoid making the interface feel broken
+
+---
+
+## 3.6.16 Loading and Error States
+
+Each screen must handle:
+- loading
+- no internet
+- server error
+- parsing failure
+- permission denied
+
+### Required Behavior
+- show clear loading state
+- provide retry where useful
+- preserve entered user data when possible
+- avoid silent failures
+
+---
+
+## 3.6.17 Step 3.6 Summary
+
+This section defines the detailed behavior of the major screens in Smart Life Planner, including:
+
+- entry screens
+- onboarding screens
+- the five main app destinations
+- nested detail screens
+- quick add flow
+- voice flow
+- AI planning flow
+- feedback, empty states, and error states
+
+This screen-level behavior layer now provides a strong foundation for the next documentation stages, especially:
+
+- button-by-button behavior
+- state management design
+- backend endpoint mapping
+- database interaction design
+- test case creation
+
+---
+
+# 📘 Smart Life Planner — Software Documentation
+# Step 4: Non-Functional Requirements
+
+---
+
+## 4.1 Purpose
+
+This section defines the **non-functional requirements** of Smart Life Planner.
+
+Non-functional requirements describe the **quality standards and operational expectations** of the system rather than the specific features it provides.
+
+These requirements define how the system should perform in areas such as:
+
+- performance
+- security
+- reliability
+- usability
+- scalability
+- maintainability
+- availability
+- compatibility
+- privacy
+
+These requirements are essential because Smart Life Planner is not only a feature-rich app, but a system that must be:
+
+- responsive
+- secure
+- stable
+- easy to use
+- scalable for future growth
+
+---
+
+## 4.2 Non-Functional Requirement Categories
+
+The Smart Life Planner system shall satisfy the following categories of non-functional requirements:
+
+1. Performance Requirements  
+2. Reliability Requirements  
+3. Availability Requirements  
+4. Usability Requirements  
+5. Security Requirements  
+6. Privacy Requirements  
+7. Scalability Requirements  
+8. Maintainability Requirements  
+9. Compatibility Requirements  
+10. Localization Requirements  
+11. Offline Support Requirements  
+12. Observability and Monitoring Requirements  
+
+---
+
+## 4.3 Performance Requirements
+
+The application must feel fast, smooth, and responsive during normal use.
+
+---
+
+### NFR-1 App Launch Performance
+The mobile application should open and display initial usable UI quickly under normal device conditions.
+
+**Target:**
+- splash-to-first-usable-screen should generally occur within **2 to 3 seconds** on a normal supported device and network
+
+---
+
+### NFR-2 Screen Response Time
+The system shall respond quickly to user actions such as:
+
+- opening screens
+- switching tabs
+- saving tasks
+- marking habits complete
+- marking prayers complete
+
+**Target:**
+- common UI actions should provide visible feedback within **1 second**
+- longer actions must show loading feedback
+
+---
+
+### NFR-3 Smooth UI Rendering
+The application UI should feel visually smooth during scrolling, animations, and navigation.
+
+Android guidance highlights smooth rendering and responsiveness as core mobile quality goals, including a 60 fps target for smooth rendering where feasible. :contentReference[oaicite:1]{index=1}
+
+**Target:**
+- avoid noticeable lag during common navigation and scrolling
+- major screens should be optimized for smooth rendering on target Android devices
+
+---
+
+### NFR-4 Background Efficiency
+The application shall minimize unnecessary battery, memory, and network consumption.
+
+**Target:**
+- background services shall only run when necessary
+- scheduled checks and notifications shall be optimized to avoid excessive battery drain
+
+---
+
+### NFR-5 AI Response Performance
+AI-assisted features such as task parsing and suggestion generation should return results quickly enough to feel interactive.
+
+**Target:**
+- task parsing response should generally complete within **2 seconds**
+- slower AI actions must show progress feedback
+
+---
+
+## 4.4 Reliability Requirements
+
+The application must behave consistently and avoid failure during normal usage.
+
+---
+
+### NFR-6 Crash Resistance
+The system shall minimize application crashes during common user flows such as:
+
+- login
+- task creation
+- focus session use
+- prayer tracking
+- note editing
+
+Google Play quality guidance places strong emphasis on crash and ANR stability because these directly affect app quality and store visibility. :contentReference[oaicite:2]{index=2}
+
+**Target:**
+- production releases should maintain strong crash stability
+- critical user flows must be tested before release
+
+---
+
+### NFR-7 State Consistency
+User actions must not create inconsistent system state.
+
+Examples:
+- a task cannot be both deleted and displayed as active
+- a prayer completion update must reflect correctly in analytics
+- a completed habit must update streaks consistently
+
+---
+
+### NFR-8 Data Integrity
+The system shall preserve the correctness of user data across:
+
+- local storage
+- synchronization
+- updates
+- unexpected app closure
+
+---
+
+### NFR-9 Graceful Error Handling
+When errors occur, the system shall:
+
+- show understandable messages
+- avoid silent failure
+- preserve unsaved user input where practical
+- offer retry options when useful
+
+---
+
+## 4.5 Availability Requirements
+
+The system must remain usable whenever possible.
+
+---
+
+### NFR-10 General Availability
+Backend services should be available for normal user operations such as:
+
+- login
+- sync
+- notifications
+- data retrieval
+
+**Target:**
+- target backend availability for production deployment: **99.0% or higher** in early production stages
+
+---
+
+### NFR-11 Partial Offline Usability
+The app shall continue to support essential actions while offline.
+
+Offline-capable actions should include:
+
+- viewing cached tasks
+- creating tasks locally
+- viewing cached notes
+- updating habits locally
+- viewing recently cached prayer data
+
+---
+
+### NFR-12 Deferred Synchronization
+If internet is unavailable, the system shall queue eligible local changes and synchronize them when connectivity returns.
+
+---
+
+## 4.6 Usability Requirements
+
+The app must be simple, clear, and efficient to use.
+
+---
+
+### NFR-13 Learnability
+A new user should be able to understand the core app structure quickly.
+
+Core tasks that should be easy to discover:
+- adding a task
+- starting a focus session
+- checking next prayer
+- marking a habit complete
+
+---
+
+### NFR-14 Minimal Interaction Cost
+Common daily actions should require very few steps.
+
+**Examples:**
+- add a quick task in 1 to 3 interactions
+- mark prayer complete in 1 tap
+- start focus session in 1 to 2 taps
+
+---
+
+### NFR-15 Clear Feedback
+The system shall provide immediate feedback for important actions.
+
+Examples:
+- task saved
+- note deleted
+- prayer marked complete
+- focus session started
+- settings updated
+
+---
+
+### NFR-16 Accessible Information Hierarchy
+Important information must be visible without excessive navigation.
+
+Examples:
+- today’s tasks visible from Home
+- next prayer visible from Home
+- quick capture always easy to access
+
+---
+
+### NFR-17 Empty-State Guidance
+When the user has no data yet, the app shall explain what to do next instead of showing a blank experience.
+
+Examples:
+- no tasks yet
+- no habits yet
+- prayer settings not configured yet
+
+---
+
+## 4.7 Security Requirements
+
+Because Smart Life Planner stores personal schedules, habits, notes, prayer history, and account data, security is a major requirement.
+
+OWASP MASVS organizes mobile security around control areas including secure storage, cryptography, authentication, network communication, platform interaction, code quality, and privacy. :contentReference[oaicite:3]{index=3}
+
+---
+
+### NFR-18 Secure Authentication
+The system shall require secure user authentication.
+
+Requirements:
+- passwords must never be stored in plaintext
+- access tokens must be handled securely
+- authenticated endpoints must validate user identity
+
+---
+
+### NFR-19 Secure Data in Transit
+All communication between mobile app and backend must use encrypted HTTPS/TLS connections.
+
+OWASP MASVS includes network communication as a core mobile security control area. :contentReference[oaicite:4]{index=4}
+
+---
+
+### NFR-20 Secure Data at Rest
+Sensitive user data stored on the device or server shall be protected appropriately.
+
+Requirements:
+- sensitive tokens must use secure storage mechanisms
+- highly sensitive data must not be written to logs
+- cached personal data should be limited to what is necessary
+
+OWASP MASVS specifically emphasizes secure storage, protection of sensitive data, and avoiding sensitive data exposure in logs or insecure locations. :contentReference[oaicite:5]{index=5}
+
+---
+
+### NFR-21 Authorization Enforcement
+Users shall only access their own data.
+
+Examples:
+- one user must not access another user’s tasks
+- one user must not access another user’s prayer history
+- all data queries must be scoped to the authenticated user
+
+---
+
+### NFR-22 Session Security
+The system shall securely manage sessions and authentication tokens.
+
+Requirements:
+- expired sessions must be rejected
+- logout must invalidate active session access where applicable
+- token refresh must be implemented securely if used
+
+---
+
+### NFR-23 Input Validation
+The system shall validate all incoming data from:
+
+- forms
+- APIs
+- voice parsing outputs
+- AI-generated suggestions
+
+This prevents corrupted data and reduces security risk.
+
+---
+
+## 4.8 Privacy Requirements
+
+The application stores personal behavioral data, so privacy must be treated seriously.
+
+OWASP MASVS includes privacy as a dedicated control area for mobile applications. :contentReference[oaicite:6]{index=6}
+
+---
+
+### NFR-24 Data Minimization
+The system shall only collect data necessary to provide its core functionality.
+
+Examples:
+- location only for prayer times and localization
+- microphone only for voice input
+- notification permission only for reminders
+
+---
+
+### NFR-25 Permission Transparency
+The app shall explain why a permission is requested before or during the request flow.
+
+Examples:
+- location for prayer time calculation
+- microphone for voice capture
+- notifications for reminders
+
+---
+
+### NFR-26 User Control
+Users shall be able to:
+- disable reminders
+- disable voice features
+- change prayer settings
+- edit or remove personal content
+
+---
+
+## 4.9 Scalability Requirements
+
+The architecture must support growth over time.
+
+---
+
+### NFR-27 Modular Scalability
+The system architecture shall support independent expansion of major modules such as:
+
+- AI assistant
+- analytics
+- prayer services
+- notifications
+- journaling
+- voice processing
+
+---
+
+### NFR-28 User Growth Scalability
+The backend shall be designed so the system can scale from early MVP traffic to significantly larger user bases without requiring a full rewrite.
+
+---
+
+### NFR-29 Data Growth Scalability
+The database shall support growth in:
+- task records
+- notes
+- habit logs
+- journal entries
+- prayer history
+- focus session history
+
+---
+
+## 4.10 Maintainability Requirements
+
+The codebase must remain manageable as the project grows.
+
+---
+
+### NFR-30 Clean Modular Code Structure
+The project shall use modular code organization for both frontend and backend.
+
+Examples:
+- separate feature modules
+- reusable components
+- service layers
+- repository/data access layers
+
+---
+
+### NFR-31 Readability and Documentation
+Code shall be readable and supported by:
+
+- naming conventions
+- comments where necessary
+- architectural documentation
+- API documentation
+
+---
+
+### NFR-32 Testability
+The system shall be designed so that major features can be tested independently.
+
+Examples:
+- task parsing
+- prayer calculation integration
+- notification logic
+- authentication flow
+
+---
+
+### NFR-33 Containerized Deployment
+The backend system should run in Dockerized environments for consistency across development, testing, and deployment.
+
+---
+
+## 4.11 Compatibility Requirements
+
+The application must function correctly across the intended device range.
+
+---
+
+### NFR-34 Android Device Compatibility
+The application shall support a defined baseline range of Android versions and screen sizes selected during implementation planning.
+
+---
+
+### NFR-35 Responsive Mobile Layout
+The UI shall adapt properly to:
+- different phone screen sizes
+- tablets in later phases where supported
+- portrait orientation as primary mode
+
+---
+
+### NFR-36 API Compatibility
+The mobile client and backend API must remain version-compatible across production releases.
+
+---
+
+## 4.12 Localization Requirements
+
+Localization is especially important because the app supports both Arabic and English.
+
+---
+
+### NFR-37 Bilingual Support
+The application shall support:
+- Arabic
+- English
+
+---
+
+### NFR-38 RTL and LTR Layout Support
+The UI shall correctly support:
+- right-to-left layout for Arabic
+- left-to-right layout for English
+
+---
+
+### NFR-39 Localized Date/Time Presentation
+The application should display date and time information in a format appropriate to the selected language and locale where practical.
+
+---
+
+## 4.13 Offline Support Requirements
+
+Offline support is important for reliability and usability.
+
+---
+
+### NFR-40 Local Caching
+The app shall cache essential user data needed for short-term continued usage.
+
+Examples:
+- recent tasks
+- recent notes
+- habit state
+- prayer schedule for the day
+
+---
+
+### NFR-41 Sync Conflict Handling
+If offline changes conflict with newer server data, the system shall apply a defined resolution strategy.
+
+Initial MVP strategy:
+- prefer latest valid update for simple entities
+- preserve user input where conflict risks data loss
+
+---
+
+## 4.14 Observability and Monitoring Requirements
+
+The system must be monitorable in production.
+
+Android and Google Play recommend tracking app quality through performance, stability, and related production signals such as crashes and ANRs. :contentReference[oaicite:7]{index=7}
+
+---
+
+### NFR-42 Error Logging
+Backend services shall log errors in a structured and secure way.
+
+---
+
+### NFR-43 Crash Monitoring
+The mobile app should integrate crash monitoring and release quality tracking.
+
+---
+
+### NFR-44 Performance Monitoring
+The production system should monitor:
+
+- API latency
+- app startup time
+- crash rates
+- failed sync operations
+- notification delivery issues
+
+---
+
+## 4.15 Business and Product Constraints
+
+The system will be developed under realistic project constraints.
+
+---
+
+### NFR-45 Budget Awareness
+The architecture shall be suitable for early-stage deployment with limited budget.
+
+---
+
+### NFR-46 Incremental Delivery
+The product shall support phased delivery, beginning with MVP and expanding later.
+
+---
+
+### NFR-47 Solo/Small-Team Practicality
+The engineering choices shall remain practical for a student or small-team implementation environment.
+
+---
+
+## 4.16 Quality Targets Summary
+
+The following are the initial practical quality targets for Smart Life Planner:
+
+| Category | Target |
+|---|---|
+| App launch | 2–3 seconds to usable UI under normal conditions |
+| Common action feedback | within 1 second where possible |
+| AI parse response | around 2 seconds under normal conditions |
+| Backend availability | 99.0%+ target in early production |
+| Offline behavior | essential local actions remain usable |
+| Security | HTTPS, secure auth, scoped authorization, protected storage |
+| Localization | full Arabic + English support |
+| Usability | common daily actions in minimal steps |
+| Maintainability | modular code and Dockerized backend |
+
+---
+
+## 4.17 Step 4 Summary
+
+This section defines the quality attributes required for Smart Life Planner.
+
+The system must be:
+
+- fast
+- secure
+- stable
+- usable
+- scalable
+- maintainable
+- privacy-aware
+- bilingual
+- mobile-friendly
+- reliable under real usage conditions
+
+These non-functional requirements ensure that Smart Life Planner is not only feature-complete, but also engineered as a high-quality software product suitable for real users and future production growth.
+
+---
+
+# 📘 Smart Life Planner — Software Documentation
+# Step 5: System Architecture
+
+---
+
+# 5.1 Purpose
+
+This section defines the **technical architecture of the Smart Life Planner system**.
+
+The system architecture explains:
+
+- how different system components interact
+- how data flows through the system
+- how the mobile application communicates with backend services
+- how the database stores user information
+- how AI and voice features are integrated
+
+This architecture ensures the system is:
+
+- scalable
+- modular
+- maintainable
+- secure
+- easy to extend
+
+---
+
+# 5.2 High-Level System Architecture
+
+Smart Life Planner follows a **three-layer architecture**:
+
+1. **Client Layer (Mobile App)**
+2. **Backend API Layer**
+3. **Data & Services Layer**
+
+---
+
+## Architecture Overview
+```
+    Mobile Client
+  (Flutter Application)
+          │
+          │ HTTPS API Requests
+          ▼
+    Backend Server
+      (FastAPI)
+          │
+  ┌───────┼─────────┐
+  ▼       ▼         ▼
+```
+PostgreSQL AI Engine Notification Service
+Database Services (FCM)
+
+---
+
+# 5.3 Client Layer — Mobile Application
+
+## Technology
+
+Flutter (Dart)
+
+The mobile application is responsible for:
+
+- user interface
+- navigation
+- local state management
+- offline caching
+- sending API requests
+- displaying notifications
+- voice input capture
+
+---
+
+## Main Client Components
+
+### 1. UI Layer
+
+Contains:
+
+- screens
+- widgets
+- navigation logic
+
+Examples:
+```
+Home Screen
+Tasks Screen
+Focus Screen
+Prayer Screen
+Profile Screen
+```
+
+---
+
+### 2. State Management Layer
+
+Responsible for managing application state.
+
+Handles:
+
+- user session
+- task data
+- habit data
+- prayer data
+- analytics data
+
+Possible Flutter state tools:
+
+- Riverpod
+- Provider
+- Bloc (optional)
+
+Recommended for this project:
+
+**Riverpod**
+
+Reason:
+
+- scalable
+- testable
+- modern Flutter standard
+
+---
+
+### 3. Local Storage
+
+Local storage allows offline usage.
+
+Used for:
+
+- cached tasks
+- cached notes
+- habit state
+- last prayer schedule
+
+Recommended technologies:
+```Hive or SQLite```
+
+Recommended:
+
+**Hive**
+
+Because:
+
+- fast
+- lightweight
+- easy Flutter integration
+
+---
+
+### 4. API Service Layer
+
+Handles all communication with backend.
+
+Responsibilities:
+
+- sending requests
+- receiving responses
+- authentication token handling
+- retry logic
+- error handling
+
+Example API calls:
+```
+POST /login
+GET /tasks
+POST /task
+POST /focus/start
+GET /prayer-times
+```
+
+---
+
+# 5.4 Backend Layer — API Server
+
+## Technology
+
+FastAPI (Python)
+
+FastAPI is chosen because:
+
+- very high performance
+- async support
+- easy API creation
+- excellent AI integration
+- automatic API documentation
+
+---
+
+## Backend Responsibilities
+
+The backend server handles:
+
+- authentication
+- user management
+- task management
+- habit tracking
+- journal storage
+- prayer calculations
+- analytics
+- AI processing
+- notifications
+
+---
+
+## Backend Modules
+
+The backend will be structured into modules.
+
+### Authentication Module
+
+Handles:
+```
+login
+signup
+logout
+token validation
+password reset
+```
+
+---
+
+### Task Module
+
+Handles:
+```
+create task
+update task
+delete task
+task lists
+project grouping
+```
+
+---
+
+### Habit Module
+
+Handles:
+```
+habit creation
+habit completion
+streak calculation
+habit analytics
+```
+
+---
+
+### Prayer Module
+
+Handles:
+```
+prayer time calculation
+prayer tracking
+quran goals
+ramadan mode
+```
+
+---
+
+### Focus Module
+
+Handles:
+```
+focus session start
+focus session end
+focus history
+```
+
+---
+
+### Journal Module
+
+Handles:
+```
+journal entries
+mood tracking
+gratitude logs
+```
+
+---
+
+### Analytics Module
+
+Handles:
+```
+productivity statistics
+habit trends
+focus analysis
+prayer consistency
+```
+
+---
+
+### AI Module
+
+Handles:
+```
+natural language task parsing
+task suggestions
+daily planning suggestions
+behavior insights
+```
+
+---
+
+### Voice Module
+
+Handles:
+```
+speech-to-text processing
+voice command parsing
+intent recognition
+```
+
+
+---
+
+# 5.5 Data Layer — Database
+
+## Technology
+
+PostgreSQL
+
+PostgreSQL is chosen because it provides:
+
+- reliability
+- strong relational queries
+- scalability
+- open source support
+
+---
+
+## Database Responsibilities
+
+The database stores:
+
+- user accounts
+- tasks
+- projects
+- notes
+- habits
+- journal entries
+- prayer logs
+- focus sessions
+- analytics data
+
+---
+
+## Example Database Tables
+```
+users
+tasks
+projects
+notes
+habits
+habit_logs
+journal_entries
+prayer_logs
+focus_sessions
+analytics_snapshots
+```
+
+---
+
+# 5.6 AI Services Layer
+
+AI features support intelligent productivity.
+
+---
+
+## AI Capabilities
+
+The AI system will support:
+
+### Natural Language Task Parsing
+
+Example:
+
+User input:
+```Finish database assignment tomorrow at 8pm```
+
+AI extracts:
+```
+Task Title
+Deadline
+Priority
+```
+
+---
+
+### Smart Suggestions
+
+AI can suggest:
+```
+Next task to complete
+Daily schedule
+Focus session recommendation
+```
+
+---
+
+### Behavior Insights
+
+AI analyzes patterns such as:
+```
+Most productive hours
+Habit success patterns
+Focus performance
+```
+
+---
+
+## AI Implementation Options
+
+Possible technologies:
+```
+OpenAI API
+Local ML models
+Custom NLP pipeline
+```
+
+Initial MVP approach:
+
+**API-based NLP service**
+
+---
+
+# 5.7 Notification System
+
+Notifications help maintain user engagement.
+
+---
+
+## Technology
+
+Firebase Cloud Messaging (FCM)
+
+Used for:
+```
+task reminders
+habit reminders
+focus alerts
+prayer notifications
+ramadan reminders
+```
+
+---
+
+# 5.8 Voice Recognition Architecture
+
+Voice input pipeline:
+```
+User Voice
+    ↓
+Speech Recognition
+    ↓
+Text Transcription
+    ↓
+Intent Detection
+    ↓
+Command Execution
+```
+
+Possible technologies:
+```
+OpenAI Whisper
+Google Speech API
+```
+
+Supported languages:
+```
+Arabic
+English
+```
+
+---
+
+# 5.9 Authentication Architecture
+
+Authentication will use **JWT tokens**.
+
+Flow:
+```
+User Login
+    ↓
+Server validates credentials
+    ↓
+Server issues JWT token
+    ↓
+Client stores token securely
+    ↓
+Token used for API requests
+```
+
+---
+
+# 5.10 Deployment Architecture
+
+The backend will run in a **Docker container**.
+
+Deployment structure:
+```
+Docker Container
+        │
+FastAPI Application
+        │
+PostgreSQL Database
+```
+
+Possible hosting platforms:
+```
+DigitalOcean
+AWS
+Render
+Railway
+```
+
+---
+
+# 5.11 System Data Flow
+
+Example flow when creating a task.
+```
+User creates task
+        ↓
+Flutter sends POST /tasks
+        ↓
+FastAPI validates request
+        ↓
+Task stored in PostgreSQL
+        ↓
+Response returned to client
+        ↓
+UI updates task list
+```
+
+---
+
+# 5.12 System Scalability Strategy
+
+The architecture supports future growth.
+
+Future scalability options:
+
+- horizontal backend scaling
+- database replication
+- AI microservices
+- caching layers
+
+---
+
+# 5.13 Security Architecture
+
+Security layers include:
+
+- HTTPS encryption
+- JWT authentication
+- secure password hashing
+- input validation
+- authorization checks
+
+---
+
+# 5.14 Architecture Advantages
+
+This architecture provides:
+
+### Modularity
+Each module can evolve independently.
+
+### Scalability
+Backend can scale separately from the client.
+
+### Maintainability
+Clear separation between layers.
+
+### AI Compatibility
+FastAPI integrates easily with ML pipelines.
+
+### Mobile Performance
+Flutter provides smooth cross-platform UI.
+
+---
+
+# 5.15 Step 5 Summary
+
+Smart Life Planner uses a **modern mobile cloud architecture** consisting of:
+
+- Flutter mobile application
+- FastAPI backend server
+- PostgreSQL database
+- AI services for intelligence
+- Firebase Cloud Messaging for notifications
+- Docker containerization for deployment
+
+This architecture ensures the system remains scalable, secure, and maintainable while supporting advanced features such as AI planning, voice interaction, and behavioral analytics.
+
+---
