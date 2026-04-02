@@ -1,7 +1,7 @@
 # 🚀 Smart Life Planner  
 ## AI-Powered Productivity, Lifestyle & Spiritual Assistant
 
-<img src="Cover.png" alt="System Architecture Diagram" width="600">
+<img src="docs/Cover.png" alt="System Architecture Diagram" width="600">
 
 ---
 
