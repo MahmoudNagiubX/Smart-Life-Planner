@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:smart_life_planner/core/l10n/app_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'routes/app_router.dart';
 
@@ -19,6 +20,8 @@ class SmartLifePlannerApp extends StatelessWidget {
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.dark,
       routerConfig: appRouter,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
-}                  
+}

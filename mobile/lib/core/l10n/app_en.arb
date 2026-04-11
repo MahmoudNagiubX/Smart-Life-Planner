@@ -1,0 +1,17 @@
+{
+  "@@locale": "en",
+  "appName": "Smart Life Planner",
+  "welcomeTitle": "Smart Life Planner",
+  "welcomeSubtitle": "Your AI-powered personal operating system",
+  "signIn": "Sign In",
+  "signUp": "Create Account",
+  "email": "Email",
+  "password": "Password",
+  "fullName": "Full Name",
+  "home": "Home",
+  "tasks": "Tasks",
+  "focus": "Focus",
+  "prayer": "Prayer",
+  "profile": "Profile",
+  "comingSoon": "Coming soon"
+}

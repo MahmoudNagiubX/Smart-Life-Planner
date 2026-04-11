@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smart_life_planner/core/l10n/app_localizations.dart';
 import '../../../routes/app_routes.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -7,6 +8,8 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -14,25 +17,22 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                '🧠',
-                style: TextStyle(fontSize: 64),
-              ),
+              const Text('🧠', style: TextStyle(fontSize: 64)),
               const SizedBox(height: 24),
-              const Text(
-                'Smart Life Planner',
+              Text(
+                l10n.welcomeTitle,
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Your AI-powered personal operating system',
+              Text(
+                l10n.welcomeSubtitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 48),
               ElevatedButton(
                 onPressed: () => context.go(AppRoutes.signIn),
-                child: const Text('Sign In'),
+                child: Text(l10n.signIn),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
@@ -43,7 +43,7 @@ class WelcomeScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('Create Account'),
+                child: Text(l10n.signUp),
               ),
             ],
           ),
