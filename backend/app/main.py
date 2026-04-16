@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1.router import router
 from app.core.logging import setup_logging, logger
@@ -15,6 +16,14 @@ app = FastAPI(
     title="Smart Life Planner API",
     version="0.1.0",
     description="AI-native personal operating system — backend core",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
