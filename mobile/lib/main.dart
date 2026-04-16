@@ -8,18 +8,20 @@ void main() {
   runApp(const ProviderScope(child: SmartLifePlannerApp()));
 }
 
-class SmartLifePlannerApp extends StatelessWidget {
+class SmartLifePlannerApp extends ConsumerWidget {
   const SmartLifePlannerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(appRouterProvider);
+
     return MaterialApp.router(
       title: 'Smart Life Planner',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.dark,
-      routerConfig: appRouter,
+      routerConfig: router,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     );
