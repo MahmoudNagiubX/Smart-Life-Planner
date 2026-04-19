@@ -59,13 +59,13 @@ class TasksNotifier extends StateNotifier<TasksState> {
   }) async {
     try {
       final service = _ref.read(taskServiceProvider);
-      final task = await service.createTask(
+      await service.createTask(
         title: title,
         description: description,
         priority: priority,
         projectId: projectId,
       );
-      state = state.copyWith(tasks: [task, ...state.tasks]);
+      await loadTasks();
     } on DioException catch (e) {
       state = state.copyWith(
         error: e.response?.data['detail'] ?? 'Failed to create task',

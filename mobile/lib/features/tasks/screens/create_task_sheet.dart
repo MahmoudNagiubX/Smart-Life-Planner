@@ -27,15 +27,23 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
     if (_titleController.text.trim().isEmpty) return;
     setState(() => _isLoading = true);
 
-    await ref.read(tasksProvider.notifier).createTask(
-          title: _titleController.text.trim(),
-          description: _descController.text.trim().isEmpty
-              ? null
-              : _descController.text.trim(),
-          priority: _priority,
-        );
+    try {
+      await ref.read(tasksProvider.notifier).createTask(
+            title: _titleController.text.trim(),
+            description: _descController.text.trim().isEmpty
+                ? null
+                : _descController.text.trim(),
+            priority: _priority,
+          );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
 
-    if (mounted) Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
