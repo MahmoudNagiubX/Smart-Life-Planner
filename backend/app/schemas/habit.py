@@ -1,0 +1,59 @@
+import uuid
+from datetime import datetime, date
+from typing import Optional
+from pydantic import BaseModel, field_validator
+
+
+class HabitCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    frequency_type: Optional[str] = "daily"
+    category: Optional[str] = None
+
+    @field_validator("title")
+    @classmethod
+    def title_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Title cannot be empty")
+        return v.strip()
+
+    @field_validator("frequency_type")
+    @classmethod
+    def frequency_valid(cls, v: str) -> str:
+        if v not in ("daily", "weekly", "custom"):
+            raise ValueError("frequency_type must be daily, weekly, or custom")
+        return v
+
+
+class HabitUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class HabitLogResponse(BaseModel):
+    id: uuid.UUID
+    habit_id: uuid.UUID
+    log_date: date
+    is_completed: bool
+    completed_at: Optional[datetime]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class HabitResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    title: str
+    description: Optional[str]
+    frequency_type: str
+    category: Optional[str]
+    is_active: bool
+    current_streak: int
+    longest_streak: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
