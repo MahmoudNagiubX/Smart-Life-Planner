@@ -1,12 +1,187 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../tasks/providers/task_provider.dart';
+import '../../tasks/models/task_model.dart';
+import '../../tasks/screens/create_task_sheet.dart';
 
-class TasksScreen extends StatelessWidget {
+class TasksScreen extends ConsumerStatefulWidget {
   const TasksScreen({super.key});
 
   @override
+  ConsumerState<TasksScreen> createState() => _TasksScreenState();
+}
+
+class _TasksScreenState extends ConsumerState<TasksScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(tasksProvider.notifier).loadTasks();
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('✅ Tasks — coming soon')),
+    final state = ref.watch(tasksProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Tasks',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Pending'),
+            Tab(text: 'Completed'),
+          ],
+        ),
+      ),
+      body: state.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : state.error != null
+              ? Center(child: Text(state.error!))
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _TaskList(
+                      tasks: state.tasks
+                          .where((t) => t.status == 'pending')
+                          .toList(),
+                    ),
+                    _TaskList(
+                      tasks: state.tasks
+                          .where((t) => t.status == 'completed')
+                          .toList(),
+                    ),
+                  ],
+                ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => const CreateTaskSheet(),
+        ),
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _TaskList extends ConsumerWidget {
+  final List<TaskModel> tasks;
+
+  const _TaskList({required this.tasks});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (tasks.isEmpty) {
+      return const Center(
+        child: Text('No tasks here 🎉'),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        return _TaskCard(task: task);
+      },
+    );
+  }
+}
+
+class _TaskCard extends ConsumerWidget {
+  final TaskModel task;
+
+  const _TaskCard({required this.task});
+
+  Color _priorityColor(String priority) {
+    switch (priority) {
+      case 'high':
+        return AppColors.error;
+      case 'medium':
+        return AppColors.warning;
+      default:
+        return AppColors.success;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: BorderSide(
+            color: _priorityColor(task.priority),
+            width: 4,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () {
+              if (task.status == 'pending') {
+                ref.read(tasksProvider.notifier).completeTask(task.id);
+              }
+            },
+            child: Icon(
+              task.status == 'completed'
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
+              color: task.status == 'completed'
+                  ? AppColors.success
+                  : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    decoration: task.status == 'completed'
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
+                ),
+                if (task.dueAt != null)
+                  Text(
+                    'Due: ${task.dueAt!.substring(0, 10)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 20),
+            onPressed: () =>
+                ref.read(tasksProvider.notifier).deleteTask(task.id),
+          ),
+        ],
+      ),
     );
   }
 }
