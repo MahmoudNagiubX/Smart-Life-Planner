@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../dashboard/providers/dashboard_provider.dart';
+import '../../dashboard/widgets/quick_capture_sheet.dart';
 import '../../tasks/providers/task_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -16,114 +18,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(tasksProvider.notifier).loadTasks();
+      ref.read(dashboardProvider.notifier).loadDashboard();
     });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
-    final tasksState = ref.watch(tasksProvider);
-    final name = authState.user?['full_name'] ?? 'Friend';
-
-    final pendingTasks =
-        tasksState.tasks.where((t) => t.status == 'pending').toList();
-    final completedToday = tasksState.tasks
-        .where((t) =>
-            t.status == 'completed' &&
-            t.completedAt != null &&
-            t.completedAt!.startsWith(
-              DateTime.now().toIso8601String().substring(0, 10),
-            ))
-        .toList();
-
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-              Text(
-                '👋 Hello, $name!',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _greeting(),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-              ),
-              const SizedBox(height: 32),
-
-              // Summary cards row
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.pending_actions,
-                      label: 'Pending',
-                      value: '${pendingTasks.length}',
-                      color: AppColors.warning,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.check_circle_outline,
-                      label: 'Done Today',
-                      value: '${completedToday.length}',
-                      color: AppColors.success,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // Upcoming tasks section
-              Text(
-                'Upcoming Tasks',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-
-              if (tasksState.isLoading)
-                const Center(child: CircularProgressIndicator())
-              else if (pendingTasks.isEmpty)
-                _EmptyTasksCard()
-              else
-                ...pendingTasks.take(5).map(
-                      (task) => _HomeTaskTile(task: task),
-                    ),
-
-              const SizedBox(height: 32),
-
-              // Coming soon cards
-              _ComingSoonCard(
-                icon: Icons.mosque_outlined,
-                label: 'Next Prayer',
-                color: AppColors.prayerGold,
-              ),
-              const SizedBox(height: 12),
-              _ComingSoonCard(
-                icon: Icons.timer_outlined,
-                label: 'Focus Session',
-                color: AppColors.primary,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   String _greeting() {
@@ -131,6 +27,175 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (hour < 12) return 'Good morning ☀️';
     if (hour < 17) return 'Good afternoon 🌤️';
     return 'Good evening 🌙';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final dashState = ref.watch(dashboardProvider);
+    final name = authState.user?['full_name'] as String? ?? 'Friend';
+    final data = dashState.data;
+
+    return Scaffold(
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () =>
+              ref.read(dashboardProvider.notifier).loadDashboard(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+
+                // Greeting
+                Text(
+                  '👋 Hello, $name!',
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _greeting(),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+                const SizedBox(height: 24),
+
+                // Quick capture button
+                GestureDetector(
+                  onTap: () async {
+                    await showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor:
+                          Theme.of(context).scaffoldBackgroundColor,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      builder: (_) => const QuickCaptureSheet(),
+                    );
+
+                    if (context.mounted) {
+                      await ref.read(dashboardProvider.notifier).loadDashboard();
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardTheme.color,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.4),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.bolt, color: AppColors.primary),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Quick capture...',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Stats row
+                if (dashState.isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.pending_actions,
+                          label: 'Pending',
+                          value: '${data?.pendingCount ?? 0}',
+                          color: AppColors.warning,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.check_circle_outline,
+                          label: 'Done Today',
+                          value: '${data?.completedToday ?? 0}',
+                          color: AppColors.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Top tasks
+                  Text(
+                    'Upcoming Tasks',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (data == null || data.topTasks.isEmpty)
+                    _EmptyCard(message: 'No pending tasks 🎉 Enjoy your day!')
+                  else
+                    ...data.topTasks.map(
+                      (task) => _TopTaskTile(
+                        id: task.id,
+                        title: task.title,
+                        priority: task.priority,
+                        dueAt: task.dueAt,
+                      ),
+                    ),
+
+                  const SizedBox(height: 28),
+
+                  // Coming soon cards
+                  Text(
+                    'Today\'s Overview',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _ComingSoonCard(
+                    icon: Icons.mosque_outlined,
+                    label: 'Next Prayer',
+                    color: AppColors.prayerGold,
+                  ),
+                  const SizedBox(height: 12),
+                  _ComingSoonCard(
+                    icon: Icons.timer_outlined,
+                    label: 'Focus Session',
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  _ComingSoonCard(
+                    icon: Icons.track_changes_outlined,
+                    label: 'Habits',
+                    color: AppColors.success,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -181,10 +246,24 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _HomeTaskTile extends ConsumerWidget {
-  final task;
+class _TopTaskTile extends ConsumerWidget {
+  final String id;
+  final String title;
+  final String priority;
+  final String? dueAt;
 
-  const _HomeTaskTile({required this.task});
+  const _TopTaskTile({
+    required this.id,
+    required this.title,
+    required this.priority,
+    this.dueAt,
+  });
+
+  Color _priorityColor(String p) {
+    if (p == 'high') return AppColors.error;
+    if (p == 'medium') return AppColors.warning;
+    return AppColors.success;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -194,12 +273,17 @@ class _HomeTaskTile extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: BorderSide(color: _priorityColor(priority), width: 3),
+        ),
       ),
       child: Row(
         children: [
           GestureDetector(
-            onTap: () =>
-                ref.read(tasksProvider.notifier).completeTask(task.id),
+            onTap: () async {
+              await ref.read(tasksProvider.notifier).completeTask(id);
+              await ref.read(dashboardProvider.notifier).loadDashboard();
+            },
             child: const Icon(
               Icons.radio_button_unchecked,
               color: AppColors.textSecondary,
@@ -211,12 +295,12 @@ class _HomeTaskTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  task.title,
+                  title,
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
-                if (task.dueAt != null)
+                if (dueAt != null)
                   Text(
-                    'Due: ${task.dueAt!.substring(0, 10)}',
+                    'Due: ${dueAt!.substring(0, 10)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -224,35 +308,17 @@ class _HomeTaskTile extends ConsumerWidget {
               ],
             ),
           ),
-          _PriorityDot(priority: task.priority),
         ],
       ),
     );
   }
 }
 
-class _PriorityDot extends StatelessWidget {
-  final String priority;
+class _EmptyCard extends StatelessWidget {
+  final String message;
 
-  const _PriorityDot({required this.priority});
+  const _EmptyCard({required this.message});
 
-  @override
-  Widget build(BuildContext context) {
-    final color = priority == 'high'
-        ? AppColors.error
-        : priority == 'medium'
-            ? AppColors.warning
-            : AppColors.success;
-
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}
-
-class _EmptyTasksCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -261,9 +327,7 @@ class _EmptyTasksCard extends StatelessWidget {
         color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Center(
-        child: Text('No pending tasks 🎉 Enjoy your day!'),
-      ),
+      child: Center(child: Text(message)),
     );
   }
 }

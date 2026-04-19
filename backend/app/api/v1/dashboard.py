@@ -16,7 +16,7 @@ async def get_home_dashboard(
     db: AsyncSession = Depends(get_db),
 ):
     user_id: uuid.UUID = current_user.id
-    today_str = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(timezone.utc).date()
 
     # Total pending tasks
     pending_result = await db.execute(
@@ -34,7 +34,7 @@ async def get_home_dashboard(
             Task.user_id == user_id,
             Task.status == "completed",
             Task.is_deleted == False,
-            func.date(Task.completed_at) == today_str,
+            func.date(Task.completed_at) == today,
         )
     )
     completed_today = completed_result.scalar() or 0
