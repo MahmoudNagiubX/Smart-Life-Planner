@@ -1,12 +1,12 @@
 from fastapi import APIRouter
-from app.api.v1 import auth, settings, tasks, dashboard, notes, habits, focus, prayers
+from app.api.v1 import auth, settings, tasks, dashboard, note, habit, focus, prayer
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
 router.include_router(settings.router)
 router.include_router(tasks.router)
 router.include_router(dashboard.router)
-router.include_router(notes.router)
-router.include_router(habits.router)
+router.include_router(note.router)
+router.include_router(habit.router)
 router.include_router(focus.router)
-router.include_router(prayers.router)
+router.include_router(prayer.router)

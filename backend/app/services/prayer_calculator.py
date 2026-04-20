@@ -1,18 +1,16 @@
 from datetime import date, datetime, timezone
 from adhanpy.calculation import CalculationMethod
-from adhanpy.prayer import PrayerTimes
-from adhanpy.astronomy import Coordinates
+from adhanpy.PrayerTimes import PrayerTimes
 
 PRAYER_NAMES = ["fajr", "dhuhr", "asr", "maghrib", "isha"]
 
 METHOD_MAP = {
-    "MWL": CalculationMethod.muslim_world_league,
-    "ISNA": CalculationMethod.north_america,
-    "Egypt": CalculationMethod.egyptian,
-    "Makkah": CalculationMethod.umm_al_qura,
-    "Karachi": CalculationMethod.karachi,
-    "Tehran": CalculationMethod.tehran,
-    "Gulf": CalculationMethod.gulf,
+    "MWL": CalculationMethod.MUSLIM_WORLD_LEAGUE,
+    "ISNA": CalculationMethod.NORTH_AMERICA,
+    "Egypt": CalculationMethod.EGYPTIAN,
+    "Makkah": CalculationMethod.UMM_AL_QURA,
+    "Karachi": CalculationMethod.KARACHI,
+    "Gulf": CalculationMethod.DUBAI,
 }
 
 
@@ -22,11 +20,13 @@ def calculate_prayer_times(
     prayer_date: date,
     method: str = "MWL",
 ) -> dict[str, datetime]:
-    coordinates = Coordinates(lat, lng)
-    calc_method = METHOD_MAP.get(method, CalculationMethod.muslim_world_league)
-    params = calc_method()
+    calc_method = METHOD_MAP.get(method, CalculationMethod.MUSLIM_WORLD_LEAGUE)
 
-    times = PrayerTimes(coordinates, prayer_date, params)
+    times = PrayerTimes(
+        (lat, lng),
+        datetime.combine(prayer_date, datetime.min.time(), tzinfo=timezone.utc),
+        calc_method,
+    )
 
     return {
         "fajr": times.fajr,
