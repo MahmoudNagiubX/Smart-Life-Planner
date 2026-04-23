@@ -10,6 +10,7 @@ import '../features/home/screens/tasks_screen.dart';
 import '../features/home/screens/focus_screen.dart';
 import '../features/home/screens/prayer_screen.dart';
 import '../features/home/screens/profile_screen.dart';
+import '../features/notes/screens/notes_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -64,6 +65,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/profile',
             builder: (context, state) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: '/home/notes',
+            builder: (context, state) => const NotesScreen(),
           ),
         ],
       ),

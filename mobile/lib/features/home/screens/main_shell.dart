@@ -21,7 +21,7 @@ class MainShell extends StatelessWidget {
       body: child,
       bottomNavigationBar: NavigationBar(
         backgroundColor: AppColors.surfaceDark,
-        indicatorColor: AppColors.primary.withOpacity(0.2),
+        indicatorColor: AppColors.primary.withValues(alpha: 0.2),
         selectedIndex: _currentIndex(context),
         onDestinationSelected: (index) {
           switch (index) {
