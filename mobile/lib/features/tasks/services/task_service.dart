@@ -15,7 +15,9 @@ class TaskService {
       '/tasks',
       queryParameters: params.isNotEmpty ? params : null,
     );
-    return (response.data as List).map((t) => TaskModel.fromJson(t)).toList();
+    return (response.data as List<dynamic>)
+        .map((t) => TaskModel.fromJson(t as Map<String, dynamic>))
+        .toList();
   }
 
   Future<TaskModel> createTask({
@@ -24,27 +26,29 @@ class TaskService {
     String priority = 'medium',
     String? projectId,
     String? dueAt,
+    String? reminderAt,
     String? category,
   }) async {
     final response = await _apiClient.dio.post('/tasks', data: {
       'title': title,
-      'description': ?description,
+      if (description != null) 'description': description,
       'priority': priority,
-      'project_id': ?projectId,
-      'due_at': ?dueAt,
-      'category': ?category,
+      if (projectId != null) 'project_id': projectId,
+      if (dueAt != null) 'due_at': dueAt,
+      if (reminderAt != null) 'reminder_at': reminderAt,
+      if (category != null) 'category': category,
     });
-    return TaskModel.fromJson(response.data);
+    return TaskModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<TaskModel> completeTask(String taskId) async {
     final response = await _apiClient.dio.patch('/tasks/$taskId/complete');
-    return TaskModel.fromJson(response.data);
+    return TaskModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<TaskModel> reopenTask(String taskId) async {
     final response = await _apiClient.dio.patch('/tasks/$taskId/reopen');
-    return TaskModel.fromJson(response.data);
+    return TaskModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<void> deleteTask(String taskId) async {
@@ -53,14 +57,16 @@ class TaskService {
 
   Future<List<TaskProject>> getProjects() async {
     final response = await _apiClient.dio.get('/tasks/projects');
-    return (response.data as List).map((p) => TaskProject.fromJson(p)).toList();
+    return (response.data as List<dynamic>)
+        .map((p) => TaskProject.fromJson(p as Map<String, dynamic>))
+        .toList();
   }
 
   Future<TaskProject> createProject(String title, {String? colorCode}) async {
     final response = await _apiClient.dio.post('/tasks/projects', data: {
       'title': title,
-      'color_code': ?colorCode,
+      if (colorCode != null) 'color_code': colorCode,
     });
-    return TaskProject.fromJson(response.data);
+    return TaskProject.fromJson(response.data as Map<String, dynamic>);
   }
 }

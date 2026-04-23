@@ -28,6 +28,7 @@ class TaskModel {
   final String? projectId;
   final String? category;
   final String? dueAt;
+  final String? reminderAt;
   final int? estimatedMinutes;
   final bool isDeleted;
   final String? completedAt;
@@ -42,6 +43,7 @@ class TaskModel {
     this.projectId,
     this.category,
     this.dueAt,
+    this.reminderAt,
     this.estimatedMinutes,
     required this.isDeleted,
     this.completedAt,
@@ -57,6 +59,7 @@ class TaskModel {
         projectId: json['project_id'],
         category: json['category'],
         dueAt: json['due_at'],
+        reminderAt: json['reminder_at'],
         estimatedMinutes: json['estimated_minutes'],
         isDeleted: json['is_deleted'] ?? false,
         completedAt: json['completed_at'],

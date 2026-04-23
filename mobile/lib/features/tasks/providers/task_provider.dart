@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../core/network/providers.dart';
+import '../../../core/notifications/notification_scheduler.dart';
 import '../models/task_model.dart';
 import '../services/task_service.dart';
 
@@ -43,10 +44,11 @@ class TasksNotifier extends StateNotifier<TasksState> {
       final service = _ref.read(taskServiceProvider);
       final tasks = await service.getTasks(status: status);
       state = state.copyWith(tasks: tasks, isLoading: false);
+      await _syncTaskReminders(tasks);
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.response?.data['detail'] ?? 'Failed to load tasks',
+        error: e.response?.data['detail'] as String? ?? 'Failed to load tasks',
       );
     }
   }
@@ -56,19 +58,24 @@ class TasksNotifier extends StateNotifier<TasksState> {
     String priority = 'medium',
     String? description,
     String? projectId,
+    DateTime? reminderAt,
   }) async {
     try {
       final service = _ref.read(taskServiceProvider);
-      await service.createTask(
+      final task = await service.createTask(
         title: title,
         description: description,
         priority: priority,
         projectId: projectId,
+        reminderAt: reminderAt?.toUtc().toIso8601String(),
       );
+
+      await _syncTaskReminder(task);
+
       await loadTasks();
     } on DioException catch (e) {
       state = state.copyWith(
-        error: e.response?.data['detail'] ?? 'Failed to create task',
+        error: e.response?.data['detail'] as String? ?? 'Failed to create task',
       );
     }
   }
@@ -77,6 +84,12 @@ class TasksNotifier extends StateNotifier<TasksState> {
     try {
       final service = _ref.read(taskServiceProvider);
       final updated = await service.completeTask(taskId);
+
+      // Cancel reminder since task is done
+      await _ref
+          .read(notificationSchedulerProvider)
+          .cancelTaskReminder(taskId);
+
       state = state.copyWith(
         tasks: state.tasks.map((t) => t.id == taskId ? updated : t).toList(),
       );
@@ -87,10 +100,46 @@ class TasksNotifier extends StateNotifier<TasksState> {
     try {
       final service = _ref.read(taskServiceProvider);
       await service.deleteTask(taskId);
+
+      // Cancel reminder since task is deleted
+      await _ref
+          .read(notificationSchedulerProvider)
+          .cancelTaskReminder(taskId);
+
       state = state.copyWith(
         tasks: state.tasks.where((t) => t.id != taskId).toList(),
       );
     } catch (_) {}
+  }
+
+  Future<void> _syncTaskReminders(List<TaskModel> tasks) async {
+    for (final task in tasks) {
+      await _syncTaskReminder(task);
+    }
+  }
+
+  Future<void> _syncTaskReminder(TaskModel task) async {
+    final scheduler = _ref.read(notificationSchedulerProvider);
+
+    if (task.status != 'pending' || task.isDeleted || task.reminderAt == null) {
+      await scheduler.cancelTaskReminder(task.id);
+      return;
+    }
+
+    try {
+      final reminderAt = DateTime.parse(task.reminderAt!).toLocal();
+      if (reminderAt.isAfter(DateTime.now())) {
+        await scheduler.scheduleTaskReminder(
+          taskId: task.id,
+          taskTitle: task.title,
+          reminderAt: reminderAt,
+        );
+      } else {
+        await scheduler.cancelTaskReminder(task.id);
+      }
+    } catch (_) {
+      await scheduler.cancelTaskReminder(task.id);
+    }
   }
 }
 

@@ -64,16 +64,23 @@ class FocusNotifier extends StateNotifier<FocusState> {
     final service = _ref.read(focusServiceProvider);
     final session = await service.getActiveSession();
     if (session != null) {
-      final elapsed = DateTime.now()
-          .difference(DateTime.parse(session.startedAt))
-          .inSeconds;
+      final startedAt = DateTime.parse(session.startedAt).toLocal();
+      final endsAt = startedAt.add(Duration(minutes: session.plannedMinutes));
+      final elapsed = DateTime.now().difference(startedAt).inSeconds;
       final remaining =
           (session.plannedMinutes * 60 - elapsed).clamp(0, session.plannedMinutes * 60);
       state = state.copyWith(
         activeSession: session,
         remainingSeconds: remaining,
       );
-      if (remaining > 0) _startTimer();
+      if (remaining > 0) {
+        await _ref.read(notificationSchedulerProvider).scheduleFocusCompleteAt(
+              sessionId: session.id,
+              plannedMinutes: session.plannedMinutes,
+              fireAt: endsAt,
+            );
+        _startTimer();
+      }
     }
   }
 

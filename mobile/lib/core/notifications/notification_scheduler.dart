@@ -14,6 +14,18 @@ class NotificationScheduler {
     required int plannedMinutes,
   }) async {
     final fireAt = DateTime.now().add(Duration(minutes: plannedMinutes));
+    await scheduleFocusCompleteAt(
+      sessionId: sessionId,
+      plannedMinutes: plannedMinutes,
+      fireAt: fireAt,
+    );
+  }
+
+  Future<void> scheduleFocusCompleteAt({
+    required String sessionId,
+    required int plannedMinutes,
+    required DateTime fireAt,
+  }) async {
     await _service.scheduleNotification(
       id: NotificationIds.focusComplete(sessionId),
       title: '🎯 Focus Session Complete!',
