@@ -111,7 +111,7 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
           // Priority (only for tasks)
           if (_type == 'task')
             DropdownButtonFormField<String>(
-              value: _priority,
+              initialValue: _priority,
               decoration: const InputDecoration(labelText: 'Priority'),
               items: const [
                 DropdownMenuItem(value: 'low', child: Text('🟢 Low')),

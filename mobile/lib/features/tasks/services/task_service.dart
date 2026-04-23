@@ -28,11 +28,11 @@ class TaskService {
   }) async {
     final response = await _apiClient.dio.post('/tasks', data: {
       'title': title,
-      if (description != null) 'description': description,
+      'description': ?description,
       'priority': priority,
-      if (projectId != null) 'project_id': projectId,
-      if (dueAt != null) 'due_at': dueAt,
-      if (category != null) 'category': category,
+      'project_id': ?projectId,
+      'due_at': ?dueAt,
+      'category': ?category,
     });
     return TaskModel.fromJson(response.data);
   }
@@ -59,7 +59,7 @@ class TaskService {
   Future<TaskProject> createProject(String title, {String? colorCode}) async {
     final response = await _apiClient.dio.post('/tasks/projects', data: {
       'title': title,
-      if (colorCode != null) 'color_code': colorCode,
+      'color_code': ?colorCode,
     });
     return TaskProject.fromJson(response.data);
   }

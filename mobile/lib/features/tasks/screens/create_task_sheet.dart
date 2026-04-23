@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/theme/app_colors.dart';
 import '../providers/task_provider.dart';
 
 class CreateTaskSheet extends ConsumerStatefulWidget {
@@ -79,7 +78,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _priority,
+            initialValue: _priority,
             decoration: const InputDecoration(labelText: 'Priority'),
             items: const [
               DropdownMenuItem(value: 'low', child: Text('🟢 Low')),
