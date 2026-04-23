@@ -5,7 +5,7 @@ from app.core.logging import logger
 
 client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
-MODEL = "llama3-8b-8192"
+MODEL = "llama-3.1-8b-instant"
 
 PARSE_TASK_PROMPT = """
 You are a smart task parser for a productivity app.
