@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../core/network/providers.dart';
+import '../../../core/notifications/notification_scheduler.dart';
 import '../models/prayer_model.dart';
 import '../services/prayer_service.dart';
 
@@ -43,6 +44,9 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
       final service = _ref.read(prayerServiceProvider);
       final data = await service.getTodayPrayers();
       state = state.copyWith(data: data, isLoading: false);
+
+      // Schedule reminders for uncompleted prayers
+      await _schedulePrayerReminders(data);
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -51,16 +55,37 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
     }
   }
 
+  Future<void> _schedulePrayerReminders(DailyPrayers data) async {
+    final scheduler = _ref.read(notificationSchedulerProvider);
+    for (final prayer in data.prayers) {
+      if (!prayer.completed && prayer.scheduledAt != null) {
+        try {
+          final scheduledAt = DateTime.parse(prayer.scheduledAt!);
+          await scheduler.schedulePrayerReminder(
+            prayerName: prayer.prayerName,
+            scheduledAt: scheduledAt,
+          );
+        } catch (_) {}
+      } else {
+        // Cancel reminder if already completed
+        await scheduler.cancelPrayerReminder(prayer.prayerName);
+      }
+    }
+  }
+
   Future<void> togglePrayer(String prayerName, bool currentlyCompleted) async {
     final data = state.data;
     if (data == null) return;
-
     try {
       final service = _ref.read(prayerServiceProvider);
       if (currentlyCompleted) {
         await service.uncompletePrayer(prayerName, data.date);
       } else {
         await service.completePrayer(prayerName, data.date);
+        // Cancel reminder since prayer is now done
+        await _ref
+            .read(notificationSchedulerProvider)
+            .cancelPrayerReminder(prayerName);
       }
       await loadTodayPrayers();
     } on DioException catch (e) {

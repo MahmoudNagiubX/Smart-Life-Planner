@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../core/network/providers.dart';
+import '../../../core/notifications/notification_scheduler.dart';
 import '../models/focus_model.dart';
 import '../services/focus_service.dart';
 
@@ -96,6 +97,13 @@ class FocusNotifier extends StateNotifier<FocusState> {
         plannedMinutes: plannedMinutes,
         sessionType: sessionType,
       );
+
+      // Schedule completion notification
+      await _ref.read(notificationSchedulerProvider).scheduleFocusComplete(
+            sessionId: session.id,
+            plannedMinutes: plannedMinutes,
+          );
+
       state = state.copyWith(
         activeSession: session,
         isLoading: false,
@@ -110,10 +118,18 @@ class FocusNotifier extends StateNotifier<FocusState> {
     }
   }
 
-  Future<void> completeSession() async {
+  Future<void> completeSession({bool cancelNotification = true}) async {
     final session = state.activeSession;
     if (session == null) return;
     _timer?.cancel();
+
+    if (cancelNotification) {
+      // Cancel the scheduled notification only when the user finishes manually.
+      await _ref
+          .read(notificationSchedulerProvider)
+          .cancelFocusNotification(session.id);
+    }
+
     try {
       final service = _ref.read(focusServiceProvider);
       await service.completeSession(session.id);
@@ -126,6 +142,12 @@ class FocusNotifier extends StateNotifier<FocusState> {
     final session = state.activeSession;
     if (session == null) return;
     _timer?.cancel();
+
+    // Cancel the scheduled notification
+    await _ref
+        .read(notificationSchedulerProvider)
+        .cancelFocusNotification(session.id);
+
     try {
       final service = _ref.read(focusServiceProvider);
       await service.cancelSession(session.id);
@@ -139,7 +161,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (state.remainingSeconds <= 0) {
         timer.cancel();
-        completeSession();
+        completeSession(cancelNotification: false);
       } else {
         state = state.copyWith(
           remainingSeconds: state.remainingSeconds - 1,

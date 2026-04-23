@@ -1,8 +1,13 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 
 class NotificationService {
+  static const _channelId = 'smart_life_planner_channel';
+  static const _channelName = 'Smart Life Planner';
+  static const _channelDescription = 'Reminders and alerts';
+
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
@@ -29,6 +34,19 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _channelId,
+        _channelName,
+        description: _channelDescription,
+        importance: Importance.high,
+      ),
+    );
+
     _initialized = true;
   }
 
@@ -37,6 +55,8 @@ class NotificationService {
   }
 
   Future<void> requestPermissions() async {
+    await Permission.notification.request();
+
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -60,9 +80,9 @@ class NotificationService {
       tz.TZDateTime.from(scheduledAt, tz.local),
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'smart_life_planner_channel',
-          'Smart Life Planner',
-          channelDescription: 'Reminders and alerts',
+          _channelId,
+          _channelName,
+          channelDescription: _channelDescription,
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
@@ -88,9 +108,9 @@ class NotificationService {
       body,
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'smart_life_planner_channel',
-          'Smart Life Planner',
-          channelDescription: 'Reminders and alerts',
+          _channelId,
+          _channelName,
+          channelDescription: _channelDescription,
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
