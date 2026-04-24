@@ -5,6 +5,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
 import '../../dashboard/widgets/quick_capture_sheet.dart';
 import '../../tasks/providers/task_provider.dart';
+import '../../ai/providers/ai_provider.dart';
+import '../../ai/widgets/next_action_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +21,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(dashboardProvider.notifier).loadDashboard();
+      ref.read(aiProvider.notifier).loadNextAction();
     });
   }
 
@@ -39,8 +42,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () =>
-              ref.read(dashboardProvider.notifier).loadDashboard(),
+          onRefresh: () async {
+            await ref.read(dashboardProvider.notifier).loadDashboard();
+            await ref.read(aiProvider.notifier).loadNextAction();
+          },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(24),
@@ -52,18 +57,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // Greeting
                 Text(
                   '👋 Hello, $name!',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _greeting(),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                    color: AppColors.textSecondary,
+                  ),
                 ),
+                const SizedBox(height: 16),
+
+                const NextActionCard(),
+
                 const SizedBox(height: 24),
 
                 // Quick capture button
@@ -72,22 +80,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     await showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
-                      backgroundColor:
-                          Theme.of(context).scaffoldBackgroundColor,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).scaffoldBackgroundColor,
                       shape: const RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(20)),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
                       ),
                       builder: (_) => const QuickCaptureSheet(),
                     );
 
                     if (context.mounted) {
-                      await ref.read(dashboardProvider.notifier).loadDashboard();
+                      await ref
+                          .read(dashboardProvider.notifier)
+                          .loadDashboard();
+                      await ref.read(aiProvider.notifier).loadNextAction();
                     }
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).cardTheme.color,
                       borderRadius: BorderRadius.circular(12),
@@ -101,10 +116,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         const SizedBox(width: 12),
                         Text(
                           'Quick capture...',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.textSecondary),
                         ),
                       ],
                     ),
@@ -142,10 +155,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // Top tasks
                   Text(
                     'Upcoming Tasks',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -166,10 +178,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // Coming soon cards
                   Text(
                     'Today\'s Overview',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _ComingSoonCard(
@@ -229,15 +240,11 @@ class _StatCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              Text(label, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ],
@@ -302,8 +309,8 @@ class _TopTaskTile extends ConsumerWidget {
                   Text(
                     'Due: ${dueAt!.substring(0, 10)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                      color: AppColors.textSecondary,
+                    ),
                   ),
               ],
             ),
@@ -358,15 +365,12 @@ class _ComingSoonCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
               Text(
                 'Coming soon',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
               ),
             ],
           ),

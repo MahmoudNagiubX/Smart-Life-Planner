@@ -4,7 +4,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../ai/providers/ai_provider.dart';
 import '../../ai/widgets/ai_confirmation_sheet.dart';
 import '../../tasks/providers/task_provider.dart';
-import '../providers/dashboard_provider.dart';
 
 class QuickCaptureSheet extends ConsumerStatefulWidget {
   const QuickCaptureSheet({super.key});
@@ -49,9 +48,7 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          builder: (_) => AiConfirmationSheet(
-            parsedTask: aiState.parsedTask!,
-          ),
+          builder: (_) => AiConfirmationSheet(parsedTask: aiState.parsedTask!),
         );
 
         if (confirmed == true && mounted) {
@@ -59,18 +56,16 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
         }
       } else {
         // AI failed — fallback to manual
-        await ref.read(tasksProvider.notifier).createTask(
-              title: text,
-              priority: _priority,
-            );
+        await ref
+            .read(tasksProvider.notifier)
+            .createTask(title: text, priority: _priority);
         if (mounted) Navigator.pop(context);
       }
     } else {
       // Manual flow
-      await ref.read(tasksProvider.notifier).createTask(
-            title: text,
-            priority: _priority,
-          );
+      await ref
+          .read(tasksProvider.notifier)
+          .createTask(title: text, priority: _priority);
       if (mounted) {
         setState(() => _isLoading = false);
         Navigator.pop(context);
@@ -108,10 +103,9 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
             children: [
               Text(
                 '⚡ Quick Capture',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -145,8 +139,8 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
               hintText: _type == 'task' && _useAi
                   ? 'e.g. Finish report tomorrow at 6 PM high priority'
                   : _type == 'task'
-                      ? 'What needs to be done?'
-                      : 'Capture your thought...',
+                  ? 'What needs to be done?'
+                  : 'Capture your thought...',
             ),
           ),
           const SizedBox(height: 12),

@@ -12,6 +12,7 @@ import '../features/home/screens/prayer_screen.dart';
 import '../features/home/screens/profile_screen.dart';
 import '../features/habits/screens/habits_screen.dart';
 import '../features/notes/screens/notes_screen.dart';
+import '../features/ai/screens/daily_plan_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -50,6 +51,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home',
             builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/home/daily-plan',
+            builder: (context, state) => const DailyPlanScreen(),
           ),
           GoRoute(
             path: '/home/tasks',
