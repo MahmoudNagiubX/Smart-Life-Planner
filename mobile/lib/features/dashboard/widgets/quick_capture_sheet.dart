@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../ai/providers/ai_provider.dart';
+import '../../ai/widgets/ai_confirmation_sheet.dart';
 import '../../tasks/providers/task_provider.dart';
+import '../providers/dashboard_provider.dart';
 
 class QuickCaptureSheet extends ConsumerStatefulWidget {
   const QuickCaptureSheet({super.key});
@@ -14,6 +17,7 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
   final _controller = TextEditingController();
   String _type = 'task';
   String _priority = 'medium';
+  bool _useAi = true;
   bool _isLoading = false;
 
   @override
@@ -28,16 +32,49 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
 
     setState(() => _isLoading = true);
 
-    if (_type == 'task') {
+    if (_type == 'task' && _useAi) {
+      // AI parsing flow
+      await ref.read(aiProvider.notifier).parseTask(text);
+      final aiState = ref.read(aiProvider);
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (aiState.parsedTask != null) {
+        // Show confirmation sheet
+        final confirmed = await showModalBottomSheet<bool>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (_) => AiConfirmationSheet(
+            parsedTask: aiState.parsedTask!,
+          ),
+        );
+
+        if (confirmed == true && mounted) {
+          Navigator.pop(context);
+        }
+      } else {
+        // AI failed — fallback to manual
+        await ref.read(tasksProvider.notifier).createTask(
+              title: text,
+              priority: _priority,
+            );
+        if (mounted) Navigator.pop(context);
+      }
+    } else {
+      // Manual flow
       await ref.read(tasksProvider.notifier).createTask(
             title: text,
             priority: _priority,
           );
-    }
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.pop(context);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -67,12 +104,16 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
           ),
           const SizedBox(height: 20),
 
-          Text(
-            '⚡ Quick Capture',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Text(
+                '⚡ Quick Capture',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
 
@@ -94,24 +135,26 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Input field
+          // Input
           TextField(
             controller: _controller,
             autofocus: true,
             maxLines: 3,
             minLines: 1,
             decoration: InputDecoration(
-              hintText: _type == 'task'
-                  ? 'What needs to be done?'
-                  : 'Capture your thought...',
+              hintText: _type == 'task' && _useAi
+                  ? 'e.g. Finish report tomorrow at 6 PM high priority'
+                  : _type == 'task'
+                      ? 'What needs to be done?'
+                      : 'Capture your thought...',
             ),
           ),
           const SizedBox(height: 12),
 
-          // Priority (only for tasks)
-          if (_type == 'task')
+          // Priority (manual task only)
+          if (_type == 'task' && !_useAi) ...[
             DropdownButtonFormField<String>(
-              initialValue: _priority,
+              value: _priority,
               decoration: const InputDecoration(labelText: 'Priority'),
               items: const [
                 DropdownMenuItem(value: 'low', child: Text('🟢 Low')),
@@ -120,6 +163,24 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
               ],
               onChanged: (v) => setState(() => _priority = v!),
             ),
+            const SizedBox(height: 12),
+          ],
+
+          // AI toggle (only for tasks)
+          if (_type == 'task')
+            Row(
+              children: [
+                const Text('🤖', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                const Text('Use AI to parse task'),
+                const Spacer(),
+                Switch(
+                  value: _useAi,
+                  activeColor: AppColors.primary,
+                  onChanged: (v) => setState(() => _useAi = v),
+                ),
+              ],
+            ),
 
           const SizedBox(height: 20),
 
@@ -127,7 +188,9 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
               ? const Center(child: CircularProgressIndicator())
               : ElevatedButton(
                   onPressed: _submit,
-                  child: const Text('Save'),
+                  child: Text(
+                    _type == 'task' && _useAi ? '🤖 Parse & Save' : 'Save',
+                  ),
                 ),
         ],
       ),
