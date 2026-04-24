@@ -2,10 +2,11 @@ import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import case, select, func
 from app.core.dependencies import get_db
 from app.api.v1.auth import get_current_user
 from app.models.task import Task
+from app.models.prayer import PrayerLog
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -18,7 +19,7 @@ async def get_home_dashboard(
     user_id: uuid.UUID = current_user.id
     today = datetime.now(timezone.utc).date()
 
-    # Total pending tasks
+    # Pending tasks count
     pending_result = await db.execute(
         select(func.count(Task.id)).where(
             Task.user_id == user_id,
@@ -28,7 +29,7 @@ async def get_home_dashboard(
     )
     pending_count = pending_result.scalar() or 0
 
-    # Completed today
+    # Completed today count
     completed_result = await db.execute(
         select(func.count(Task.id)).where(
             Task.user_id == user_id,
@@ -39,8 +40,7 @@ async def get_home_dashboard(
     )
     completed_today = completed_result.scalar() or 0
 
-    # Top 5 pending tasks ordered by priority then created_at
-    priority_order = {"high": 1, "medium": 2, "low": 3}
+    # Top 5 pending tasks
     top_tasks_result = await db.execute(
         select(Task)
         .where(
@@ -53,9 +53,29 @@ async def get_home_dashboard(
     )
     top_tasks = top_tasks_result.scalars().all()
 
+    # Today's prayer progress
+    prayers_result = await db.execute(
+        select(
+            func.count(PrayerLog.id),
+            func.sum(
+                case((PrayerLog.completed == True, 1), else_=0)
+            ),
+        ).where(
+            PrayerLog.user_id == user_id,
+            PrayerLog.prayer_date == today,
+        )
+    )
+    prayer_row = prayers_result.one()
+    total_prayers = prayer_row[0] or 0
+    completed_prayers = prayer_row[1] or 0
+
     return {
         "pending_count": pending_count,
         "completed_today": completed_today,
+        "prayer_progress": {
+            "completed": completed_prayers,
+            "total": total_prayers if total_prayers > 0 else 5,
+        },
         "top_tasks": [
             {
                 "id": str(t.id),

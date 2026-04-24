@@ -56,21 +56,37 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
         }
       } else {
         // AI failed — fallback to manual
-        await ref
+        final created = await ref
             .read(tasksProvider.notifier)
             .createTask(title: text, priority: _priority);
-        if (mounted) Navigator.pop(context);
+        if (mounted) {
+          setState(() => _isLoading = false);
+          if (created) {
+            Navigator.pop(context);
+          } else {
+            _showTaskError();
+          }
+        }
       }
     } else {
       // Manual flow
-      await ref
+      final created = await ref
           .read(tasksProvider.notifier)
           .createTask(title: text, priority: _priority);
       if (mounted) {
         setState(() => _isLoading = false);
-        Navigator.pop(context);
+        if (created) {
+          Navigator.pop(context);
+        } else {
+          _showTaskError();
+        }
       }
     }
+  }
+
+  void _showTaskError() {
+    final error = ref.read(tasksProvider).error ?? 'Task could not be created';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 
   @override

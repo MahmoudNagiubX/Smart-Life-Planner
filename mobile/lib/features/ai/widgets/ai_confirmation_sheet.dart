@@ -47,16 +47,25 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
     if (_titleController.text.trim().isEmpty) return;
     setState(() => _isLoading = true);
 
-    await ref.read(tasksProvider.notifier).createTask(
-          title: _titleController.text.trim(),
-          priority: _priority,
-        );
+    final created = await ref
+        .read(tasksProvider.notifier)
+        .createTask(title: _titleController.text.trim(), priority: _priority);
 
-    ref.read(aiProvider.notifier).clearParsed();
+    if (created) {
+      ref.read(aiProvider.notifier).clearParsed();
+    }
 
     if (mounted) {
       setState(() => _isLoading = false);
-      Navigator.pop(context, true);
+      if (created) {
+        Navigator.pop(context, true);
+      } else {
+        final error =
+            ref.read(tasksProvider).error ?? 'Task could not be created';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+      }
     }
   }
 
@@ -95,10 +104,9 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
               const SizedBox(width: 8),
               Text(
                 'AI Parsed Your Task',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -107,13 +115,9 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
           // Confidence badge
           Row(
             children: [
-              const Text(
-                'Confidence: ',
-                style: TextStyle(fontSize: 12),
-              ),
+              const Text('Confidence: ', style: TextStyle(fontSize: 12)),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: _confidenceColor(task.confidence).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
@@ -155,7 +159,9 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
           const SizedBox(height: 12),
 
           // Extracted info chips
-          if (task.dueAt != null || task.estimatedMinutes != null || task.category != null)
+          if (task.dueAt != null ||
+              task.estimatedMinutes != null ||
+              task.category != null)
             Wrap(
               spacing: 8,
               children: [

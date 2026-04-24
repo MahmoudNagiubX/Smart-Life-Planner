@@ -55,7 +55,9 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
     if (_titleController.text.trim().isEmpty) return;
     setState(() => _isLoading = true);
 
-    await ref.read(tasksProvider.notifier).createTask(
+    final created = await ref
+        .read(tasksProvider.notifier)
+        .createTask(
           title: _titleController.text.trim(),
           description: _descController.text.trim().isEmpty
               ? null
@@ -66,7 +68,15 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
 
     if (mounted) {
       setState(() => _isLoading = false);
-      Navigator.pop(context);
+      if (created) {
+        Navigator.pop(context);
+      } else {
+        final error =
+            ref.read(tasksProvider).error ?? 'Task could not be created';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+      }
     }
   }
 
@@ -96,10 +106,9 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
           const SizedBox(height: 20),
           Text(
             'New Task',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -110,8 +119,9 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
           const SizedBox(height: 12),
           TextField(
             controller: _descController,
-            decoration:
-                const InputDecoration(labelText: 'Description (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Description (optional)',
+            ),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
@@ -130,16 +140,17 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
           GestureDetector(
             onTap: _pickReminder,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: AppColors.cardDark,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.notifications_outlined,
-                      color: AppColors.textSecondary),
+                  const Icon(
+                    Icons.notifications_outlined,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: 12),
                   Text(
                     _reminderAt == null
@@ -155,8 +166,11 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
                     const Spacer(),
                     GestureDetector(
                       onTap: () => setState(() => _reminderAt = null),
-                      child: const Icon(Icons.clear,
-                          size: 18, color: AppColors.textSecondary),
+                      child: const Icon(
+                        Icons.clear,
+                        size: 18,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ],

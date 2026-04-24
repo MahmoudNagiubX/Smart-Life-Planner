@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../../core/theme/app_colors.dart';
+import '../../ai/widgets/next_action_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
 import '../../dashboard/widgets/quick_capture_sheet.dart';
 import '../../tasks/providers/task_provider.dart';
-import '../../ai/providers/ai_provider.dart';
-import '../../ai/widgets/next_action_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -21,15 +22,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(dashboardProvider.notifier).loadDashboard();
-      ref.read(aiProvider.notifier).loadNextAction();
     });
   }
 
   String _greeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning ☀️';
-    if (hour < 17) return 'Good afternoon 🌤️';
-    return 'Good evening 🌙';
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  Future<void> _refreshDashboard() {
+    return ref.read(dashboardProvider.notifier).loadDashboard();
   }
 
   @override
@@ -42,10 +46,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async {
-            await ref.read(dashboardProvider.notifier).loadDashboard();
-            await ref.read(aiProvider.notifier).loadNextAction();
-          },
+          onRefresh: _refreshDashboard,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(24),
@@ -53,10 +54,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
-
-                // Greeting
                 Text(
-                  '👋 Hello, $name!',
+                  'Hello, $name!',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -68,13 +67,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                const NextActionCard(),
-
                 const SizedBox(height: 24),
 
-                // Quick capture button
                 GestureDetector(
                   onTap: () async {
                     await showModalBottomSheet(
@@ -90,12 +84,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       builder: (_) => const QuickCaptureSheet(),
                     );
-
                     if (context.mounted) {
-                      await ref
-                          .read(dashboardProvider.notifier)
-                          .loadDashboard();
-                      await ref.read(aiProvider.notifier).loadNextAction();
+                      await _refreshDashboard();
                     }
                   },
                   child: Container(
@@ -107,7 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       color: Theme.of(context).cardTheme.color,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(0.4),
+                        color: AppColors.primary.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Row(
@@ -119,15 +109,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(color: AppColors.textSecondary),
                         ),
+                        const Spacer(),
+                        const Icon(
+                          Icons.auto_awesome,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
                       ],
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                const NextActionCard(),
                 const SizedBox(height: 24),
 
-                // Stats row
                 if (dashState.isLoading)
                   const Center(child: CircularProgressIndicator())
+                else if (dashState.error != null)
+                  _DashboardErrorCard(
+                    message: dashState.error!,
+                    onRetry: _refreshDashboard,
+                  )
                 else ...[
                   Row(
                     children: [
@@ -150,19 +153,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  _PrayerProgressCard(
+                    completed: data?.prayerProgress.completed ?? 0,
+                    total: data?.prayerProgress.total ?? 5,
+                    onTap: () => context.go('/home/prayer'),
+                  ),
                   const SizedBox(height: 28),
 
-                  // Top tasks
-                  Text(
-                    'Upcoming Tasks',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        'Upcoming Tasks',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => context.go('/home/tasks'),
+                        child: const Text('See all'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-
+                  const SizedBox(height: 8),
                   if (data == null || data.topTasks.isEmpty)
-                    _EmptyCard(message: 'No pending tasks 🎉 Enjoy your day!')
+                    _EmptyCard(message: 'No pending tasks')
                   else
                     ...data.topTasks.map(
                       (task) => _TopTaskTile(
@@ -172,33 +187,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         dueAt: task.dueAt,
                       ),
                     ),
-
                   const SizedBox(height: 28),
 
-                  // Coming soon cards
                   Text(
-                    'Today\'s Overview',
+                    "Today's Tools",
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _ComingSoonCard(
-                    icon: Icons.mosque_outlined,
-                    label: 'Next Prayer',
-                    color: AppColors.prayerGold,
-                  ),
-                  const SizedBox(height: 12),
-                  _ComingSoonCard(
-                    icon: Icons.timer_outlined,
-                    label: 'Focus Session',
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(height: 12),
-                  _ComingSoonCard(
-                    icon: Icons.track_changes_outlined,
-                    label: 'Habits',
-                    color: AppColors.success,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _NavCard(
+                          icon: Icons.timer_outlined,
+                          label: 'Focus',
+                          color: AppColors.primary,
+                          onTap: () => context.go('/home/focus'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _NavCard(
+                          icon: Icons.track_changes_outlined,
+                          label: 'Habits',
+                          color: AppColors.success,
+                          onTap: () => context.go('/home/habits'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _NavCard(
+                          icon: Icons.calendar_today_outlined,
+                          label: 'AI Plan',
+                          color: AppColors.warning,
+                          onTap: () => context.go('/home/daily-plan'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ],
@@ -248,6 +274,82 @@ class _StatCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PrayerProgressCard extends StatelessWidget {
+  final int completed;
+  final int total;
+  final VoidCallback onTap;
+
+  const _PrayerProgressCard({
+    required this.completed,
+    required this.total,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final safeTotal = total <= 0 ? 5 : total;
+    final progress = (completed / safeTotal).clamp(0.0, 1.0);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.prayerGold.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.prayerGold.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.mosque_outlined, color: AppColors.prayerGold),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Prayers Today',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$completed / $safeTotal completed',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.prayerGold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 6,
+                      backgroundColor: AppColors.prayerGold.withValues(
+                        alpha: 0.18,
+                      ),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.prayerGold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Icon(Icons.chevron_right, color: AppColors.prayerGold),
+          ],
+        ),
       ),
     );
   }
@@ -321,6 +423,51 @@ class _TopTaskTile extends ConsumerWidget {
   }
 }
 
+class _DashboardErrorCard extends StatelessWidget {
+  final String message;
+  final Future<void> Function() onRetry;
+
+  const _DashboardErrorCard({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Dashboard failed to load',
+            style: TextStyle(
+              color: AppColors.error,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptyCard extends StatelessWidget {
   final String message;
 
@@ -339,42 +486,44 @@ class _EmptyCard extends StatelessWidget {
   }
 }
 
-class _ComingSoonCard extends StatelessWidget {
+class _NavCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final VoidCallback onTap;
 
-  const _ComingSoonCard({
+  const _NavCard({
     required this.icon,
     required this.label,
     required this.color,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-              Text(
-                'Coming soon',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

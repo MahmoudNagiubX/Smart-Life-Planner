@@ -13,11 +13,7 @@ class DashboardState {
   final bool isLoading;
   final String? error;
 
-  const DashboardState({
-    this.data,
-    this.isLoading = false,
-    this.error,
-  });
+  const DashboardState({this.data, this.isLoading = false, this.error});
 
   DashboardState copyWith({
     DashboardData? data,
@@ -46,7 +42,13 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.response?.data['detail'] as String? ?? 'Failed to load dashboard',
+        error:
+            e.response?.data['detail'] as String? ?? 'Failed to load dashboard',
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to read dashboard data',
       );
     }
   }
@@ -54,5 +56,5 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
 
 final dashboardProvider =
     StateNotifierProvider<DashboardNotifier, DashboardState>((ref) {
-  return DashboardNotifier(ref);
-});
+      return DashboardNotifier(ref);
+    });

@@ -14,11 +14,7 @@ class TasksState {
   final bool isLoading;
   final String? error;
 
-  const TasksState({
-    this.tasks = const [],
-    this.isLoading = false,
-    this.error,
-  });
+  const TasksState({this.tasks = const [], this.isLoading = false, this.error});
 
   TasksState copyWith({
     List<TaskModel>? tasks,
@@ -53,7 +49,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
     }
   }
 
-  Future<void> createTask({
+  Future<bool> createTask({
     required String title,
     String priority = 'medium',
     String? description,
@@ -73,10 +69,15 @@ class TasksNotifier extends StateNotifier<TasksState> {
       await _syncTaskReminder(task);
 
       await loadTasks();
+      return true;
     } on DioException catch (e) {
       state = state.copyWith(
         error: e.response?.data['detail'] as String? ?? 'Failed to create task',
       );
+      return false;
+    } catch (_) {
+      state = state.copyWith(error: 'Failed to create task');
+      return false;
     }
   }
 
@@ -86,9 +87,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       final updated = await service.completeTask(taskId);
 
       // Cancel reminder since task is done
-      await _ref
-          .read(notificationSchedulerProvider)
-          .cancelTaskReminder(taskId);
+      await _ref.read(notificationSchedulerProvider).cancelTaskReminder(taskId);
 
       state = state.copyWith(
         tasks: state.tasks.map((t) => t.id == taskId ? updated : t).toList(),
@@ -102,9 +101,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       await service.deleteTask(taskId);
 
       // Cancel reminder since task is deleted
-      await _ref
-          .read(notificationSchedulerProvider)
-          .cancelTaskReminder(taskId);
+      await _ref.read(notificationSchedulerProvider).cancelTaskReminder(taskId);
 
       state = state.copyWith(
         tasks: state.tasks.where((t) => t.id != taskId).toList(),
