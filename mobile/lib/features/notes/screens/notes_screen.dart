@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../voice/screens/voice_note_sheet.dart';
 import '../providers/note_provider.dart';
 import '../models/note_model.dart';
 import 'create_note_sheet.dart';
@@ -61,9 +62,9 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                     : null,
               ),
               onChanged: (value) {
-                ref.read(notesProvider.notifier).loadNotes(
-                      search: value.isEmpty ? null : value,
-                    );
+                ref
+                    .read(notesProvider.notifier)
+                    .loadNotes(search: value.isEmpty ? null : value);
               },
             ),
           ),
@@ -74,40 +75,71 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
             child: state.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : state.error != null
-                    ? Center(child: Text(state.error!))
-                    : state.notes.isEmpty
-                        ? const Center(
-                            child: Text('No notes yet.\nTap + to create one! 📝',
-                                textAlign: TextAlign.center),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: () =>
-                                ref.read(notesProvider.notifier).loadNotes(),
-                            child: ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: state.notes.length,
-                              itemBuilder: (context, index) {
-                                return _NoteCard(note: state.notes[index]);
-                              },
-                            ),
-                          ),
+                ? Center(child: Text(state.error!))
+                : state.notes.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No notes yet.\nTap + to create one! 📝',
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: () =>
+                        ref.read(notesProvider.notifier).loadNotes(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: state.notes.length,
+                      itemBuilder: (context, index) {
+                        return _NoteCard(note: state.notes[index]);
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            builder: (_) => const CreateNoteSheet(),
-          );
-        },
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'voice_note',
+            onPressed: () async {
+              await showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (_) => const VoiceNoteSheet(),
+              );
+              if (context.mounted) {
+                ref.read(notesProvider.notifier).loadNotes();
+              }
+            },
+            backgroundColor: AppColors.primary.withValues(alpha: 0.7),
+            child: const Icon(Icons.mic, size: 20),
+          ),
+          const SizedBox(height: 8),
+          FloatingActionButton(
+            heroTag: 'text_note',
+            onPressed: () async {
+              await showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (_) => const CreateNoteSheet(),
+              );
+              if (context.mounted) {
+                ref.read(notesProvider.notifier).loadNotes();
+              }
+            },
+            backgroundColor: AppColors.primary,
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
@@ -127,7 +159,7 @@ class _NoteCard extends ConsumerWidget {
         color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
         border: note.isPinned
-            ? Border.all(color: AppColors.prayerGold.withOpacity(0.5))
+            ? Border.all(color: AppColors.prayerGold.withValues(alpha: 0.5))
             : null,
       ),
       child: Column(
@@ -136,7 +168,11 @@ class _NoteCard extends ConsumerWidget {
           Row(
             children: [
               if (note.isPinned)
-                const Icon(Icons.push_pin, size: 16, color: AppColors.prayerGold),
+                const Icon(
+                  Icons.push_pin,
+                  size: 16,
+                  color: AppColors.prayerGold,
+                ),
               if (note.isPinned) const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -181,16 +217,16 @@ class _NoteCard extends ConsumerWidget {
             note.content,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 8),
           Text(
             note.updatedAt.substring(0, 10),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary.withOpacity(0.6),
-                ),
+              color: AppColors.textSecondary.withValues(alpha: 0.6),
+            ),
           ),
         ],
       ),

@@ -16,14 +16,14 @@ class NoteService {
         .toList();
   }
 
-  Future<NoteModel> createNote({
-    required String content,
-    String? title,
-  }) async {
-    final response = await _apiClient.dio.post('/notes', data: {
-      'content': content,
-      if (title != null && title.isNotEmpty) 'title': title,
-    });
+  Future<NoteModel> createNote({required String content, String? title}) async {
+    final response = await _apiClient.dio.post(
+      '/notes',
+      data: {
+        'content': content,
+        if (title != null && title.isNotEmpty) 'title': title,
+      },
+    );
     return NoteModel.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -33,11 +33,10 @@ class NoteService {
     String? content,
     bool? isPinned,
   }) async {
-    final response = await _apiClient.dio.patch('/notes/$noteId', data: {
-      if (title != null) 'title': title,
-      if (content != null) 'content': content,
-      if (isPinned != null) 'is_pinned': isPinned,
-    });
+    final response = await _apiClient.dio.patch(
+      '/notes/$noteId',
+      data: {'title': ?title, 'content': ?content, 'is_pinned': ?isPinned},
+    );
     return NoteModel.fromJson(response.data as Map<String, dynamic>);
   }
 
