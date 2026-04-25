@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Literal
 
 
@@ -80,7 +80,17 @@ class BulkTaskCreateRequest(BaseModel):
             raise ValueError("Cannot create more than 20 tasks at once")
         return v
 
-
 class BulkTaskCreateResponse(BaseModel):
     created_count: int
     tasks: List[dict]
+
+
+class VoiceNoteOrganizeResponse(BaseModel):
+    transcribed_text: str
+    language: Optional[str] = "auto"
+    provider: str
+    title: Optional[str] = None
+    content: str
+    note_type: Literal["text", "checklist", "reflection"] = "text"
+    tags: List[str] = Field(default_factory=list)
+    confidence: Literal["low", "medium", "high"] = "low"

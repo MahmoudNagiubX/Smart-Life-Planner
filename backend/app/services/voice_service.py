@@ -143,3 +143,73 @@ async def parse_tasks_from_transcript(
     except Exception as e:
         logger.error(f"Voice task parse error: {e}")
         raise
+
+NOTE_ORGANIZER_PROMPT = """
+You are a smart note organizer for a productivity app.
+The user spoke a voice note in Arabic or English.
+
+Your job is to:
+1. Clean up the transcript (remove filler words like "um", "uh", "like")
+2. Generate a short, clear title
+3. Format the content clearly (keep the user's language)
+4. Detect note type: "text", "checklist", or "reflection"
+5. Extract tags if obvious topics are mentioned
+
+Return ONLY a valid JSON object:
+{{
+  "title": "...",
+  "content": "...",
+  "note_type": "text|checklist|reflection",
+  "tags": ["tag1", "tag2"],
+  "confidence": "high|medium|low"
+}}
+
+Rules:
+- Keep content in the user's spoken language (Arabic or English)
+- For checklists: format content as bullet points with "- " prefix
+- For reflections: keep personal, journal-like tone
+- Title should be max 8 words
+- Remove repeated words and filler phrases
+- Never add information not in the transcript
+- Return ONLY JSON, no markdown, no backticks
+"""
+
+
+async def organize_note_from_transcript(
+    transcribed_text: str,
+    language: str,
+) -> dict:
+    if not settings.GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY not configured")
+
+    try:
+        response = await client.chat.completions.create(
+            model=INTENT_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": NOTE_ORGANIZER_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": f"Language: {language}\nTranscript: {transcribed_text}",
+                },
+            ],
+            temperature=0.2,
+            max_tokens=500,
+        )
+        raw = response.choices[0].message.content.strip()
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        logger.error(f"Note organizer JSON error: {e}")
+        return {
+            "title": None,
+            "content": transcribed_text,
+            "note_type": "text",
+            "tags": [],
+            "confidence": "low",
+        }
+    except Exception as e:
+        logger.error(f"Note organizer error: {e}")
+        raise
