@@ -13,6 +13,7 @@ import '../features/home/screens/profile_screen.dart';
 import '../features/habits/screens/habits_screen.dart';
 import '../features/notes/screens/notes_screen.dart';
 import '../features/ai/screens/daily_plan_screen.dart';
+import '../features/analytics/screens/analytics_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -79,6 +80,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/notes',
             builder: (context, state) => const NotesScreen(),
+          ),
+          GoRoute(
+            path: '/home/analytics',
+            builder: (context, state) => const AnalyticsScreen(),
           ),
         ],
       ),
