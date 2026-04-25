@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import '../../voice/screens/voice_capture_screen.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../ai/widgets/next_action_card.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -110,10 +110,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ?.copyWith(color: AppColors.textSecondary),
                         ),
                         const Spacer(),
-                        const Icon(
-                          Icons.auto_awesome,
-                          size: 16,
-                          color: AppColors.primary,
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const VoiceCaptureScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.mic,
+                              color: AppColors.primary,
+                              size: 18,
+                            ),
+                          ),
                         ),
                       ],
                     ),
