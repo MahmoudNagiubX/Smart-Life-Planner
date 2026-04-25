@@ -141,3 +141,35 @@ async def get_subtask_by_id(db: AsyncSession, subtask_id: uuid.UUID, task_id: uu
         select(TaskSubtask).where(TaskSubtask.id == subtask_id, TaskSubtask.task_id == task_id)
     )
     return result.scalar_one_or_none()
+
+async def bulk_create_tasks(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    tasks_data: list[dict],
+) -> list[Task]:
+    created = []
+    for task_data in tasks_data:
+        subtasks_data = task_data.pop("subtasks", [])
+        task = Task(user_id=user_id, **task_data)
+        db.add(task)
+        await db.flush()
+
+        for sub in subtasks_data:
+            subtask = TaskSubtask(
+                task_id=task.id,
+                title=sub.get("title", ""),
+                is_completed=sub.get("completed", False),
+            )
+            db.add(subtask)
+
+        created.append(task)
+
+    await db.commit()
+
+    # Reload all with subtasks
+    result = []
+    for t in created:
+        refreshed = await get_task_by_id(db, t.id, user_id)
+        if refreshed:
+            result.append(refreshed)
+    return result

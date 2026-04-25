@@ -43,6 +43,7 @@ Rules:
 - Today is {today}
 - Support Arabic and English naturally
 - Extract ALL tasks mentioned, even casual ones
+- If one date/time phrase applies to a list of tasks, apply it to every task in that list unless the user clearly gives a different date/time for a specific task
 - Split big tasks into subtasks when user gives obvious sub-items
 - "tomorrow" = {tomorrow}
 - "tonight" = today at 20:00

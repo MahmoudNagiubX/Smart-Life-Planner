@@ -3,6 +3,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_db
+from app.schemas.voice import BulkTaskCreateRequest, BulkTaskCreateResponse
+from app.repositories.task_repository import bulk_create_tasks
+from app.schemas.task import TaskResponse
 from app.api.v1.auth import get_current_user
 from app.schemas.task import (
     TaskCreate, TaskUpdate, TaskResponse,
@@ -187,3 +190,52 @@ async def remove_subtask(
     if not subtask:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subtask not found")
     await delete_subtask(db, subtask)
+    
+@router.post("/bulk-create", response_model=BulkTaskCreateResponse)
+async def bulk_create(
+    payload: BulkTaskCreateRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    tasks_data = []
+    for item in payload.tasks:
+        data = item.model_dump()
+        subtasks = data.pop("subtasks", [])
+
+        # Convert due_date string to datetime if provided
+        due_at = None
+        if data.get("due_at"):
+            try:
+                from datetime import datetime
+                raw = data["due_at"]
+                if "T" in raw:
+                    due_at = datetime.fromisoformat(raw)
+                else:
+                    due_at = datetime.fromisoformat(f"{raw}T00:00:00")
+            except Exception:
+                due_at = None
+
+        tasks_data.append({
+            "title": data["title"],
+            "description": data.get("description"),
+            "priority": data.get("priority", "medium"),
+            "due_at": due_at,
+            "estimated_minutes": data.get("estimated_duration_minutes"),
+            "category": data.get("category"),
+            "subtasks": subtasks,
+        })
+
+    created = await bulk_create_tasks(db, current_user.id, tasks_data)
+
+    return BulkTaskCreateResponse(
+        created_count=len(created),
+        tasks=[
+            {
+                "id": str(t.id),
+                "title": t.title,
+                "priority": t.priority,
+                "status": t.status,
+            }
+            for t in created
+        ],
+    )
