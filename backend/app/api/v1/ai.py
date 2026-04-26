@@ -18,6 +18,7 @@ from app.services.ai_service import (
     get_next_action,
     generate_daily_plan,
 )
+from app.services.ai_fallback import parse_task_fallback, parse_task_response
 from app.core.config import settings
 from app.core.logging import logger
 
@@ -38,15 +39,13 @@ async def parse_task(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    _check_ai_configured()
+    if not settings.GROQ_API_KEY:
+        return parse_task_fallback(payload.input_text, "ai_not_configured")
+
     try:
         today = date.today().isoformat()
         result = await parse_task_from_text(payload.input_text, today)
-        return ParseTaskResponse(
-            success=True,
-            data=result,
-            raw_input=payload.input_text,
-        )
+        return parse_task_response(payload.input_text, result)
     except Exception as e:
         logger.error(
             "AI endpoint failure",
@@ -57,10 +56,7 @@ async def parse_task(
                 "safe_context": "parse_task_endpoint",
             },
         )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="AI parsing failed. Please try again.",
-        )
+        return parse_task_fallback(payload.input_text, "ai_service_failure")
 
 
 @router.get("/next-action", response_model=NextActionResponse)

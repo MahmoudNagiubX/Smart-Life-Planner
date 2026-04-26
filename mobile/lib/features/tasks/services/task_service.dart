@@ -28,6 +28,7 @@ class TaskService {
     String? dueAt,
     String? reminderAt,
     String? category,
+    int? estimatedMinutes,
   }) async {
     final data = <String, dynamic>{'title': title, 'priority': priority};
     if (description != null) data['description'] = description;
@@ -35,6 +36,7 @@ class TaskService {
     if (dueAt != null) data['due_at'] = dueAt;
     if (reminderAt != null) data['reminder_at'] = reminderAt;
     if (category != null) data['category'] = category;
+    if (estimatedMinutes != null) data['estimated_minutes'] = estimatedMinutes;
 
     final response = await _apiClient.dio.post('/tasks', data: data);
     return TaskModel.fromJson(response.data as Map<String, dynamic>);

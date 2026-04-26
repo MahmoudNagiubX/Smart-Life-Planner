@@ -9,6 +9,8 @@ final aiServiceProvider = Provider<AiService>((ref) {
   return AiService(ref.watch(apiClientProvider));
 });
 
+enum AiParseStatus { idle, parsing, parsed, failed }
+
 class ParsedTask {
   final String title;
   final String priority;
@@ -17,6 +19,9 @@ class ParsedTask {
   final String? category;
   final String confidence;
   final String rawInput;
+  final bool requiresConfirmation;
+  final String? fallbackReason;
+  final AiParseStatus parseStatus;
 
   ParsedTask({
     required this.title,
@@ -26,10 +31,15 @@ class ParsedTask {
     this.category,
     required this.confidence,
     required this.rawInput,
+    this.requiresConfirmation = true,
+    this.fallbackReason,
+    this.parseStatus = AiParseStatus.parsed,
   });
 
   factory ParsedTask.fromJson(Map<String, dynamic> json, String rawInput) {
     final data = json['data'] as Map<String, dynamic>? ?? const {};
+    final success = json['success'] as bool? ?? true;
+    final parseStatus = json['parse_status'] as String?;
     return ParsedTask(
       title: data['title'] as String? ?? rawInput,
       priority: data['priority'] as String? ?? 'medium',
@@ -38,6 +48,23 @@ class ParsedTask {
       category: data['category'] as String?,
       confidence: data['confidence'] as String? ?? 'low',
       rawInput: rawInput,
+      requiresConfirmation: json['requires_confirmation'] as bool? ?? true,
+      fallbackReason: json['fallback_reason'] as String?,
+      parseStatus: !success || parseStatus == 'failed'
+          ? AiParseStatus.failed
+          : AiParseStatus.parsed,
+    );
+  }
+
+  factory ParsedTask.manualFallback(String rawInput, String reason) {
+    return ParsedTask(
+      title: rawInput,
+      priority: 'medium',
+      confidence: 'low',
+      rawInput: rawInput,
+      requiresConfirmation: true,
+      fallbackReason: reason,
+      parseStatus: AiParseStatus.failed,
     );
   }
 
@@ -57,6 +84,7 @@ class AiState {
   final bool isPlanLoading;
   final bool isNextActionLoading;
   final String? error;
+  final AiParseStatus parseStatus;
 
   const AiState({
     this.parsedTask,
@@ -66,6 +94,7 @@ class AiState {
     this.isPlanLoading = false,
     this.isNextActionLoading = false,
     this.error,
+    this.parseStatus = AiParseStatus.idle,
   });
 
   AiState copyWith({
@@ -76,6 +105,7 @@ class AiState {
     bool? isPlanLoading,
     bool? isNextActionLoading,
     String? error,
+    AiParseStatus? parseStatus,
     bool clearParsed = false,
     bool clearNextAction = false,
     bool clearDailyPlan = false,
@@ -88,6 +118,9 @@ class AiState {
       isPlanLoading: isPlanLoading ?? this.isPlanLoading,
       isNextActionLoading: isNextActionLoading ?? this.isNextActionLoading,
       error: error,
+      parseStatus: clearParsed
+          ? AiParseStatus.idle
+          : parseStatus ?? this.parseStatus,
     );
   }
 }
@@ -98,21 +131,41 @@ class AiNotifier extends StateNotifier<AiState> {
   AiNotifier(this._ref) : super(const AiState());
 
   Future<void> parseTask(String inputText) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      parseStatus: AiParseStatus.parsing,
+    );
     try {
       final service = _ref.read(aiServiceProvider);
       final result = await service.parseTask(inputText);
       final parsed = ParsedTask.fromJson(result, inputText);
-      state = state.copyWith(parsedTask: parsed, isLoading: false);
-    } on DioException catch (e) {
       state = state.copyWith(
+        parsedTask: parsed,
         isLoading: false,
-        error: friendlyApiError(e, 'AI parsing failed'),
+        parseStatus: parsed.parseStatus,
+      );
+    } on DioException catch (e) {
+      final fallback = ParsedTask.manualFallback(
+        inputText,
+        friendlyApiError(e, 'AI parsing failed'),
+      );
+      state = state.copyWith(
+        parsedTask: fallback,
+        isLoading: false,
+        error: fallback.fallbackReason,
+        parseStatus: AiParseStatus.failed,
       );
     } catch (_) {
+      final fallback = ParsedTask.manualFallback(
+        inputText,
+        'Failed to read AI task parsing result',
+      );
       state = state.copyWith(
+        parsedTask: fallback,
         isLoading: false,
-        error: 'Failed to read AI task parsing result',
+        error: fallback.fallbackReason,
+        parseStatus: AiParseStatus.failed,
       );
     }
   }

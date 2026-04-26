@@ -16,6 +16,9 @@ class AiConfirmationSheet extends ConsumerStatefulWidget {
 
 class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
   late TextEditingController _titleController;
+  late TextEditingController _dueAtController;
+  late TextEditingController _estimatedMinutesController;
+  late TextEditingController _categoryController;
   late String _priority;
   bool _isLoading = false;
 
@@ -23,12 +26,24 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.parsedTask.title);
+    _dueAtController = TextEditingController(
+      text: widget.parsedTask.dueAt ?? '',
+    );
+    _estimatedMinutesController = TextEditingController(
+      text: widget.parsedTask.estimatedMinutes?.toString() ?? '',
+    );
+    _categoryController = TextEditingController(
+      text: widget.parsedTask.category ?? '',
+    );
     _priority = widget.parsedTask.priority;
   }
 
   @override
   void dispose() {
     _titleController.dispose();
+    _dueAtController.dispose();
+    _estimatedMinutesController.dispose();
+    _categoryController.dispose();
     super.dispose();
   }
 
@@ -47,9 +62,25 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
     if (_titleController.text.trim().isEmpty) return;
     setState(() => _isLoading = true);
 
+    final dueAt = _dueAtController.text.trim().isEmpty
+        ? null
+        : DateTime.tryParse(_dueAtController.text.trim());
+    final estimatedMinutes = _estimatedMinutesController.text.trim().isEmpty
+        ? null
+        : int.tryParse(_estimatedMinutesController.text.trim());
+    final category = _categoryController.text.trim().isEmpty
+        ? null
+        : _categoryController.text.trim();
+
     final created = await ref
         .read(tasksProvider.notifier)
-        .createTask(title: _titleController.text.trim(), priority: _priority);
+        .createTask(
+          title: _titleController.text.trim(),
+          priority: _priority,
+          dueAt: dueAt,
+          category: category,
+          estimatedMinutes: estimatedMinutes,
+        );
 
     if (created) {
       ref.read(aiProvider.notifier).clearParsed();
@@ -90,7 +121,7 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textSecondary.withOpacity(0.4),
+                color: AppColors.textSecondary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -112,6 +143,25 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
           ),
           const SizedBox(height: 4),
 
+          if (task.requiresConfirmation || task.confidence == 'low') ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.35),
+                ),
+              ),
+              child: const Text(
+                'Review the details before saving.',
+                style: TextStyle(color: AppColors.warning),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // Confidence badge
           Row(
             children: [
@@ -119,7 +169,9 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: _confidenceColor(task.confidence).withOpacity(0.15),
+                  color: _confidenceColor(
+                    task.confidence,
+                  ).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -147,7 +199,7 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
 
           // Priority selector
           DropdownButtonFormField<String>(
-            value: _priority,
+            initialValue: _priority,
             decoration: const InputDecoration(labelText: 'Priority'),
             items: const [
               DropdownMenuItem(value: 'low', child: Text('🟢 Low')),
@@ -155,6 +207,35 @@ class _AiConfirmationSheetState extends ConsumerState<AiConfirmationSheet> {
               DropdownMenuItem(value: 'high', child: Text('🔴 High')),
             ],
             onChanged: (v) => setState(() => _priority = v!),
+          ),
+          const SizedBox(height: 12),
+
+          TextField(
+            controller: _dueAtController,
+            decoration: const InputDecoration(
+              labelText: 'Due date / time',
+              hintText: 'YYYY-MM-DDTHH:MM:SS',
+              prefixIcon: Icon(Icons.calendar_today),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          TextField(
+            controller: _estimatedMinutesController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Estimated minutes',
+              prefixIcon: Icon(Icons.timer_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          TextField(
+            controller: _categoryController,
+            decoration: const InputDecoration(
+              labelText: 'Category',
+              prefixIcon: Icon(Icons.label_outline),
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -233,7 +314,7 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(

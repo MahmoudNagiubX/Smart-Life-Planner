@@ -18,6 +18,8 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
   String _priority = 'medium';
   bool _useAi = true;
   bool _isLoading = false;
+  bool _showAiFallback = false;
+  String? _aiFallbackMessage;
 
   @override
   void dispose() {
@@ -40,6 +42,11 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
       setState(() => _isLoading = false);
 
       if (aiState.parsedTask != null) {
+        if (aiState.parseStatus == AiParseStatus.failed) {
+          _switchToManualFallback(aiState.parsedTask!);
+          return;
+        }
+
         // Show confirmation sheet
         final confirmed = await showModalBottomSheet<bool>(
           context: context,
@@ -53,20 +60,14 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
 
         if (confirmed == true && mounted) {
           Navigator.pop(context);
+        } else if (confirmed == false && mounted) {
+          _switchToManualFallback(aiState.parsedTask!);
         }
       } else {
         // AI failed — fallback to manual
-        final created = await ref
-            .read(tasksProvider.notifier)
-            .createTask(title: text, priority: _priority);
-        if (mounted) {
-          setState(() => _isLoading = false);
-          if (created) {
-            Navigator.pop(context);
-          } else {
-            _showTaskError();
-          }
-        }
+        _switchToManualFallback(
+          ParsedTask.manualFallback(text, 'Could not parse that.'),
+        );
       }
     } else {
       // Manual flow
@@ -89,6 +90,19 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 
+  void _switchToManualFallback(ParsedTask parsedTask) {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      _useAi = false;
+      _showAiFallback = true;
+      _aiFallbackMessage =
+          parsedTask.fallbackReason ?? "Couldn't parse that, enter manually.";
+      _controller.text = parsedTask.title;
+      _priority = parsedTask.priority;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -108,7 +122,7 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textSecondary.withOpacity(0.4),
+                color: AppColors.textSecondary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -146,6 +160,25 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
           const SizedBox(height: 16),
 
           // Input
+          if (_showAiFallback) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Text(
+                _aiFallbackMessage ?? "Couldn't parse that, enter manually.",
+                style: const TextStyle(color: AppColors.warning),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           TextField(
             controller: _controller,
             autofocus: true,
@@ -164,7 +197,7 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
           // Priority (manual task only)
           if (_type == 'task' && !_useAi) ...[
             DropdownButtonFormField<String>(
-              value: _priority,
+              initialValue: _priority,
               decoration: const InputDecoration(labelText: 'Priority'),
               items: const [
                 DropdownMenuItem(value: 'low', child: Text('🟢 Low')),
@@ -186,7 +219,7 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
                 const Spacer(),
                 Switch(
                   value: _useAi,
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   onChanged: (v) => setState(() => _useAi = v),
                 ),
               ],

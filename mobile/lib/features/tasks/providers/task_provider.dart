@@ -55,7 +55,10 @@ class TasksNotifier extends StateNotifier<TasksState> {
     String priority = 'medium',
     String? description,
     String? projectId,
+    DateTime? dueAt,
     DateTime? reminderAt,
+    String? category,
+    int? estimatedMinutes,
   }) async {
     try {
       final service = _ref.read(taskServiceProvider);
@@ -64,7 +67,10 @@ class TasksNotifier extends StateNotifier<TasksState> {
         description: description,
         priority: priority,
         projectId: projectId,
+        dueAt: dueAt?.toUtc().toIso8601String(),
         reminderAt: reminderAt?.toUtc().toIso8601String(),
+        category: category,
+        estimatedMinutes: estimatedMinutes,
       );
 
       await _syncTaskReminder(task);

@@ -15,6 +15,9 @@ class ParseTaskResponse(BaseModel):
     success: bool
     data: dict
     raw_input: str
+    requires_confirmation: bool = True
+    parse_status: str = "parsed"
+    fallback_reason: Optional[str] = None
 
 class NextActionResponse(BaseModel):
     task_id: Optional[str]
