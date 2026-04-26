@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../hasae/widgets/hasae_next_action_card.dart';
 import '../../hasae/widgets/overload_warning_card.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../dashboard/models/dashboard_model.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
 import '../../dashboard/widgets/quick_capture_sheet.dart';
 import '../../tasks/providers/task_provider.dart';
@@ -179,6 +180,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     total: data?.prayerProgress.total ?? 5,
                     onTap: () => context.go('/home/prayer'),
                   ),
+                  if (data != null) ...[
+                    const SizedBox(height: 12),
+                    _PersonalizedSetupCard(data: data),
+                    const SizedBox(height: 12),
+                    _NextPrayerCard(
+                      nextPrayer: data.personalization.nextPrayer,
+                      onTap: () => context.go('/home/prayer'),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _HabitSnapshotCard(
+                            activeCount:
+                                data.personalization.habitSnapshot.activeCount,
+                            completedToday: data
+                                .personalization
+                                .habitSnapshot
+                                .completedToday,
+                            highlight:
+                                data.personalization.habitSnapshot.highlight,
+                            onTap: () => context.go('/home/habits'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _FocusShortcutCard(
+                            label: data.personalization.focusShortcut.label,
+                            minutes: data
+                                .personalization
+                                .focusShortcut
+                                .suggestedMinutes,
+                            onTap: () => context.go('/home/focus'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _AiPlanPreviewCard(
+                      title: data.personalization.aiPlanCard.title,
+                      preview: data.personalization.aiPlanCard.preview,
+                      onTap: () => context.go('/home/daily-plan'),
+                    ),
+                    const SizedBox(height: 12),
+                    _JournalPromptCard(
+                      prompt: data.personalization.journalPrompt,
+                      onTap: () => context.go('/home/notes'),
+                    ),
+                  ],
                   const SizedBox(height: 28),
 
                   Row(
@@ -250,6 +300,299 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PersonalizedSetupCard extends StatelessWidget {
+  final DashboardData data;
+
+  const _PersonalizedSetupCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final personalization = data.personalization;
+    final goalLabels = personalization.goalLabels;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.tune_outlined, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  personalization.taskEnvironment,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          if (goalLabels.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: goalLabels
+                  .map(
+                    (goal) => Chip(
+                      label: Text(goal),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _NextPrayerCard extends StatelessWidget {
+  final DashboardNextPrayer nextPrayer;
+  final VoidCallback onTap;
+
+  const _NextPrayerCard({required this.nextPrayer, required this.onTap});
+
+  String _timeLabel() {
+    final scheduledAt = nextPrayer.scheduledAt;
+    if (scheduledAt == null || scheduledAt.length < 16) {
+      return 'Open Prayer to sync today\'s times';
+    }
+
+    final parsed = DateTime.tryParse(scheduledAt);
+    if (parsed == null) return 'Open Prayer to sync today\'s times';
+    final local = parsed.toLocal();
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = nextPrayer.enabled
+        ? nextPrayer.name ?? 'Next prayer'
+        : 'Prayer rhythm';
+    final subtitle = nextPrayer.enabled
+        ? _timeLabel()
+        : 'Add spiritual growth in onboarding settings to prioritize prayer anchors.';
+
+    return _WideActionCard(
+      icon: Icons.mosque_outlined,
+      title: title,
+      subtitle: subtitle,
+      color: AppColors.prayerGold,
+      onTap: onTap,
+    );
+  }
+}
+
+class _HabitSnapshotCard extends StatelessWidget {
+  final int activeCount;
+  final int completedToday;
+  final String highlight;
+  final VoidCallback onTap;
+
+  const _HabitSnapshotCard({
+    required this.activeCount,
+    required this.completedToday,
+    required this.highlight,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _MiniActionCard(
+      icon: Icons.track_changes_outlined,
+      title: '$completedToday / $activeCount',
+      subtitle: highlight,
+      color: AppColors.success,
+      onTap: onTap,
+    );
+  }
+}
+
+class _FocusShortcutCard extends StatelessWidget {
+  final String label;
+  final int minutes;
+  final VoidCallback onTap;
+
+  const _FocusShortcutCard({
+    required this.label,
+    required this.minutes,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _MiniActionCard(
+      icon: Icons.timer_outlined,
+      title: '$minutes min',
+      subtitle: label,
+      color: AppColors.primary,
+      onTap: onTap,
+    );
+  }
+}
+
+class _AiPlanPreviewCard extends StatelessWidget {
+  final String title;
+  final String preview;
+  final VoidCallback onTap;
+
+  const _AiPlanPreviewCard({
+    required this.title,
+    required this.preview,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _WideActionCard(
+      icon: Icons.auto_awesome,
+      title: title,
+      subtitle: preview,
+      color: AppColors.warning,
+      onTap: onTap,
+    );
+  }
+}
+
+class _JournalPromptCard extends StatelessWidget {
+  final String prompt;
+  final VoidCallback onTap;
+
+  const _JournalPromptCard({required this.prompt, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return _WideActionCard(
+      icon: Icons.edit_note_outlined,
+      title: 'Journal prompt',
+      subtitle: prompt,
+      color: AppColors.prayerGold,
+      onTap: onTap,
+    );
+  }
+}
+
+class _MiniActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _MiniActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 112,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.28)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color),
+            const Spacer(),
+            Text(
+              title,
+              style: TextStyle(color: color, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WideActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _WideActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.26)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: color),
+          ],
         ),
       ),
     );
