@@ -3,12 +3,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1.router import router
-from app.core.logging import setup_logging, logger
 from app.core.exceptions import (
     http_exception_handler,
     validation_exception_handler,
     unhandled_exception_handler,
 )
+from app.core.logging import setup_logging, logger
+from app.core.middleware import RequestIdMiddleware
 
 setup_logging()
 
@@ -18,6 +19,7 @@ app = FastAPI(
     description="AI-native personal operating system — backend core",
 )
 
+app.add_middleware(RequestIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",

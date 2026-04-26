@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../models/note_model.dart';
 import '../services/note_service.dart';
@@ -13,11 +14,7 @@ class NotesState {
   final bool isLoading;
   final String? error;
 
-  const NotesState({
-    this.notes = const [],
-    this.isLoading = false,
-    this.error,
-  });
+  const NotesState({this.notes = const [], this.isLoading = false, this.error});
 
   NotesState copyWith({
     List<NoteModel>? notes,
@@ -46,7 +43,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.response?.data['detail'] as String? ?? 'Failed to load notes',
+        error: friendlyApiError(e, 'Failed to load notes'),
       );
     }
   }
@@ -58,7 +55,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
       await loadNotes();
     } on DioException catch (e) {
       state = state.copyWith(
-        error: e.response?.data['detail'] as String? ?? 'Failed to create note',
+        error: friendlyApiError(e, 'Failed to create note'),
       );
     }
   }

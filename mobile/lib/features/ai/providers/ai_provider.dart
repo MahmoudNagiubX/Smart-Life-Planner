@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../models/daily_plan_model.dart';
 import '../services/ai_service.dart';
@@ -106,7 +107,7 @@ class AiNotifier extends StateNotifier<AiState> {
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.response?.data['detail'] as String? ?? 'AI parsing failed',
+        error: friendlyApiError(e, 'AI parsing failed'),
       );
     } catch (_) {
       state = state.copyWith(
@@ -127,9 +128,7 @@ class AiNotifier extends StateNotifier<AiState> {
       state = state.copyWith(
         isNextActionLoading: false,
         clearNextAction: true,
-        error:
-            e.response?.data['detail'] as String? ??
-            'Failed to get next action',
+        error: friendlyApiError(e, 'Failed to get next action'),
       );
     } catch (_) {
       state = state.copyWith(
@@ -151,8 +150,7 @@ class AiNotifier extends StateNotifier<AiState> {
       state = state.copyWith(
         isPlanLoading: false,
         clearDailyPlan: true,
-        error:
-            e.response?.data['detail'] as String? ?? 'Failed to generate plan',
+        error: friendlyApiError(e, 'Failed to generate plan'),
       );
     } catch (_) {
       state = state.copyWith(

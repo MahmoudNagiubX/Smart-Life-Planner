@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../models/hasae_model.dart';
 import '../services/hasae_service.dart';
@@ -40,10 +41,8 @@ class HasaeState {
       nextAction: nextAction ?? this.nextAction,
       overload: overload ?? this.overload,
       rankedTasks: rankedTasks ?? this.rankedTasks,
-      isNextActionLoading:
-          isNextActionLoading ?? this.isNextActionLoading,
-      isOverloadLoading:
-          isOverloadLoading ?? this.isOverloadLoading,
+      isNextActionLoading: isNextActionLoading ?? this.isNextActionLoading,
+      isOverloadLoading: isOverloadLoading ?? this.isOverloadLoading,
       isRankLoading: isRankLoading ?? this.isRankLoading,
       error: error,
     );
@@ -60,13 +59,11 @@ class HasaeNotifier extends StateNotifier<HasaeState> {
     try {
       final service = _ref.read(hasaeServiceProvider);
       final result = await service.getNextAction();
-      state = state.copyWith(
-          nextAction: result, isNextActionLoading: false);
+      state = state.copyWith(nextAction: result, isNextActionLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(
         isNextActionLoading: false,
-        error: e.response?.data['detail'] as String? ??
-            'Failed to get next action',
+        error: friendlyApiError(e, 'Failed to get next action'),
       );
     }
   }
@@ -76,8 +73,7 @@ class HasaeNotifier extends StateNotifier<HasaeState> {
     try {
       final service = _ref.read(hasaeServiceProvider);
       final result = await service.checkOverload();
-      state =
-          state.copyWith(overload: result, isOverloadLoading: false);
+      state = state.copyWith(overload: result, isOverloadLoading: false);
     } on DioException catch (_) {
       state = state.copyWith(isOverloadLoading: false);
     }
@@ -88,22 +84,17 @@ class HasaeNotifier extends StateNotifier<HasaeState> {
     try {
       final service = _ref.read(hasaeServiceProvider);
       final tasks = await service.getRankedTasks();
-      state =
-          state.copyWith(rankedTasks: tasks, isRankLoading: false);
+      state = state.copyWith(rankedTasks: tasks, isRankLoading: false);
     } on DioException catch (_) {
       state = state.copyWith(isRankLoading: false);
     }
   }
 
   Future<void> loadAll() async {
-    await Future.wait([
-      loadNextAction(),
-      loadOverload(),
-    ]);
+    await Future.wait([loadNextAction(), loadOverload()]);
   }
 }
 
-final hasaeProvider =
-    StateNotifierProvider<HasaeNotifier, HasaeState>((ref) {
+final hasaeProvider = StateNotifierProvider<HasaeNotifier, HasaeState>((ref) {
   return HasaeNotifier(ref);
 });

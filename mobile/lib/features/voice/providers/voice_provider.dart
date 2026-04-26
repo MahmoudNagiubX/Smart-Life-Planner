@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../models/voice_result_model.dart';
 import '../services/audio_recorder_service.dart';
@@ -9,14 +10,7 @@ final voiceApiServiceProvider = Provider<VoiceApiService>((ref) {
   return VoiceApiService(ref.watch(apiClientProvider));
 });
 
-enum VoiceScreenState {
-  idle,
-  recording,
-  processing,
-  preview,
-  success,
-  failed,
-}
+enum VoiceScreenState { idle, recording, processing, preview, success, failed }
 
 class VoiceState {
   final VoiceScreenState screenState;
@@ -98,11 +92,9 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
         editableTasks: List.from(result.tasks),
       );
     } on DioException catch (e) {
-      final msg = e.response?.data['detail'] as String? ??
-          'Voice processing failed. Try again.';
       state = state.copyWith(
         screenState: VoiceScreenState.failed,
-        error: msg,
+        error: friendlyApiError(e, 'Voice processing failed. Try again.'),
       );
     } catch (e) {
       state = state.copyWith(
@@ -143,8 +135,9 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   }
 
   Future<int> confirmTasks() async {
-    final selectedTasks =
-        state.editableTasks.where((t) => t.isSelected).toList();
+    final selectedTasks = state.editableTasks
+        .where((t) => t.isSelected)
+        .toList();
     if (selectedTasks.isEmpty) return 0;
 
     final service = _ref.read(voiceApiServiceProvider);

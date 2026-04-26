@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
 import '../models/task_model.dart';
@@ -44,7 +45,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.response?.data['detail'] as String? ?? 'Failed to load tasks',
+        error: friendlyApiError(e, 'Failed to load tasks'),
       );
     }
   }
@@ -72,7 +73,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       return true;
     } on DioException catch (e) {
       state = state.copyWith(
-        error: e.response?.data['detail'] as String? ?? 'Failed to create task',
+        error: friendlyApiError(e, 'Failed to create task'),
       );
       return false;
     } catch (_) {

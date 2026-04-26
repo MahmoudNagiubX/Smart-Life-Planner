@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../models/analytics_model.dart';
 import '../services/analytics_service.dart';
@@ -64,8 +65,7 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.response?.data['detail'] as String? ??
-            'Failed to load analytics',
+        error: friendlyApiError(e, 'Failed to load analytics'),
       );
     }
   }
@@ -73,5 +73,5 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
 
 final analyticsProvider =
     StateNotifierProvider<AnalyticsNotifier, AnalyticsState>((ref) {
-  return AnalyticsNotifier(ref);
-});
+      return AnalyticsNotifier(ref);
+    });

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../models/dashboard_model.dart';
 import '../services/dashboard_service.dart';
@@ -42,8 +43,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error:
-            e.response?.data['detail'] as String? ?? 'Failed to load dashboard',
+        error: friendlyApiError(e, 'Failed to load dashboard'),
       );
     } catch (_) {
       state = state.copyWith(

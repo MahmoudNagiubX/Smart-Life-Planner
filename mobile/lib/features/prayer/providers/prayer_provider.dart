@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
 import '../models/prayer_model.dart';
@@ -14,17 +15,9 @@ class PrayerState {
   final bool isLoading;
   final String? error;
 
-  const PrayerState({
-    this.data,
-    this.isLoading = false,
-    this.error,
-  });
+  const PrayerState({this.data, this.isLoading = false, this.error});
 
-  PrayerState copyWith({
-    DailyPrayers? data,
-    bool? isLoading,
-    String? error,
-  }) {
+  PrayerState copyWith({DailyPrayers? data, bool? isLoading, String? error}) {
     return PrayerState(
       data: data ?? this.data,
       isLoading: isLoading ?? this.isLoading,
@@ -50,7 +43,7 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.response?.data['detail'] as String? ?? 'Failed to load prayers',
+        error: friendlyApiError(e, 'Failed to load prayers'),
       );
     }
   }
@@ -90,12 +83,14 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
       await loadTodayPrayers();
     } on DioException catch (e) {
       state = state.copyWith(
-        error: e.response?.data['detail'] as String? ?? 'Failed to update prayer',
+        error: friendlyApiError(e, 'Failed to update prayer'),
       );
     }
   }
 }
 
-final prayerProvider = StateNotifierProvider<PrayerNotifier, PrayerState>((ref) {
+final prayerProvider = StateNotifierProvider<PrayerNotifier, PrayerState>((
+  ref,
+) {
   return PrayerNotifier(ref);
 });

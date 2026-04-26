@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../models/habit_model.dart';
 import '../services/habit_service.dart';
@@ -50,7 +51,7 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.response?.data['detail'] as String? ?? 'Failed to load habits',
+        error: friendlyApiError(e, 'Failed to load habits'),
       );
     }
   }
@@ -72,7 +73,7 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
       await loadHabits();
     } on DioException catch (e) {
       state = state.copyWith(
-        error: e.response?.data['detail'] as String? ?? 'Failed to create habit',
+        error: friendlyApiError(e, 'Failed to create habit'),
       );
     }
   }
@@ -87,7 +88,7 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
       await loadHabits();
     } on DioException catch (e) {
       state = state.copyWith(
-        error: e.response?.data['detail'] as String? ?? 'Failed to complete habit',
+        error: friendlyApiError(e, 'Failed to complete habit'),
       );
     }
   }
@@ -103,6 +104,8 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
   }
 }
 
-final habitsProvider = StateNotifierProvider<HabitsNotifier, HabitsState>((ref) {
+final habitsProvider = StateNotifierProvider<HabitsNotifier, HabitsState>((
+  ref,
+) {
   return HabitsNotifier(ref);
 });

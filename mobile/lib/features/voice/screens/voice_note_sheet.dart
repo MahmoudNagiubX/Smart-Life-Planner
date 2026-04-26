@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/theme/app_colors.dart';
 import '../models/voice_note_model.dart';
 import '../services/audio_recorder_service.dart';
@@ -148,9 +149,7 @@ class _VoiceNoteSheetState extends ConsumerState<VoiceNoteSheet>
     } on DioException catch (e) {
       setState(() {
         _state = _VoiceNoteState.idle;
-        _error =
-            e.response?.data['detail'] as String? ??
-            'Voice processing failed. Try again.';
+        _error = friendlyApiError(e, 'Voice processing failed. Try again.');
       });
     } catch (_) {
       setState(() {

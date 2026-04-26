@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
 import '../models/focus_model.dart';
@@ -67,14 +68,18 @@ class FocusNotifier extends StateNotifier<FocusState> {
       final startedAt = DateTime.parse(session.startedAt).toLocal();
       final endsAt = startedAt.add(Duration(minutes: session.plannedMinutes));
       final elapsed = DateTime.now().difference(startedAt).inSeconds;
-      final remaining =
-          (session.plannedMinutes * 60 - elapsed).clamp(0, session.plannedMinutes * 60);
+      final remaining = (session.plannedMinutes * 60 - elapsed).clamp(
+        0,
+        session.plannedMinutes * 60,
+      );
       state = state.copyWith(
         activeSession: session,
         remainingSeconds: remaining,
       );
       if (remaining > 0) {
-        await _ref.read(notificationSchedulerProvider).scheduleFocusCompleteAt(
+        await _ref
+            .read(notificationSchedulerProvider)
+            .scheduleFocusCompleteAt(
               sessionId: session.id,
               plannedMinutes: session.plannedMinutes,
               fireAt: endsAt,
@@ -106,7 +111,9 @@ class FocusNotifier extends StateNotifier<FocusState> {
       );
 
       // Schedule completion notification
-      await _ref.read(notificationSchedulerProvider).scheduleFocusComplete(
+      await _ref
+          .read(notificationSchedulerProvider)
+          .scheduleFocusComplete(
             sessionId: session.id,
             plannedMinutes: plannedMinutes,
           );
@@ -120,7 +127,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.response?.data['detail'] as String? ?? 'Failed to start session',
+        error: friendlyApiError(e, 'Failed to start session'),
       );
     }
   }
@@ -170,9 +177,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
         timer.cancel();
         completeSession(cancelNotification: false);
       } else {
-        state = state.copyWith(
-          remainingSeconds: state.remainingSeconds - 1,
-        );
+        state = state.copyWith(remainingSeconds: state.remainingSeconds - 1);
       }
     });
   }
