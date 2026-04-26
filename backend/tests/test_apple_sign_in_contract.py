@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.user import AppleSignInRequest
+from app.schemas.user import AppleSignInRequest, GoogleSignInRequest
 
 
 def test_apple_sign_in_request_trims_safe_optional_fields():
@@ -27,3 +27,15 @@ def test_apple_sign_in_request_trims_safe_optional_fields():
 def test_apple_sign_in_request_rejects_invalid_payload(payload):
     with pytest.raises(ValidationError):
         AppleSignInRequest(**payload)
+
+
+def test_google_sign_in_request_trims_id_token():
+    payload = GoogleSignInRequest(id_token="  google-id-token  ")
+
+    assert payload.id_token == "google-id-token"
+
+
+@pytest.mark.parametrize("id_token", ["", "   "])
+def test_google_sign_in_request_rejects_blank_token(id_token):
+    with pytest.raises(ValidationError):
+        GoogleSignInRequest(id_token=id_token)

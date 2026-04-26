@@ -106,6 +106,13 @@ class ChangePasswordRequest(BaseModel):
 class GoogleSignInRequest(BaseModel):
     id_token: str
 
+    @field_validator("id_token")
+    @classmethod
+    def id_token_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("id_token cannot be empty")
+        return v.strip()
+
 
 class AppleSignInRequest(BaseModel):
     """

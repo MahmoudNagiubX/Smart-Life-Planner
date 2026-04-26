@@ -1,6 +1,6 @@
 import uuid
-import json
 import random
+import secrets
 import string
 from datetime import datetime, timedelta, timezone
 
@@ -57,12 +57,17 @@ bearer_scheme = HTTPBearer()
 # ── Apple JWKS constants ────────────────────────────────────────────────────
 APPLE_JWKS_URL = "https://appleid.apple.com/auth/keys"
 APPLE_ISSUER = "https://appleid.apple.com"
+MAX_PASSWORD_RESET_ATTEMPTS = 5
 
 # ── helpers ────────────────────────────────────────────────────────────────
 
 
 def _generate_code(length: int = 6) -> str:
     return "".join(random.choices(string.digits, k=length))
+
+
+def _generate_reset_token() -> str:
+    return secrets.token_urlsafe(48)[:64]
 
 
 async def _create_verification_code(
@@ -226,16 +231,26 @@ async def forgot_password(
     # Always return 200 — never reveal if email exists
     if not user or not user.is_active:
         return {"message": "If that email exists, a reset code was sent"}
+    if user.auth_provider != AuthProvider.email or not user.hashed_password:
+        logger.info(
+            "Password reset requested for non-password account user_id=%s provider=%s",
+            user.id,
+            user.auth_provider.value,
+        )
+        return {"message": "If that email exists, a reset code was sent"}
 
     # Rate-limit: 1 code per 60 seconds
     result = await db.execute(
         select(PasswordReset).where(
             PasswordReset.user_id == user.id,
-            PasswordReset.created_at > datetime.now(timezone.utc) - timedelta(seconds=60),
+            PasswordReset.created_at
+            > datetime.now(timezone.utc) - timedelta(seconds=60),
         ).limit(1)
     )
     if result.scalar_one_or_none():
-        raise HTTPException(status_code=429, detail="Please wait before requesting another code")
+        raise HTTPException(
+            status_code=429, detail="Please wait before requesting another code"
+        )
 
     code = _generate_code()
     expires = datetime.now(timezone.utc) + timedelta(minutes=15)
@@ -252,26 +267,37 @@ async def verify_reset_code(
     payload: VerifyResetCodeRequest, db: AsyncSession = Depends(get_db)
 ):
     user = await get_user_by_email(db, payload.email)
-    if not user:
+    if (
+        not user
+        or user.auth_provider != AuthProvider.email
+        or not user.hashed_password
+    ):
         raise HTTPException(status_code=400, detail="Invalid code")
 
     result = await db.execute(
         select(PasswordReset).where(
             PasswordReset.user_id == user.id,
-            PasswordReset.code == payload.code,
             PasswordReset.used_at.is_(None),
             PasswordReset.reset_token.is_(None),
             PasswordReset.expires_at > datetime.now(timezone.utc),
         ).order_by(PasswordReset.created_at.desc()).limit(1)
     )
     reset = result.scalar_one_or_none()
+    if reset and reset.failed_attempts >= MAX_PASSWORD_RESET_ATTEMPTS:
+        reset.used_at = datetime.now(timezone.utc)
+        await db.commit()
+        reset = None
     if not reset:
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+    if reset.code != payload.code:
+        reset.failed_attempts += 1
+        if reset.failed_attempts >= MAX_PASSWORD_RESET_ATTEMPTS:
+            reset.used_at = datetime.now(timezone.utc)
+        await db.commit()
         raise HTTPException(status_code=400, detail="Invalid or expired code")
 
     # Issue a one-time reset token
-    reset_token = "".join(
-        random.choices(string.ascii_letters + string.digits, k=64)
-    )
+    reset_token = _generate_reset_token()
     reset.reset_token = reset_token
     await db.commit()
 
@@ -294,7 +320,12 @@ async def set_new_password(
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
 
     user = await get_user_by_id(db, reset.user_id)
-    if not user or not user.is_active:
+    if (
+        not user
+        or not user.is_active
+        or user.auth_provider != AuthProvider.email
+        or not user.hashed_password
+    ):
         raise HTTPException(status_code=400, detail="Invalid request")
 
     # Set new password + mark token used
@@ -338,7 +369,10 @@ async def google_sign_in(
             )
         raise HTTPException(
             status_code=400,
-            detail="Invalid Google token. Check that Flutter uses the Web OAuth client ID and backend GOOGLE_CLIENT_ID matches it.",
+            detail=(
+                "Invalid Google token. Check that Flutter uses the Web OAuth "
+                "client ID and backend GOOGLE_CLIENT_ID matches it."
+            ),
         )
 
     google_user_id = id_info["sub"]
@@ -354,10 +388,25 @@ async def google_sign_in(
     if not user:
         # Check if email already registered with a different provider
         existing = await get_user_by_email(db, email)
-        if existing and existing.auth_provider != AuthProvider.google:
+        if existing:
+            if existing.auth_provider == AuthProvider.google:
+                logger.warning(
+                    "Google sign-in provider mismatch for existing user_id=%s",
+                    existing.id,
+                )
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "This email is already linked to another Google sign-in. "
+                        "Please contact support."
+                    ),
+                )
             raise HTTPException(
                 status_code=409,
-                detail="An account with this email already exists. Please sign in with email/password.",
+                detail=(
+                    "An account with this email already exists. "
+                    "Please sign in with email/password."
+                ),
             )
         # Create new Google user
         user = await create_user(
