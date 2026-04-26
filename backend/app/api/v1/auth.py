@@ -1,19 +1,28 @@
 import uuid
+import json
 import random
 import string
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt as jose_jwt, JWTError
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.core.config import settings as app_settings
 from app.core.dependencies import get_db
+from app.core.logging import logger
 from app.core.security import (
     hash_password,
     verify_password,
     create_access_token,
     decode_access_token,
 )
+from app.models.user import AuthProvider
 from app.models.verification import EmailVerification, PasswordReset
 from app.repositories.user_repository import (
     get_user_by_email,
@@ -33,23 +42,22 @@ from app.schemas.user import (
     SetNewPasswordRequest,
     ChangePasswordRequest,
     GoogleSignInRequest,
+    AppleSignInRequest,
 )
 from app.services.email_service import (
     send_verification_email,
     send_password_reset_email,
 )
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
-from app.core.config import settings as app_settings
-from app.core.logging import logger
-from jose import jwt as jose_jwt
-from google.oauth2 import id_token as google_id_token
-from google.auth.transport import requests as google_requests
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 bearer_scheme = HTTPBearer()
 
+# ── Apple JWKS constants ────────────────────────────────────────────────────
+APPLE_JWKS_URL = "https://appleid.apple.com/auth/keys"
+APPLE_ISSUER = "https://appleid.apple.com"
+
 # ── helpers ────────────────────────────────────────────────────────────────
+
 
 def _generate_code(length: int = 6) -> str:
     return "".join(random.choices(string.digits, k=length))
@@ -69,6 +77,7 @@ async def _create_verification_code(
 
 
 # ── dependency ─────────────────────────────────────────────────────────────
+
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
@@ -91,6 +100,7 @@ async def get_current_user(
 
 
 # ── endpoints ──────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
@@ -327,8 +337,6 @@ async def google_sign_in(
     if not email:
         raise HTTPException(status_code=400, detail="Google account has no email")
 
-    # Check if user exists by Google provider ID
-    from app.models.user import AuthProvider
     user = await get_user_by_provider(db, AuthProvider.google, google_user_id)
 
     if not user:
@@ -384,3 +392,173 @@ async def change_password(
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user=Depends(get_current_user)):
     return current_user
+
+
+# ── Apple Sign-In ──────────────────────────────────────────────────────────
+# Apple identity tokens are JWTs signed with Apple's private key.
+# We verify them using Apple's published JWKS (public keys) — no additional
+# library beyond python-jose (already in requirements.txt) is required.
+#
+# References:
+#   https://developer.apple.com/documentation/sign_in_with_apple/sign_in_with_apple_rest_api/authenticating_users_with_sign_in_with_apple
+#   https://appleid.apple.com/auth/keys
+
+
+async def _fetch_apple_public_keys() -> list[dict]:
+    """Fetch Apple's public JWKS. Returns list of JWK dicts."""
+    async with httpx.AsyncClient(timeout=10) as client:
+        response = await client.get(APPLE_JWKS_URL)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("keys", [])
+
+
+def _verify_apple_identity_token(
+    identity_token: str,
+    apple_keys: list[dict],
+    audience: str,
+) -> dict:
+    """
+    Verify an Apple identity token (JWT) against Apple's public keys.
+
+    Returns the decoded claims dict if valid.
+    Raises HTTPException 400 if invalid.
+
+    Apple uses RS256 algorithm. The token header's `kid` identifies
+    which public key to use from the JWKS response.
+    """
+    # 1. Read the unverified header to find the key ID
+    try:
+        unverified_header = jose_jwt.get_unverified_header(identity_token)
+    except JWTError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid Apple token header: {exc}")
+
+    kid = unverified_header.get("kid")
+    alg = unverified_header.get("alg", "RS256")
+
+    # 2. Find the matching public key
+    matching_key = next(
+        (k for k in apple_keys if k.get("kid") == kid), None
+    )
+    if not matching_key:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Apple public key not found for kid={kid}. Try again shortly.",
+        )
+
+    # 3. Decode + verify signature, issuer, audience, and expiry
+    try:
+        claims = jose_jwt.decode(
+            identity_token,
+            matching_key,
+            algorithms=[alg],
+            audience=audience,
+            issuer=APPLE_ISSUER,
+        )
+    except JWTError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Apple token verification failed: {exc}",
+        )
+
+    return claims
+
+
+@router.post("/apple", response_model=TokenResponse)
+async def apple_sign_in(
+    payload: AppleSignInRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Apple Sign-In endpoint.
+
+    Flow:
+    1. Verify Apple identity token using Apple JWKS.
+    2. Extract sub (Apple user ID), email, and name.
+    3. Create user if first-time login; re-use existing account if returning.
+    4. Handle private-relay email edge cases safely.
+    5. Return app JWT.
+
+    iOS configuration notes:
+    - Set APPLE_APP_BUNDLE_ID in backend .env to your app's Bundle ID
+      (e.g. APPLE_APP_BUNDLE_ID=com.yourcompany.smartlifeplanner).
+    - On Android: Apple Sign-In is NOT officially supported. The Flutter
+      client must hide the button on Android (handled by platform check).
+    - Apple ONLY sends full_name and email on the VERY FIRST sign-in.
+      The Flutter client MUST pass them in the request body on that
+      first call. On subsequent sign-ins they will be null.
+    """
+    if not app_settings.APPLE_APP_BUNDLE_ID:
+        raise HTTPException(
+            status_code=500,
+            detail="Apple sign-in not configured. Set APPLE_APP_BUNDLE_ID in backend .env.",
+        )
+
+    # Fetch Apple public keys
+    try:
+        apple_keys = await _fetch_apple_public_keys()
+    except Exception as exc:
+        logger.warning("Failed to fetch Apple JWKS: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Could not reach Apple servers to verify token. Please try again.",
+        )
+
+    claims = _verify_apple_identity_token(
+        payload.identity_token,
+        apple_keys,
+        app_settings.APPLE_APP_BUNDLE_ID,
+    )
+
+    apple_user_id = claims.get("sub")  # Apple's stable, unique user identifier
+    if not apple_user_id:
+        raise HTTPException(status_code=400, detail="Apple token missing 'sub' claim")
+
+    # Email: token claim takes priority; payload is fallback for first sign-in
+    # Apple may return a private relay address like xyz@privaterelay.appleid.com
+    email_from_token = claims.get("email")
+    email = email_from_token or payload.email
+
+    # Name: only available in payload on very first sign-in
+    full_name = payload.full_name or (email.split("@")[0] if email else "Apple User")
+
+    email_verified = claims.get("email_verified", False)
+    # Apple may return "true" as a string
+    if isinstance(email_verified, str):
+        email_verified = email_verified.lower() == "true"
+
+    # 1. Look up by Apple provider ID (stable across sessions)
+    user = await get_user_by_provider(db, AuthProvider.apple, apple_user_id)
+
+    if not user:
+        if email:
+            # Check if email already exists under a different provider
+            existing = await get_user_by_email(db, email)
+            if existing and existing.auth_provider != AuthProvider.apple:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "An account with this email already exists. "
+                        "Please sign in with your original method."
+                    ),
+                )
+
+        # Create new Apple user.
+        # Note: email may be None when user chose "Hide My Email" and this is
+        # a non-first-time call without a cached email. Use a placeholder.
+        effective_email = email or f"apple_{apple_user_id}@privaterelay.appleid.com"
+        user = await create_user(
+            db,
+            email=effective_email,
+            full_name=full_name,
+            hashed_password=None,  # Social login — no password
+            auth_provider=AuthProvider.apple,
+            provider_user_id=apple_user_id,
+            is_verified=email_verified,
+        )
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is disabled")
+
+    token = create_access_token(str(user.id))
+    return TokenResponse(access_token=token)

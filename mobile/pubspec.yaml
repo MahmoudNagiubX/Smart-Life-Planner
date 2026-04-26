@@ -59,6 +59,7 @@ dependencies:
   # UI
   google_fonts: ^6.2.1
   google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.3
 
   # Utils
   freezed_annotation: ^2.4.1

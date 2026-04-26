@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../../core/network/providers.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
@@ -195,6 +196,77 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: 'Google sign-in failed: $e',
+      );
+    }
+  }
+
+  /// Sign in with Apple.
+  ///
+  /// Only available on iOS/macOS natively. On Android the package shows
+  /// a web-based flow. We guard the button in the UI instead.
+  ///
+  /// Apple only sends [fullName] and [email] on the VERY FIRST sign-in.
+  /// We always pass them in the payload so the backend can cache them.
+  Future<void> appleSignIn() async {
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final identityToken = credential.identityToken;
+      if (identityToken == null) {
+        state = state.copyWith(
+          status: AuthStatus.unauthenticated,
+          error: 'Apple sign-in did not return an identity token.',
+        );
+        return;
+      }
+
+      // Build optional name from the credential (first sign-in only)
+      final givenName = credential.givenName;
+      final familyName = credential.familyName;
+      String? fullName;
+      if (givenName != null || familyName != null) {
+        fullName = [givenName, familyName].whereType<String>().join(' ').trim();
+        if (fullName.isEmpty) fullName = null;
+      }
+
+      final authService = _ref.read(authServiceProvider);
+      final tokenStorage = _ref.read(tokenStorageProvider);
+
+      final token = await authService.appleSignIn(
+        identityToken: identityToken,
+        fullName: fullName,
+        email: credential.email,
+      );
+      await tokenStorage.saveToken(token);
+
+      final user = await authService.getMe();
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: user,
+        error: null,
+      );
+    } on DioException catch (e) {
+      final message = _extractAuthError(e, 'Apple sign-in failed');
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        error: message,
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      // User cancelled — not an error
+      if (e.code == AuthorizationErrorCode.canceled) return;
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        error: 'Apple sign-in failed: ${e.message}',
+      );
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        error: 'Apple sign-in failed: $e',
       );
     }
   }

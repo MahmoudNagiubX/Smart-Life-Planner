@@ -36,6 +36,27 @@ class AuthService {
     return response.data['access_token'] as String;
   }
 
+  /// Send Apple identity token to the backend for verification.
+  ///
+  /// [identityToken] — JWT from Apple's identity server.
+  /// [fullName]      — Only present on the very first Apple sign-in.
+  /// [email]         — May be a private relay address; only on first sign-in.
+  Future<String> appleSignIn({
+    required String identityToken,
+    String? fullName,
+    String? email,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/auth/apple',
+      data: {
+        'identity_token': identityToken,
+        'full_name': fullName,
+        'email': email,
+      }..removeWhere((_, v) => v == null),
+    );
+    return response.data['access_token'] as String;
+  }
+
   Future<Map<String, dynamic>> getMe() async {
     final response = await _apiClient.dio.get('/auth/me');
     return response.data;

@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
@@ -180,6 +182,30 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           minimumSize: const Size(double.infinity, 50),
                         ),
                       ),
+                // Apple Sign-In — iOS & macOS only (per Apple guidelines)
+                if (!_isLoading && (Platform.isIOS || Platform.isMacOS)) ...[
+                  const SizedBox(height: 12),
+                  SignInWithAppleButton(
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final authNotifier = ref.read(authProvider.notifier);
+                      setState(() => _isLoading = true);
+                      await authNotifier.appleSignIn();
+                      if (mounted) {
+                        final err = ref.read(authProvider).error;
+                        if (err != null) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(err),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                        setState(() => _isLoading = false);
+                      }
+                    },
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
