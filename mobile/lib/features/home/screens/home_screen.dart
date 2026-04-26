@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../voice/screens/voice_capture_screen.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../ai/widgets/next_action_card.dart';
+import '../../hasae/widgets/hasae_next_action_card.dart';
+import '../../hasae/widgets/overload_warning_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
 import '../../dashboard/widgets/quick_capture_sheet.dart';
@@ -138,7 +139,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                const NextActionCard(),
+                const OverloadWarningCard(),
+                const SizedBox(height: 12),
+                const HasaeNextActionCard(),
                 const SizedBox(height: 24),
 
                 if (dashState.isLoading)

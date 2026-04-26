@@ -14,6 +14,7 @@ import '../features/habits/screens/habits_screen.dart';
 import '../features/notes/screens/notes_screen.dart';
 import '../features/ai/screens/daily_plan_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
+import '../features/hasae/screens/ranked_tasks_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -24,7 +25,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isAuthenticated = authState.status == AuthStatus.authenticated;
       final isUnknown = authState.status == AuthStatus.unknown;
-      final isAuthRoute = state.matchedLocation == AppRoutes.welcome ||
+      final isAuthRoute =
+          state.matchedLocation == AppRoutes.welcome ||
           state.matchedLocation == AppRoutes.signIn ||
           state.matchedLocation == AppRoutes.signUp;
 
@@ -84,6 +86,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/analytics',
             builder: (context, state) => const AnalyticsScreen(),
+          ),
+          GoRoute(
+            path: '/home/ranked-tasks',
+            builder: (context, state) => const RankedTasksScreen(),
           ),
         ],
       ),
