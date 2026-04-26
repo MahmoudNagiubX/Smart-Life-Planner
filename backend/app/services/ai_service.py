@@ -3,7 +3,7 @@ from groq import AsyncGroq
 from app.core.config import settings
 from app.core.logging import logger
 
-client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+client: AsyncGroq | None = None
 
 MODEL = "llama-3.1-8b-instant"
 
@@ -64,12 +64,18 @@ Rules:
 """
 
 
-async def parse_task_from_text(input_text: str, today: str) -> dict:
+def _get_client() -> AsyncGroq:
+    global client
     if not settings.GROQ_API_KEY:
         raise ValueError("GROQ_API_KEY not configured")
+    if client is None:
+        client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+    return client
 
+
+async def parse_task_from_text(input_text: str, today: str) -> dict:
     try:
-        response = await client.chat.completions.create(
+        response = await _get_client().chat.completions.create(
             model=MODEL,
             messages=[
                 {
@@ -94,9 +100,6 @@ async def parse_task_from_text(input_text: str, today: str) -> dict:
 
 
 async def get_next_action(tasks: list[dict]) -> dict:
-    if not settings.GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY not configured")
-
     if not tasks:
         return {
             "task_id": None,
@@ -107,7 +110,7 @@ async def get_next_action(tasks: list[dict]) -> dict:
 
     try:
         tasks_text = json.dumps(tasks[:10], default=str)
-        response = await client.chat.completions.create(
+        response = await _get_client().chat.completions.create(
             model=MODEL,
             messages=[
                 {"role": "system", "content": NEXT_ACTION_PROMPT},
@@ -132,14 +135,11 @@ async def get_next_action(tasks: list[dict]) -> dict:
 
 
 async def generate_daily_plan(tasks: list[dict], prayers: list[dict]) -> list[dict]:
-    if not settings.GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY not configured")
-
     try:
         context = json.dumps(
             {"tasks": tasks[:10], "prayers": prayers}, default=str
         )
-        response = await client.chat.completions.create(
+        response = await _get_client().chat.completions.create(
             model=MODEL,
             messages=[
                 {"role": "system", "content": DAILY_PLAN_PROMPT},

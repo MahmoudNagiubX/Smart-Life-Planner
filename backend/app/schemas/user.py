@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, field_validator
 
+
 class UserRegister(BaseModel):
     email: EmailStr
     full_name: str
@@ -21,19 +22,39 @@ class UserRegister(BaseModel):
             raise ValueError("Full name cannot be empty")
         return v.strip()
 
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
 
 class UserResponse(BaseModel):
     id: uuid.UUID
     email: str
     full_name: str
     is_active: bool
+    is_verified: bool          # ← now exposed to frontend
     created_at: datetime
 
     model_config = {"from_attributes": True}
 
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+    @field_validator("code")
+    @classmethod
+    def code_is_digits(cls, v: str) -> str:
+        if not v.strip().isdigit() or len(v.strip()) != 6:
+            raise ValueError("Code must be a 6-digit number")
+        return v.strip()
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr

@@ -5,7 +5,7 @@ from groq import AsyncGroq
 from app.core.config import settings
 from app.core.logging import logger
 
-client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+client: AsyncGroq | None = None
 
 STT_MODEL = "whisper-large-v3-turbo"
 INTENT_MODEL = "llama-3.1-8b-instant"
@@ -58,14 +58,20 @@ Rules:
 """
 
 
+def _get_client() -> AsyncGroq:
+    global client
+    if not settings.GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY not configured")
+    if client is None:
+        client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+    return client
+
+
 async def transcribe_audio_with_groq(
     audio_bytes: bytes,
     filename: str,
     language: str = "auto",
 ) -> dict:
-    if not settings.GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY not configured")
-
     if len(audio_bytes) > MAX_AUDIO_BYTES:
         raise ValueError("Audio file too large. Maximum size is 25 MB.")
 
@@ -85,7 +91,7 @@ async def transcribe_audio_with_groq(
             if language and language != "auto":
                 kwargs["language"] = language
 
-            transcription = await client.audio.transcriptions.create(**kwargs)
+            transcription = await _get_client().audio.transcriptions.create(**kwargs)
 
         return {
             "transcribed_text": transcription.text.strip(),
@@ -107,11 +113,8 @@ async def parse_tasks_from_transcript(
     today: str,
     tomorrow: str,
 ) -> dict:
-    if not settings.GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY not configured")
-
     try:
-        response = await client.chat.completions.create(
+        response = await _get_client().chat.completions.create(
             model=INTENT_MODEL,
             messages=[
                 {
@@ -179,11 +182,8 @@ async def organize_note_from_transcript(
     transcribed_text: str,
     language: str,
 ) -> dict:
-    if not settings.GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY not configured")
-
     try:
-        response = await client.chat.completions.create(
+        response = await _get_client().chat.completions.create(
             model=INTENT_MODEL,
             messages=[
                 {
