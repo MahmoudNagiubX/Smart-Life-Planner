@@ -100,3 +100,27 @@ class ChangePasswordRequest(BaseModel):
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
         return v
+
+
+class GoogleSignInRequest(BaseModel):
+    id_token: str
+
+
+class AppleSignInRequest(BaseModel):
+    """
+    Apple Sign-In payload sent from the Flutter client.
+
+    Fields:
+        identity_token  — JWT issued by Apple's identity server. Must be
+                          verified against Apple's public keys.
+        full_name       — Optional; Apple ONLY sends the user's name on the
+                          VERY FIRST sign-in. The client must cache and send
+                          it on that first request.
+        email           — Optional; Apple only sends email on first sign-in.
+                          May be a private relay address if the user chose
+                          "Hide My Email".
+    """
+
+    identity_token: str
+    full_name: str | None = None
+    email: str | None = None

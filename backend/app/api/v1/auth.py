@@ -19,6 +19,7 @@ from app.repositories.user_repository import (
     get_user_by_email,
     create_user,
     get_user_by_id,
+    get_user_by_provider,
 )
 from app.schemas.user import (
     UserRegister,
@@ -31,12 +32,19 @@ from app.schemas.user import (
     VerifyResetCodeRequest,
     SetNewPasswordRequest,
     ChangePasswordRequest,
+    GoogleSignInRequest,
 )
 from app.services.email_service import (
     send_verification_email,
     send_password_reset_email,
 )
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from app.core.config import settings as app_settings
+from app.core.logging import logger
+from jose import jwt as jose_jwt
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 bearer_scheme = HTTPBearer()
@@ -273,6 +281,80 @@ async def set_new_password(
     await db.commit()
 
     return {"message": "Password updated successfully"}
+
+
+@router.post("/google", response_model=TokenResponse)
+async def google_sign_in(
+    payload: GoogleSignInRequest, db: AsyncSession = Depends(get_db)
+):
+    if not app_settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Google sign-in not configured")
+
+    # Verify the Google ID token
+    try:
+        id_info = google_id_token.verify_oauth2_token(
+            payload.id_token,
+            google_requests.Request(),
+            app_settings.GOOGLE_CLIENT_ID,
+        )
+    except ValueError as exc:
+        try:
+            claims = jose_jwt.get_unverified_claims(payload.id_token)
+            logger.warning(
+                "Invalid Google token: %s | expected_aud=%s actual_aud=%s issuer=%s email=%s",
+                exc,
+                app_settings.GOOGLE_CLIENT_ID,
+                claims.get("aud"),
+                claims.get("iss"),
+                claims.get("email"),
+            )
+        except Exception:
+            logger.warning(
+                "Invalid Google token: %s | expected_aud=%s | could not decode claims",
+                exc,
+                app_settings.GOOGLE_CLIENT_ID,
+            )
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid Google token. Check that Flutter uses the Web OAuth client ID and backend GOOGLE_CLIENT_ID matches it.",
+        )
+
+    google_user_id = id_info["sub"]
+    email = id_info.get("email", "")
+    full_name = id_info.get("name", email.split("@")[0])
+    email_verified = id_info.get("email_verified", False)
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Google account has no email")
+
+    # Check if user exists by Google provider ID
+    from app.models.user import AuthProvider
+    user = await get_user_by_provider(db, AuthProvider.google, google_user_id)
+
+    if not user:
+        # Check if email already registered with a different provider
+        existing = await get_user_by_email(db, email)
+        if existing and existing.auth_provider != AuthProvider.google:
+            raise HTTPException(
+                status_code=409,
+                detail="An account with this email already exists. Please sign in with email/password.",
+            )
+        # Create new Google user
+        user = await create_user(
+            db,
+            email=email,
+            full_name=full_name,
+            hashed_password=None,
+            auth_provider=AuthProvider.google,
+            provider_user_id=google_user_id,
+            is_verified=email_verified,
+        )
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is disabled")
+
+    token = create_access_token(str(user.id))
+    return TokenResponse(access_token=token)
 
 
 @router.post("/change-password", status_code=status.HTTP_200_OK)

@@ -10,11 +10,10 @@ class AuthService {
     required String fullName,
     required String password,
   }) async {
-    final response = await _apiClient.dio.post('/auth/register', data: {
-      'email': email,
-      'full_name': fullName,
-      'password': password,
-    });
+    final response = await _apiClient.dio.post(
+      '/auth/register',
+      data: {'email': email, 'full_name': fullName, 'password': password},
+    );
     return response.data;
   }
 
@@ -22,11 +21,19 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final response = await _apiClient.dio.post('/auth/login', data: {
-      'email': email,
-      'password': password,
-    });
+    final response = await _apiClient.dio.post(
+      '/auth/login',
+      data: {'email': email, 'password': password},
+    );
     return response.data['access_token'];
+  }
+
+  Future<String> googleSignIn({required String idToken}) async {
+    final response = await _apiClient.dio.post(
+      '/auth/google',
+      data: {'id_token': idToken},
+    );
+    return response.data['access_token'] as String;
   }
 
   Future<Map<String, dynamic>> getMe() async {
