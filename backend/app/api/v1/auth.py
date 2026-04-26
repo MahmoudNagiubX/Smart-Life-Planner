@@ -30,6 +30,7 @@ from app.schemas.user import (
     ForgotPasswordRequest,
     VerifyResetCodeRequest,
     SetNewPasswordRequest,
+    ChangePasswordRequest,
 )
 from app.services.email_service import (
     send_verification_email,
@@ -272,6 +273,30 @@ async def set_new_password(
     await db.commit()
 
     return {"message": "Password updated successfully"}
+
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Google/Apple users have no password to change
+    if not current_user.hashed_password:
+        raise HTTPException(
+            status_code=400,
+            detail="Password change is not available for social login accounts",
+        )
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if payload.current_password == payload.new_password:
+        raise HTTPException(
+            status_code=400, detail="New password must be different from current"
+        )
+
+    current_user.hashed_password = hash_password(payload.new_password)
+    await db.commit()
+    return {"message": "Password changed successfully"}
 
 
 @router.get("/me", response_model=UserResponse)

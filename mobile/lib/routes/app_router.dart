@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/auth/screens/change_password_screen.dart';
 import '../features/auth/screens/welcome_screen.dart';
 import '../features/auth/screens/sign_in_screen.dart';
 import '../features/auth/screens/sign_up_screen.dart';
@@ -74,6 +75,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/profile',
             builder: (context, state) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: '/home/change-password',
+            builder: (context, state) => const ChangePasswordScreen(),
           ),
           GoRoute(
             path: '/home/habits',

@@ -22,10 +22,9 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               Text(
                 'Profile',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -41,8 +40,11 @@ class ProfileScreen extends ConsumerWidget {
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: AppColors.primary.withOpacity(0.2),
-                      child: const Icon(Icons.person,
-                          size: 28, color: AppColors.primary),
+                      child: const Icon(
+                        Icons.person,
+                        size: 28,
+                        color: AppColors.primary,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Column(
@@ -50,16 +52,12 @@ class ProfileScreen extends ConsumerWidget {
                       children: [
                         Text(
                           user?['full_name'] as String? ?? '',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         Text(
                           user?['email'] as String? ?? '',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
+                          style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: AppColors.textSecondary),
                         ),
                       ],
@@ -104,6 +102,13 @@ class ProfileScreen extends ConsumerWidget {
                 color: AppColors.primary,
                 onTap: () => context.push('/home/daily-plan'),
               ),
+              const SizedBox(height: 10),
+              _MenuItem(
+                icon: Icons.lock_outlined,
+                label: 'Change Password',
+                color: AppColors.textSecondary,
+                onTap: () => context.push('/home/change-password'),
+              ),
 
               const SizedBox(height: 32),
 
@@ -145,8 +150,7 @@ class _MenuItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(12),
@@ -161,8 +165,7 @@ class _MenuItem extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w500),
               ),
             ),
-            Icon(Icons.chevron_right,
-                color: AppColors.textSecondary, size: 20),
+            Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 20),
           ],
         ),
       ),
