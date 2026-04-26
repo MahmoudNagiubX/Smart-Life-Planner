@@ -866,15 +866,26 @@ class _BottomControls extends StatelessWidget {
           else
             const SizedBox(width: 72),
           const Spacer(),
-          ElevatedButton(
-            onPressed: isLoading ? null : onNext,
-            child: isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(isLastStep ? 'Start Using App' : 'Next'),
+          SizedBox(
+            width: isLastStep ? 180 : 120,
+            height: 52,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(0, 52),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+              onPressed: isLoading ? null : onNext,
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      isLastStep ? 'Start Using App' : 'Next',
+                      textAlign: TextAlign.center,
+                    ),
+            ),
           ),
         ],
       ),
