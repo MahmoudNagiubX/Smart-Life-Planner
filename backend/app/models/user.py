@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -77,6 +77,25 @@ class UserSettings(Base):
     notifications_enabled: Mapped[bool] = mapped_column(
         Boolean, default=True, nullable=False
     )
+    # Onboarding and personalization
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    goals: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    wake_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    sleep_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    work_study_windows: Mapped[list[dict]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    microphone_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    location_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    onboarding_completed: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=datetime.utcnow,

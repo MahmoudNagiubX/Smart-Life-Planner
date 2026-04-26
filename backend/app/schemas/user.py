@@ -34,6 +34,7 @@ class UserResponse(BaseModel):
     full_name: str
     is_active: bool
     is_verified: bool          # ← now exposed to frontend
+    onboarding_completed: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -148,4 +149,4 @@ class DeleteAccountRequest(BaseModel):
         if v is not None and v.strip().upper() != "DELETE":
             raise ValueError("Confirmation must be the word DELETE")
         return v.strip().upper() if v else v
-
+

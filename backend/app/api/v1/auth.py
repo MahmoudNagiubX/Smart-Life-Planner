@@ -30,6 +30,7 @@ from app.repositories.user_repository import (
     get_user_by_id,
     get_user_by_provider,
 )
+from app.repositories.settings_repository import get_settings_by_user_id
 from app.schemas.user import (
     UserRegister,
     UserLogin,
@@ -401,8 +402,20 @@ async def change_password(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(current_user=Depends(get_current_user)):
-    return current_user
+async def get_me(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    settings = await get_settings_by_user_id(db, current_user.id)
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "is_active": current_user.is_active,
+        "is_verified": current_user.is_verified,
+        "created_at": current_user.created_at,
+        "onboarding_completed": settings.onboarding_completed if settings else False,
+    }
 
 
 # ── Apple Sign-In ──────────────────────────────────────────────────────────

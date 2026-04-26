@@ -61,6 +61,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> refreshUser() async {
+    final authService = _ref.read(authServiceProvider);
+    final user = await authService.getMe();
+    state = state.copyWith(
+      status: AuthStatus.authenticated,
+      user: user,
+      error: null,
+    );
+  }
+
   Future<void> register({
     required String email,
     required String fullName,
