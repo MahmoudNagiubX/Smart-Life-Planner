@@ -4,6 +4,7 @@ from app.core.dependencies import get_db
 from app.api.v1.auth import get_current_user
 from app.repositories.settings_repository import get_settings_by_user_id, update_settings
 from app.schemas.settings import SettingsResponse, SettingsUpdate, OnboardingRequest
+from app.services.onboarding_defaults import create_default_habits_for_goals
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -59,5 +60,7 @@ async def complete_onboarding(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Settings not found",
         )
+
+    await create_default_habits_for_goals(db, current_user.id, data["goals"])
 
     return updated

@@ -3,6 +3,7 @@ from pydantic import Field, field_validator
 from typing import Optional
 import uuid
 from datetime import datetime
+from app.services.onboarding_defaults import normalize_goal_keys
 
 
 def _validate_hh_mm(value: str | None, field_name: str) -> str | None:
@@ -84,6 +85,13 @@ class SettingsUpdate(BaseModel):
     def sleep_time_valid(cls, value: str | None) -> str | None:
         return _validate_hh_mm(value, "sleep_time")
 
+    @field_validator("goals")
+    @classmethod
+    def settings_goals_normalized(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return value
+        return normalize_goal_keys(value)
+
 
 class OnboardingRequest(BaseModel):
     timezone: str
@@ -124,7 +132,7 @@ class OnboardingRequest(BaseModel):
     @field_validator("goals")
     @classmethod
     def goals_trimmed(cls, value: list[str]) -> list[str]:
-        return [goal.strip() for goal in value if goal.strip()]
+        return normalize_goal_keys(value)
 
     @field_validator("wake_time")
     @classmethod
