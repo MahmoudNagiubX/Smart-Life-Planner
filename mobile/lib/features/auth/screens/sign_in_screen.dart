@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +21,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _isLoading = false;
+
+  bool get _canShowAppleSignIn {
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+  }
 
   @override
   void dispose() {
@@ -204,8 +210,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           minimumSize: const Size(double.infinity, 50),
                         ),
                       ),
-                // Apple Sign-In — iOS & macOS only (per Apple guidelines)
-                if (!_isLoading && (Platform.isIOS || Platform.isMacOS)) ...[
+                // Apple Sign-In is configured only for Apple OS builds.
+                if (!_isLoading && _canShowAppleSignIn) ...[
                   const SizedBox(height: 12),
                   SignInWithAppleButton(
                     onPressed: () async {

@@ -124,7 +124,22 @@ class AppleSignInRequest(BaseModel):
 
     identity_token: str
     full_name: str | None = None
-    email: str | None = None
+    email: EmailStr | None = None
+
+    @field_validator("identity_token")
+    @classmethod
+    def identity_token_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("identity_token cannot be empty")
+        return v.strip()
+
+    @field_validator("full_name")
+    @classmethod
+    def full_name_trimmed(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        stripped = " ".join(v.split())
+        return stripped or None
 
 
 # ── Account Deletion ────────────────────────────────────────────────────────
