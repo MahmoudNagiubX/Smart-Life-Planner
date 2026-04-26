@@ -554,27 +554,7 @@ class _SummaryStep extends StatelessWidget {
             ].join(', ').ifEmpty('Skipped for now'),
           ),
           const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.25),
-              ),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.auto_awesome, color: AppColors.primary),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Your dashboard, habits, and AI recommendations will use this setup.',
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _AiRecommendationPreview(data: data),
         ],
       ),
     );
@@ -587,6 +567,94 @@ class _SummaryStep extends StatelessWidget {
           orElse: () => _Choice(value, value),
         )
         .label;
+  }
+}
+
+class _AiRecommendationPreview extends StatelessWidget {
+  final OnboardingData data;
+
+  const _AiRecommendationPreview({required this.data});
+
+  String _previewText() {
+    final rhythm = [
+      if (data.wakeTime != null) 'start after ${data.wakeTime}',
+      if (data.sleepTime != null) 'wind down before ${data.sleepTime}',
+    ].join(', ');
+    final rhythmText = rhythm.isEmpty ? 'your daily rhythm' : rhythm;
+
+    if (data.goals.contains('study') &&
+        data.goals.contains('spiritual_growth')) {
+      return 'Your first AI plans will protect study blocks around prayer anchors and $rhythmText.';
+    }
+    if (data.goals.contains('study')) {
+      return 'Your first AI plans will prioritize focused study blocks and $rhythmText.';
+    }
+    if (data.goals.contains('work')) {
+      return 'Your first AI plans will prioritize deep work and $rhythmText.';
+    }
+    if (data.goals.contains('fitness')) {
+      return 'Your first AI plans will balance energy, movement, and $rhythmText.';
+    }
+    if (data.goals.contains('spiritual_growth')) {
+      return 'Your first AI plans will keep prayer and Quran habits visible around $rhythmText.';
+    }
+    return 'Your first AI plans will use $rhythmText and adjust as you add tasks and habits.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = data.goals.map(_SummaryStep._goalLabel).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.auto_awesome, color: AppColors.primary),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'AI recommendation preview',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(_previewText(), style: Theme.of(context).textTheme.bodyMedium),
+          if (labels.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: labels
+                  .map(
+                    (label) => Chip(
+                      label: Text(label),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            'Stored seed: goal tags and daily rhythm only.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
   }
 }
 

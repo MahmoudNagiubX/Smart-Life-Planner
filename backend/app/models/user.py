@@ -95,6 +95,13 @@ class UserSettings(Base):
     onboarding_completed: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    ai_goal_tags: Mapped[list[str]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    ai_daily_rhythm: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    ai_recommendation_seeded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

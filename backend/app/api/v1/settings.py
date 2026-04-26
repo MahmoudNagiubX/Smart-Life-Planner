@@ -4,9 +4,12 @@ from app.core.dependencies import get_db
 from app.api.v1.auth import get_current_user
 from app.repositories.settings_repository import get_settings_by_user_id, update_settings
 from app.schemas.settings import SettingsResponse, SettingsUpdate, OnboardingRequest
+from app.services.ai_recommendation_seed import build_ai_recommendation_seed
 from app.services.onboarding_defaults import create_default_habits_for_goals
 
 router = APIRouter(prefix="/settings", tags=["settings"])
+
+AI_SEED_FIELDS = {"goals", "wake_time", "sleep_time", "timezone"}
 
 
 @router.get("", response_model=SettingsResponse)
@@ -29,16 +32,29 @@ async def update_user_settings(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    updated = await update_settings(
-        db,
-        current_user.id,
-        payload.model_dump(exclude_none=True),
-    )
-    if not updated:
+    existing = await get_settings_by_user_id(db, current_user.id)
+    if not existing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Settings not found",
         )
+
+    data = payload.model_dump(exclude_none=True)
+    if AI_SEED_FIELDS.intersection(data):
+        data.update(
+            build_ai_recommendation_seed(
+                goals=data.get("goals", existing.goals),
+                wake_time=data.get("wake_time", existing.wake_time),
+                sleep_time=data.get("sleep_time", existing.sleep_time),
+                timezone_name=data.get("timezone", existing.timezone),
+            )
+        )
+
+    updated = await update_settings(
+        db,
+        current_user.id,
+        data,
+    )
     return updated
 
 
@@ -53,6 +69,14 @@ async def complete_onboarding(
     """
     data = payload.model_dump(mode="json")
     data["onboarding_completed"] = True
+    data.update(
+        build_ai_recommendation_seed(
+            goals=data["goals"],
+            wake_time=data.get("wake_time"),
+            sleep_time=data.get("sleep_time"),
+            timezone_name=data["timezone"],
+        )
+    )
 
     updated = await update_settings(db, current_user.id, data)
     if not updated:

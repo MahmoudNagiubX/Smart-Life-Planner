@@ -43,6 +43,9 @@ class SettingsResponse(BaseModel):
     microphone_enabled: bool
     location_enabled: bool
     onboarding_completed: bool
+    ai_goal_tags: list[str]
+    ai_daily_rhythm: dict
+    ai_recommendation_seeded_at: Optional[datetime]
 
     updated_at: datetime
 
