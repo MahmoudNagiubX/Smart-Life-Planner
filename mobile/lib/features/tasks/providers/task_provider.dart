@@ -87,8 +87,9 @@ class TasksNotifier extends StateNotifier<TasksState> {
       final service = _ref.read(taskServiceProvider);
       final updated = await service.completeTask(taskId);
 
-      // Cancel reminder since task is done
-      await _ref.read(notificationSchedulerProvider).cancelTaskReminder(taskId);
+      await _ref
+          .read(notificationSchedulerProvider)
+          .cancelTaskReminders(taskId);
 
       state = state.copyWith(
         tasks: state.tasks.map((t) => t.id == taskId ? updated : t).toList(),
@@ -101,13 +102,60 @@ class TasksNotifier extends StateNotifier<TasksState> {
       final service = _ref.read(taskServiceProvider);
       await service.deleteTask(taskId);
 
-      // Cancel reminder since task is deleted
-      await _ref.read(notificationSchedulerProvider).cancelTaskReminder(taskId);
+      await _ref
+          .read(notificationSchedulerProvider)
+          .cancelTaskReminders(taskId);
 
       state = state.copyWith(
         tasks: state.tasks.where((t) => t.id != taskId).toList(),
       );
     } catch (_) {}
+  }
+
+  Future<bool> updateTask({
+    required String taskId,
+    String? title,
+    String? description,
+    String? priority,
+    String? projectId,
+    DateTime? dueAt,
+    DateTime? reminderAt,
+    String? category,
+    int? estimatedMinutes,
+    bool clearDueAt = false,
+    bool clearReminderAt = false,
+  }) async {
+    try {
+      final service = _ref.read(taskServiceProvider);
+      final updated = await service.updateTask(
+        taskId: taskId,
+        title: title,
+        description: description,
+        priority: priority,
+        projectId: projectId,
+        dueAt: dueAt?.toUtc().toIso8601String(),
+        reminderAt: reminderAt?.toUtc().toIso8601String(),
+        category: category,
+        estimatedMinutes: estimatedMinutes,
+        clearDueAt: clearDueAt,
+        clearReminderAt: clearReminderAt,
+      );
+
+      await _syncTaskReminder(updated);
+
+      state = state.copyWith(
+        tasks: state.tasks.map((t) => t.id == taskId ? updated : t).toList(),
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to update task'),
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(error: 'Failed to update task');
+      return false;
+    }
   }
 
   Future<void> _syncTaskReminders(List<TaskModel> tasks) async {
@@ -127,7 +175,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
     try {
       final reminderAt = DateTime.parse(task.reminderAt!).toLocal();
       if (reminderAt.isAfter(DateTime.now())) {
-        await scheduler.scheduleTaskReminder(
+        await scheduler.rescheduleTaskReminder(
           taskId: task.id,
           taskTitle: task.title,
           reminderAt: reminderAt,

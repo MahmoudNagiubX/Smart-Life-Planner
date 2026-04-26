@@ -19,12 +19,14 @@ class HabitService {
     String frequencyType = 'daily',
     String? category,
   }) async {
-    final response = await _apiClient.dio.post('/habits', data: {
+    final data = <String, dynamic>{
       'title': title,
-      if (description != null) 'description': description,
       'frequency_type': frequencyType,
-      if (category != null) 'category': category,
-    });
+    };
+    if (description != null) data['description'] = description;
+    if (category != null) data['category'] = category;
+
+    final response = await _apiClient.dio.post('/habits', data: data);
     return HabitModel.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -35,6 +37,14 @@ class HabitService {
       queryParameters: {'log_date': today},
     );
     return HabitLogModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<HabitModel> archiveHabit(String habitId) async {
+    final response = await _apiClient.dio.patch(
+      '/habits/$habitId',
+      data: {'is_active': false},
+    );
+    return HabitModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<void> deleteHabit(String habitId) async {

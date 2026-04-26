@@ -6,10 +6,17 @@ from app.repositories.settings_repository import get_settings_by_user_id, update
 from app.schemas.settings import SettingsResponse, SettingsUpdate, OnboardingRequest
 from app.services.ai_recommendation_seed import build_ai_recommendation_seed
 from app.services.onboarding_defaults import create_default_habits_for_goals
+from app.services.reminder_lifecycle import log_prayer_reminders_invalidated
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 AI_SEED_FIELDS = {"goals", "wake_time", "sleep_time", "timezone"}
+PRAYER_REMINDER_FIELDS = {
+    "prayer_calculation_method",
+    "prayer_location_lat",
+    "prayer_location_lng",
+    "timezone",
+}
 
 
 @router.get("", response_model=SettingsResponse)
@@ -48,6 +55,11 @@ async def update_user_settings(
                 sleep_time=data.get("sleep_time", existing.sleep_time),
                 timezone_name=data.get("timezone", existing.timezone),
             )
+        )
+    if PRAYER_REMINDER_FIELDS.intersection(data):
+        log_prayer_reminders_invalidated(
+            user_id=current_user.id,
+            reason="settings_changed",
         )
 
     updated = await update_settings(

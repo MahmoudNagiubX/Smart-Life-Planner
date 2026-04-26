@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/onboarding_data.dart';
 import '../../../core/network/providers.dart';
+import '../../../core/notifications/notification_scheduler.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 
 class OnboardingNotifier extends StateNotifier<OnboardingData> {
@@ -24,6 +25,7 @@ class OnboardingNotifier extends StateNotifier<OnboardingData> {
     try {
       final apiClient = _ref.read(apiClientProvider);
       await apiClient.dio.post('/settings/onboarding', data: state.toJson());
+      await _ref.read(notificationSchedulerProvider).cancelAllPrayerReminders();
       await _ref.read(authProvider.notifier).refreshUser();
       return true;
     } catch (e) {

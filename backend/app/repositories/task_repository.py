@@ -5,6 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.models.task import Task, TaskProject, TaskSubtask
+from app.services.reminder_lifecycle import (
+    log_task_reminders_cancelled,
+    log_task_reminders_rescheduled,
+)
 
 
 # ── Projects ──────────────────────────────────────────────
@@ -85,18 +89,42 @@ async def create_task(db: AsyncSession, user_id: uuid.UUID, data: dict) -> Task:
 
 
 async def update_task(db: AsyncSession, task: Task, data: dict) -> Task:
+    previous_due_at = task.due_at
+    previous_reminder_at = task.reminder_at
     for key, value in data.items():
         setattr(task, key, value)
+    reminder_fields_changed = (
+        ("due_at" in data and data["due_at"] != previous_due_at)
+        or ("reminder_at" in data and data["reminder_at"] != previous_reminder_at)
+    )
     await db.commit()
     await db.refresh(task)
+    if reminder_fields_changed:
+        log_task_reminders_rescheduled(
+            user_id=task.user_id,
+            task_id=task.id,
+            previous_due_at=previous_due_at,
+            previous_reminder_at=previous_reminder_at,
+            next_due_at=task.due_at,
+            next_reminder_at=task.reminder_at,
+        )
     return await get_task_by_id(db, task.id, task.user_id)
 
 
 async def complete_task(db: AsyncSession, task: Task) -> Task:
     task.status = "completed"
     task.completed_at = datetime.utcnow()
+    cancelled_reminder = task.reminder_at is not None
+    if cancelled_reminder:
+        task.reminder_at = None
     await db.commit()
     await db.refresh(task)
+    if cancelled_reminder:
+        log_task_reminders_cancelled(
+            user_id=task.user_id,
+            task_id=task.id,
+            reason="completed",
+        )
     return task
 
 
@@ -110,7 +138,16 @@ async def reopen_task(db: AsyncSession, task: Task) -> Task:
 
 async def soft_delete_task(db: AsyncSession, task: Task) -> None:
     task.is_deleted = True
+    cancelled_reminder = task.reminder_at is not None
+    if cancelled_reminder:
+        task.reminder_at = None
     await db.commit()
+    if cancelled_reminder:
+        log_task_reminders_cancelled(
+            user_id=task.user_id,
+            task_id=task.id,
+            reason="deleted",
+        )
 
 
 # ── Subtasks ───────────────────────────────────────────────

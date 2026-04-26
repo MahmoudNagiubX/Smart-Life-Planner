@@ -17,6 +17,13 @@ SAFE_EXTRA_KEYS = {
     "duration_ms",
     "failure_area",
     "slow_threshold_ms",
+    "user_id",
+    "target_type",
+    "target_id",
+    "previous_due_at",
+    "previous_reminder_at",
+    "next_due_at",
+    "next_reminder_at",
 }
 
 SENSITIVE_KEY_FRAGMENTS = {

@@ -102,7 +102,7 @@ async def update_existing_task(
     task = await get_task_by_id(db, task_id, current_user.id)
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-    return await update_task(db, task, payload.model_dump(exclude_none=True))
+    return await update_task(db, task, payload.model_dump(exclude_unset=True))
 
 
 @router.patch("/{task_id}/complete", response_model=TaskResponse)

@@ -36,9 +36,7 @@ class NotificationScheduler {
   }
 
   Future<void> cancelFocusNotification(String sessionId) async {
-    await _service.cancelNotification(
-      NotificationIds.focusComplete(sessionId),
-    );
+    await _service.cancelNotification(NotificationIds.focusComplete(sessionId));
   }
 
   // ── Prayer ─────────────────────────────────────────────
@@ -67,6 +65,13 @@ class NotificationScheduler {
     );
   }
 
+  Future<void> cancelAllPrayerReminders() async {
+    const prayerNames = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+    for (final prayerName in prayerNames) {
+      await cancelPrayerReminder(prayerName);
+    }
+  }
+
   // ── Tasks ──────────────────────────────────────────────
 
   Future<void> scheduleTaskReminder({
@@ -85,8 +90,25 @@ class NotificationScheduler {
     );
   }
 
+  Future<void> rescheduleTaskReminder({
+    required String taskId,
+    required String taskTitle,
+    required DateTime reminderAt,
+  }) async {
+    await cancelTaskReminder(taskId);
+    await scheduleTaskReminder(
+      taskId: taskId,
+      taskTitle: taskTitle,
+      reminderAt: reminderAt,
+    );
+  }
+
   Future<void> cancelTaskReminder(String taskId) async {
     await _service.cancelNotification(NotificationIds.taskReminder(taskId));
+  }
+
+  Future<void> cancelTaskReminders(String taskId) async {
+    await cancelTaskReminder(taskId);
   }
 
   // ── Habits ─────────────────────────────────────────────
@@ -101,6 +123,14 @@ class NotificationScheduler {
       body: "Don't forget: $habitTitle",
       payload: 'habit:$habitId',
     );
+  }
+
+  Future<void> cancelHabitReminder(String habitId) async {
+    await _service.cancelNotification(NotificationIds.habitReminder(habitId));
+  }
+
+  Future<void> cancelHabitReminders(String habitId) async {
+    await cancelHabitReminder(habitId);
   }
 
   String _prayerDisplayName(String name) {

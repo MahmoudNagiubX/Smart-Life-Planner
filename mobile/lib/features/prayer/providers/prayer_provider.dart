@@ -38,7 +38,7 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
       final data = await service.getTodayPrayers();
       state = state.copyWith(data: data, isLoading: false);
 
-      // Schedule reminders for uncompleted prayers
+      await _ref.read(notificationSchedulerProvider).cancelAllPrayerReminders();
       await _schedulePrayerReminders(data);
     } on DioException catch (e) {
       state = state.copyWith(
@@ -64,6 +64,11 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
         await scheduler.cancelPrayerReminder(prayer.prayerName);
       }
     }
+  }
+
+  Future<void> refreshPrayerRemindersAfterSettingsChange() async {
+    await _ref.read(notificationSchedulerProvider).cancelAllPrayerReminders();
+    await loadTodayPrayers();
   }
 
   Future<void> togglePrayer(String prayerName, bool currentlyCompleted) async {

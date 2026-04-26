@@ -29,20 +29,54 @@ class TaskService {
     String? reminderAt,
     String? category,
   }) async {
-    final response = await _apiClient.dio.post('/tasks', data: {
-      'title': title,
-      if (description != null) 'description': description,
-      'priority': priority,
-      if (projectId != null) 'project_id': projectId,
-      if (dueAt != null) 'due_at': dueAt,
-      if (reminderAt != null) 'reminder_at': reminderAt,
-      if (category != null) 'category': category,
-    });
+    final data = <String, dynamic>{'title': title, 'priority': priority};
+    if (description != null) data['description'] = description;
+    if (projectId != null) data['project_id'] = projectId;
+    if (dueAt != null) data['due_at'] = dueAt;
+    if (reminderAt != null) data['reminder_at'] = reminderAt;
+    if (category != null) data['category'] = category;
+
+    final response = await _apiClient.dio.post('/tasks', data: data);
     return TaskModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<TaskModel> completeTask(String taskId) async {
     final response = await _apiClient.dio.patch('/tasks/$taskId/complete');
+    return TaskModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<TaskModel> updateTask({
+    required String taskId,
+    String? title,
+    String? description,
+    String? priority,
+    String? projectId,
+    String? dueAt,
+    String? reminderAt,
+    String? category,
+    int? estimatedMinutes,
+    bool clearDueAt = false,
+    bool clearReminderAt = false,
+  }) async {
+    final data = <String, dynamic>{};
+    if (title != null) data['title'] = title;
+    if (description != null) data['description'] = description;
+    if (priority != null) data['priority'] = priority;
+    if (projectId != null) data['project_id'] = projectId;
+    if (clearDueAt) {
+      data['due_at'] = null;
+    } else if (dueAt != null) {
+      data['due_at'] = dueAt;
+    }
+    if (clearReminderAt) {
+      data['reminder_at'] = null;
+    } else if (reminderAt != null) {
+      data['reminder_at'] = reminderAt;
+    }
+    if (category != null) data['category'] = category;
+    if (estimatedMinutes != null) data['estimated_minutes'] = estimatedMinutes;
+
+    final response = await _apiClient.dio.patch('/tasks/$taskId', data: data);
     return TaskModel.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -63,10 +97,10 @@ class TaskService {
   }
 
   Future<TaskProject> createProject(String title, {String? colorCode}) async {
-    final response = await _apiClient.dio.post('/tasks/projects', data: {
-      'title': title,
-      if (colorCode != null) 'color_code': colorCode,
-    });
+    final data = <String, dynamic>{'title': title};
+    if (colorCode != null) data['color_code'] = colorCode;
+
+    final response = await _apiClient.dio.post('/tasks/projects', data: data);
     return TaskProject.fromJson(response.data as Map<String, dynamic>);
   }
 }

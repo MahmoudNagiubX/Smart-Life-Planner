@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
+import '../../../core/notifications/notification_scheduler.dart';
 import '../models/habit_model.dart';
 import '../services/habit_service.dart';
 
@@ -97,10 +98,33 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
     try {
       final service = _ref.read(habitServiceProvider);
       await service.deleteHabit(habitId);
+      await _ref
+          .read(notificationSchedulerProvider)
+          .cancelHabitReminders(habitId);
       state = state.copyWith(
         habits: state.habits.where((h) => h.id != habitId).toList(),
       );
     } catch (_) {}
+  }
+
+  Future<void> archiveHabit(String habitId) async {
+    try {
+      final service = _ref.read(habitServiceProvider);
+      final archived = await service.archiveHabit(habitId);
+      await _ref
+          .read(notificationSchedulerProvider)
+          .cancelHabitReminders(habitId);
+      state = state.copyWith(
+        habits: state.habits
+            .map((h) => h.id == habitId ? archived : h)
+            .where((h) => h.isActive)
+            .toList(),
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to archive habit'),
+      );
+    }
   }
 }
 
