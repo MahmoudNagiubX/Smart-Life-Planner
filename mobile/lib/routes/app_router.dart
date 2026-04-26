@@ -18,6 +18,7 @@ import '../features/notes/screens/notes_screen.dart';
 import '../features/ai/screens/daily_plan_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
+import '../features/onboarding/screens/onboarding_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -36,11 +37,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == AppRoutes.forgotPassword;
 
       if (isUnknown) return null;
-      if (isAuthenticated && isAuthRoute) return AppRoutes.home;
       if (!isAuthenticated && !isAuthRoute) return AppRoutes.welcome;
+
+      if (isAuthenticated) {
+        final isOnboardingCompleted =
+            authState.user?['onboarding_completed'] == true;
+        if (!isOnboardingCompleted &&
+            state.matchedLocation != AppRoutes.onboarding) {
+          return AppRoutes.onboarding;
+        } else if (isOnboardingCompleted &&
+            (isAuthRoute || state.matchedLocation == AppRoutes.onboarding)) {
+          return AppRoutes.home;
+        }
+      }
       return null;
     },
     routes: [
+      GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (context, state) => const OnboardingScreen(),
+      ),
       GoRoute(
         path: AppRoutes.welcome,
         builder: (context, state) => const WelcomeScreen(),
