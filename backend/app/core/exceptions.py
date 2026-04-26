@@ -6,6 +6,21 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.logging import logger
 
 
+SENSITIVE_FIELD_PARTS = {
+    "authorization",
+    "cookie",
+    "password",
+    "secret",
+    "token",
+    "code",
+    "audio",
+    "transcript",
+    "content",
+    "journal",
+    "note",
+}
+
+
 def _request_context(request: Request) -> dict:
     return {
         "request_id": getattr(request.state, "request_id", None),
@@ -17,9 +32,12 @@ def _request_context(request: Request) -> dict:
 def _validation_fields(exc: RequestValidationError) -> list[dict[str, str]]:
     fields: list[dict[str, str]] = []
     for error in exc.errors():
+        field = " -> ".join(str(location) for location in error["loc"])
+        if any(part in field.lower() for part in SENSITIVE_FIELD_PARTS):
+            field = "sensitive_field"
         fields.append(
             {
-                "field": " -> ".join(str(location) for location in error["loc"]),
+                "field": field,
                 "message": str(error["msg"]),
                 "error_type": str(error.get("type", "validation_error")),
             }
@@ -35,6 +53,7 @@ async def http_exception_handler(
         **_request_context(request),
         "status_code": exc.status_code,
         "error_type": "http_exception",
+        "safe_context": "HTTP exception handled",
     }
     log_method = logger.error if exc.status_code >= 500 else logger.info
     log_method("HTTP request rejected", extra=context)
@@ -61,6 +80,7 @@ async def validation_exception_handler(
             **_request_context(request),
             "status_code": 422,
             "error_type": "validation_error",
+            "safe_context": "Request validation failed",
             "fields": fields,
         },
     )
@@ -87,6 +107,7 @@ async def unhandled_exception_handler(
             **_request_context(request),
             "status_code": 500,
             "exception_type": type(exc).__name__,
+            "safe_context": "Unhandled exception converted to safe response",
         },
     )
     return JSONResponse(

@@ -20,15 +20,21 @@ String friendlyAuthError(Object error, String fallback) {
         return 'That code expired. Request a new one and try again.';
       }
       if (normalized.contains('social sign-in') ||
-          normalized.contains('original sign-in method') ||
-          normalized.contains('already exists')) {
-        return detail;
+          normalized.contains('original sign-in method')) {
+        return 'This account uses a social sign-in method.';
+      }
+      if (normalized.contains('already exists')) {
+        return 'An account with this email already exists.';
+      }
+      if (normalized.contains('different sign-in') ||
+          normalized.contains('another google sign-in')) {
+        return 'This account uses a different sign-in method.';
       }
       if (statusCode == 422) {
         return _validationMessage(data) ??
             'Please check the highlighted fields.';
       }
-      return detail;
+      return _knownSafeMessage(detail) ?? fallback;
     }
 
     if (statusCode == 401) return 'Please sign in again.';
@@ -69,10 +75,38 @@ String? _validationMessage(dynamic data) {
         if (item is Map) {
           final field = item['field'];
           final message = item['message'] ?? item['msg'];
-          if (field is String && message is String) return '$field: $message';
-          if (message is String) return message;
+          if (message is! String) return null;
+          if (field is String && field == 'sensitive_field') {
+            return 'Please check one of the submitted fields.';
+          }
+          if (field is String) return '$field: ${_friendlyValidation(message)}';
+          return _friendlyValidation(message);
         }
-        return item.toString();
+        return null;
       })
+      .whereType<String>()
       .join('\n');
+}
+
+String? _knownSafeMessage(String detail) {
+  final normalized = detail.toLowerCase();
+  if (normalized.contains('invalid code')) {
+    return 'That code is invalid or expired.';
+  }
+  if (normalized.contains('please wait')) {
+    return 'Please wait before trying again.';
+  }
+  if (normalized.contains('not configured')) {
+    return 'This sign-in method is not configured yet.';
+  }
+  return null;
+}
+
+String _friendlyValidation(String message) {
+  final normalized = message.toLowerCase();
+  if (normalized.contains('field required')) return 'This field is required.';
+  if (normalized.contains('valid email')) return 'Enter a valid email address.';
+  if (normalized.contains('at least 8')) return 'Use at least 8 characters.';
+  if (normalized.contains('6-digit')) return 'Enter the 6-digit code.';
+  return 'Please check this value.';
 }

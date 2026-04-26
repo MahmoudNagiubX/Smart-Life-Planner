@@ -10,11 +10,10 @@ logger = logging.getLogger(__name__)
 async def send_verification_email(email: str, code: str) -> None:
     """
     In production: send a real email via SMTP / SendGrid / Resend.
-    In development: log the code so you can copy it from terminal.
+    Codes are intentionally omitted from logs.
     """
     logger.info(
-        f"[DEV] Verification code for {email}: {code}  "
-        "(Replace this with real email sending in production)"
+        "Verification email queued. Configure an email provider before production."
     )
 
 
@@ -23,6 +22,5 @@ async def send_password_reset_email(email: str, code: str) -> None:
     Placeholder for password reset email — used in Step 12A.3.
     """
     logger.info(
-        f"[DEV] Password reset code for {email}: {code}  "
-        "(Replace this with real email sending in production)"
+        "Password reset email queued. Configure an email provider before production."
     )

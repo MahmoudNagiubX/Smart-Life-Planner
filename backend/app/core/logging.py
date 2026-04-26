@@ -13,6 +13,7 @@ SAFE_EXTRA_KEYS = {
     "exception_type",
     "error_type",
     "fields",
+    "safe_context",
 }
 
 SENSITIVE_KEY_FRAGMENTS = {
@@ -23,7 +24,14 @@ SENSITIVE_KEY_FRAGMENTS = {
     "token",
     "code",
     "email",
+    "audio",
+    "transcript",
+    "content",
+    "journal",
+    "note",
 }
+
+REDACTED_TEXT = "[redacted]"
 
 
 def _is_sensitive_key(key: str) -> bool:
@@ -45,13 +53,22 @@ def _json_safe(value: Any) -> Any:
     return str(value)
 
 
+def redact_sensitive_text(value: str) -> str:
+    redacted = value
+    for fragment in SENSITIVE_KEY_FRAGMENTS:
+        redacted = redacted.replace(fragment, REDACTED_TEXT)
+        redacted = redacted.replace(fragment.upper(), REDACTED_TEXT)
+        redacted = redacted.replace(fragment.title(), REDACTED_TEXT)
+    return redacted
+
+
 class JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": redact_sensitive_text(record.getMessage()),
             "service": "smart-life-planner-api",
         }
 
