@@ -9,7 +9,7 @@ from app.core.exceptions import (
     unhandled_exception_handler,
 )
 from app.core.logging import setup_logging, logger
-from app.core.middleware import RequestIdMiddleware
+from app.core.middleware import RequestIdMiddleware, RequestTimingMiddleware
 
 setup_logging()
 
@@ -20,6 +20,7 @@ app = FastAPI(
 )
 
 app.add_middleware(RequestIdMiddleware)
+app.add_middleware(RequestTimingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",

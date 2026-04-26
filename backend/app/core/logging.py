@@ -14,6 +14,9 @@ SAFE_EXTRA_KEYS = {
     "error_type",
     "fields",
     "safe_context",
+    "duration_ms",
+    "failure_area",
+    "slow_threshold_ms",
 }
 
 SENSITIVE_KEY_FRAGMENTS = {

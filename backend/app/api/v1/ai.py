@@ -19,6 +19,7 @@ from app.services.ai_service import (
     generate_daily_plan,
 )
 from app.core.config import settings
+from app.core.logging import logger
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -47,9 +48,18 @@ async def parse_task(
             raw_input=payload.input_text,
         )
     except Exception as e:
+        logger.error(
+            "AI endpoint failure",
+            exc_info=True,
+            extra={
+                "failure_area": "ai_service",
+                "exception_type": type(e).__name__,
+                "safe_context": "parse_task_endpoint",
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"AI parsing failed: {str(e)}",
+            detail="AI parsing failed. Please try again.",
         )
 
 
@@ -79,9 +89,18 @@ async def next_action(
             confidence=result.get("confidence", "low"),
         )
     except Exception as e:
+        logger.error(
+            "AI endpoint failure",
+            exc_info=True,
+            extra={
+                "failure_area": "ai_service",
+                "exception_type": type(e).__name__,
+                "safe_context": "next_action_endpoint",
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"AI next action failed: {str(e)}",
+            detail="AI next action failed. Please try again.",
         )
 
 
@@ -135,7 +154,16 @@ async def daily_plan(
             plan=plan_items,
         )
     except Exception as e:
+        logger.error(
+            "AI endpoint failure",
+            exc_info=True,
+            extra={
+                "failure_area": "ai_service",
+                "exception_type": type(e).__name__,
+                "safe_context": "daily_plan_endpoint",
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"AI daily plan failed: {str(e)}",
+            detail="AI daily plan failed. Please try again.",
         )

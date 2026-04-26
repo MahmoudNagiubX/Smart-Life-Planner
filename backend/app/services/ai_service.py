@@ -73,6 +73,18 @@ def _get_client() -> AsyncGroq:
     return client
 
 
+def _log_ai_failure(operation: str, exc: Exception) -> None:
+    logger.error(
+        "AI service failure",
+        exc_info=True,
+        extra={
+            "failure_area": "ai_service",
+            "exception_type": type(exc).__name__,
+            "safe_context": operation,
+        },
+    )
+
+
 async def parse_task_from_text(input_text: str, today: str) -> dict:
     try:
         response = await _get_client().chat.completions.create(
@@ -92,10 +104,10 @@ async def parse_task_from_text(input_text: str, today: str) -> dict:
         raw = raw.replace("```json", "").replace("```", "").strip()
         return json.loads(raw)
     except json.JSONDecodeError as e:
-        logger.error(f"AI parse_task JSON error: {e}")
+        _log_ai_failure("parse_task_json_decode", e)
         return {"title": input_text, "priority": "medium", "confidence": "low"}
     except Exception as e:
-        logger.error(f"AI parse_task error: {e}")
+        _log_ai_failure("parse_task", e)
         raise
 
 
@@ -123,14 +135,14 @@ async def get_next_action(tasks: list[dict]) -> dict:
         raw = raw.replace("```json", "").replace("```", "").strip()
         return json.loads(raw)
     except json.JSONDecodeError as e:
-        logger.error(f"AI next_action JSON error: {e}")
+        _log_ai_failure("next_action_json_decode", e)
         return {
             "task_id": None,
             "reason": "Could not determine next action",
             "confidence": "low",
         }
     except Exception as e:
-        logger.error(f"AI next_action error: {e}")
+        _log_ai_failure("next_action", e)
         raise
 
 
@@ -152,8 +164,8 @@ async def generate_daily_plan(tasks: list[dict], prayers: list[dict]) -> list[di
         raw = raw.replace("```json", "").replace("```", "").strip()
         return json.loads(raw)
     except json.JSONDecodeError as e:
-        logger.error(f"AI daily_plan JSON error: {e}")
+        _log_ai_failure("daily_plan_json_decode", e)
         return []
     except Exception as e:
-        logger.error(f"AI daily_plan error: {e}")
+        _log_ai_failure("daily_plan", e)
         raise
