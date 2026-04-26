@@ -43,6 +43,7 @@ from app.schemas.user import (
     ChangePasswordRequest,
     GoogleSignInRequest,
     AppleSignInRequest,
+    DeleteAccountRequest,
 )
 from app.services.email_service import (
     send_verification_email,
@@ -562,3 +563,84 @@ async def apple_sign_in(
 
     token = create_access_token(str(user.id))
     return TokenResponse(access_token=token)
+
+
+# ── Account Deletion ─────────────────────────────────────────────────────────
+# Soft-delete with immediate email anonymisation.
+# A background scheduled job (or manual DBA task) should hard-delete rows
+# where deleted_at < NOW() - INTERVAL '30 days'.
+#
+# Soft-delete is preferred over immediate hard-delete because:
+#   1. GDPR's "right to erasure" does not require instant data removal.
+#   2. It allows a grace period for accidental deletions.
+#   3. It avoids FK cascade issues on large related datasets.
+
+
+@router.delete("/delete-account", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(
+    payload: DeleteAccountRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Permanently schedule the current user's account for deletion.
+
+    Behaviour:
+    - Email/password accounts: must supply a correct `password`.
+    - Social (Google/Apple) accounts: must supply `confirmation = "DELETE"`.
+    - The account is immediately deactivated (is_active=False) and the
+      email is anonymised to prevent future sign-in or account recovery.
+    - deleted_at is set to now. A separate job performs hard-deletion
+      after 30 days (the data-retention window).
+    - Returns HTTP 204 No Content. The client MUST clear its token.
+
+    Security hardening:
+    - Requires authenticated Bearer token (cannot be called without login).
+    - Password accounts cannot use the `confirmation` bypass.
+    - Social accounts cannot use a password they don't have.
+    """
+    is_social_user = current_user.hashed_password is None
+
+    if is_social_user:
+        # Social users confirm with the word "DELETE"
+        if not payload.confirmation:
+            raise HTTPException(
+                status_code=400,
+                detail="Social account deletion requires confirmation='DELETE'.",
+            )
+        # Already validated by pydantic that confirmation == 'DELETE'
+    else:
+        # Password users must supply their current password
+        if not payload.password:
+            raise HTTPException(
+                status_code=400,
+                detail="Password is required to delete your account.",
+            )
+        if not verify_password(payload.password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=403,
+                detail="Incorrect password. Account not deleted.",
+            )
+
+    # ─ Soft-delete: anonymise + deactivate ────────────────────────────────────
+    now = datetime.now(timezone.utc)
+    anonymised_email = f"deleted_{current_user.id}@removed.invalid"
+
+    current_user.email = anonymised_email
+    current_user.full_name = "Deleted User"
+    current_user.hashed_password = None
+    current_user.provider_user_id = None  # Revoke social link
+    current_user.is_active = False
+    current_user.is_verified = False
+    current_user.deleted_at = now
+
+    await db.commit()
+
+    logger.info(
+        "Account soft-deleted: original_id=%s anonymised_to=%s",
+        current_user.id,
+        anonymised_email,
+    )
+
+    # HTTP 204 — no body. Client must discard the JWT immediately.
+    return None

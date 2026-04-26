@@ -61,4 +61,17 @@ class AuthService {
     final response = await _apiClient.dio.get('/auth/me');
     return response.data;
   }
+
+  Future<void> deleteAccount({
+    String? password,
+    String? confirmation,
+  }) async {
+    await _apiClient.dio.delete(
+      '/auth/delete-account',
+      data: {
+        'password': password,
+        'confirmation': confirmation,
+      }..removeWhere((_, v) => v == null),
+    );
+  }
 }

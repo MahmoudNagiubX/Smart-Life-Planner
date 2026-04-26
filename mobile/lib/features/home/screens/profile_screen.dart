@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../routes/app_routes.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -11,6 +12,76 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
+
+    Future<void> showDeleteDialog() async {
+      final controller = TextEditingController();
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Account'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'This action is permanent and cannot be undone. All your data will be erased after 30 days.',
+                style: TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'To confirm, enter your password. If you signed in with Google or Apple, type the word DELETE.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Password or DELETE',
+                  border: OutlineInputBorder(),
+                ),
+                obscureText: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete Permanently'),
+            ),
+          ],
+        ),
+      );
+
+      if (result == true && context.mounted) {
+        final input = controller.text.trim();
+        if (input.isEmpty) return;
+
+        final isSocial = input.toUpperCase() == 'DELETE';
+        final success = await ref.read(authProvider.notifier).deleteAccount(
+              password: isSocial ? null : input,
+              confirmation: isSocial ? 'DELETE' : null,
+            );
+
+        if (success && context.mounted) {
+          context.go(AppRoutes.welcome);
+        } else if (context.mounted) {
+          final error = ref.read(authProvider).error;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error ?? 'Failed to delete account'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -120,8 +191,35 @@ class ProfileScreen extends ConsumerWidget {
                 icon: const Icon(Icons.logout),
                 label: const Text('Sign Out'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.red,
+                  elevation: 0,
+                  side: const BorderSide(color: Colors.red),
+                ),
+              ),
+
+
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 16),
+
+              // Danger Zone
+              Text(
+                'Danger Zone',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: showDeleteDialog,
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('Delete Account'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  minimumSize: const Size(double.infinity, 50),
                 ),
               ),
             ],
@@ -131,6 +229,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 }
+
 
 class _MenuItem extends StatelessWidget {
   final IconData icon;

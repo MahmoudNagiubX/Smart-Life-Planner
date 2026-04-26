@@ -271,11 +271,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<bool> deleteAccount({
+    String? password,
+    String? confirmation,
+  }) async {
+    try {
+      final authService = _ref.read(authServiceProvider);
+      await authService.deleteAccount(
+        password: password,
+        confirmation: confirmation,
+      );
+      // If successful, log out immediately.
+      await logout();
+      return true;
+    } on DioException catch (e) {
+      final message = _extractAuthError(e, 'Account deletion failed');
+      state = state.copyWith(error: message);
+      return false;
+    } catch (e) {
+      state = state.copyWith(error: 'Account deletion failed: $e');
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     final tokenStorage = _ref.read(tokenStorageProvider);
     await tokenStorage.deleteToken();
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
+
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {

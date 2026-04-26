@@ -123,4 +123,29 @@ class AppleSignInRequest(BaseModel):
 
     identity_token: str
     full_name: str | None = None
-    email: str | None = None
+    email: str | None = None
+
+
+# ── Account Deletion ────────────────────────────────────────────────────────
+
+class DeleteAccountRequest(BaseModel):
+    """
+    Account deletion request.
+
+    For email/password accounts: supply `password` to confirm identity.
+    For social accounts (Google/Apple): supply `confirmation` = "DELETE"
+    (exact string) as the confirmation phrase.
+
+    Exactly one of `password` or `confirmation` must be provided.
+    """
+
+    password: str | None = None
+    confirmation: str | None = None
+
+    @field_validator("confirmation")
+    @classmethod
+    def confirmation_must_be_delete(cls, v: str | None) -> str | None:
+        if v is not None and v.strip().upper() != "DELETE":
+            raise ValueError("Confirmation must be the word DELETE")
+        return v.strip().upper() if v else v
+
