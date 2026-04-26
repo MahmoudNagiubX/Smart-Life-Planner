@@ -46,7 +46,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authState.error!),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
+            action: authState.error!.toLowerCase().contains('verify')
+                ? SnackBarAction(
+                    label: 'Verify',
+                    onPressed: () => context.go(
+                      Uri(
+                        path: AppRoutes.verifyEmail,
+                        queryParameters: {
+                          'email': _emailController.text.trim(),
+                        },
+                      ).toString(),
+                    ),
+                  )
+                : null,
           ),
         );
       }
@@ -124,6 +137,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     return null;
                   },
                 ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _isLoading
+                        ? null
+                        : () => context.go(AppRoutes.forgotPassword),
+                    child: const Text('Forgot Password?'),
+                  ),
+                ),
                 const SizedBox(height: 32),
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -162,7 +184,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               messenger.showSnackBar(
                                 SnackBar(
                                   content: Text(err),
-                                  backgroundColor: Colors.red,
+                                  backgroundColor: AppColors.error,
                                 ),
                               );
                             }
@@ -197,7 +219,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           messenger.showSnackBar(
                             SnackBar(
                               content: Text(err),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }

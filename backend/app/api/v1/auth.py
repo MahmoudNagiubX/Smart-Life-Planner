@@ -127,9 +127,19 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     user = await get_user_by_email(db, payload.email)
-    if not user or not user.hashed_password:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
+    if user.auth_provider != AuthProvider.email or not user.hashed_password:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This account uses social sign-in. Please use the original sign-in method.",
+        )
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email before signing in.",
         )
     if not verify_password(payload.password, user.hashed_password):
         raise HTTPException(
@@ -435,7 +445,12 @@ def _verify_apple_identity_token(
         raise HTTPException(status_code=400, detail=f"Invalid Apple token header: {exc}")
 
     kid = unverified_header.get("kid")
-    alg = unverified_header.get("alg", "RS256")
+    alg = unverified_header.get("alg")
+    if alg != "RS256":
+        raise HTTPException(
+            status_code=400,
+            detail="Apple token uses an unsupported signing algorithm",
+        )
 
     # 2. Find the matching public key
     matching_key = next(
@@ -452,7 +467,7 @@ def _verify_apple_identity_token(
         claims = jose_jwt.decode(
             identity_token,
             matching_key,
-            algorithms=[alg],
+            algorithms=["RS256"],
             audience=audience,
             issuer=APPLE_ISSUER,
         )

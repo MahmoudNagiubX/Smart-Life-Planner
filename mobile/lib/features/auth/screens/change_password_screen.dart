@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../utils/auth_error_messages.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -55,24 +56,17 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       }
     } catch (e) {
       if (mounted) {
-        final msg = _extractError(e);
+        final msg = friendlyAuthError(
+          e,
+          'Something went wrong. Please try again.',
+        );
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+          SnackBar(content: Text(msg), backgroundColor: AppColors.error),
         );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  String _extractError(Object e) {
-    try {
-      // DioException detail extraction
-      final dynamic err = e;
-      final detail = err?.response?.data?['detail'];
-      if (detail is String && detail.isNotEmpty) return detail;
-    } catch (_) {}
-    return 'Something went wrong. Please try again.';
   }
 
   Widget _passwordField({

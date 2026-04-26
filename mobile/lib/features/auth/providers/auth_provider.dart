@@ -3,60 +3,9 @@ import 'package:dio/dio.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../../core/network/providers.dart';
+import '../utils/auth_error_messages.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
-
-String _extractAuthError(DioException error, String fallback) {
-  final data = error.response?.data;
-
-  if (data is Map) {
-    final detail = data['detail'];
-    final message = data['message'];
-    final errors = data['errors'];
-
-    if (errors is List && errors.isNotEmpty) {
-      final validationMessage = errors
-          .map((item) {
-            if (item is Map) {
-              final field = item['field'];
-              final itemMessage = item['message'] ?? item['msg'];
-              if (field is String && itemMessage is String) {
-                return '$field: $itemMessage';
-              }
-              if (itemMessage is String) {
-                return itemMessage;
-              }
-            }
-            return item.toString();
-          })
-          .join('\n');
-
-      if (detail is String && detail.isNotEmpty) {
-        return '$detail\n$validationMessage';
-      }
-      return validationMessage;
-    }
-
-    if (detail is String && detail.isNotEmpty) {
-      return detail;
-    }
-
-    if (message is String && message.isNotEmpty) {
-      return message;
-    }
-  }
-
-  if (data is String && data.isNotEmpty) {
-    return data;
-  }
-
-  final networkMessage = error.message ?? error.error?.toString();
-  if (networkMessage != null && networkMessage.isNotEmpty) {
-    return networkMessage;
-  }
-
-  return fallback;
-}
 
 class AuthState {
   final AuthStatus status;
@@ -118,15 +67,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String password,
   }) async {
     try {
+      state = state.copyWith(error: null);
       final authService = _ref.read(authServiceProvider);
       await authService.register(
         email: email,
         fullName: fullName,
         password: password,
       );
-      await login(email: email, password: password);
+      state = const AuthState(status: AuthStatus.unauthenticated);
     } on DioException catch (e) {
-      final message = _extractAuthError(e, 'Registration failed');
+      final message = friendlyAuthError(e, 'Registration failed');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: message,
@@ -136,6 +86,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> login({required String email, required String password}) async {
     try {
+      state = state.copyWith(error: null);
       final authService = _ref.read(authServiceProvider);
       final tokenStorage = _ref.read(tokenStorageProvider);
       final token = await authService.login(email: email, password: password);
@@ -147,7 +98,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         error: null,
       );
     } on DioException catch (e) {
-      final message = _extractAuthError(e, 'Login failed');
+      final message = friendlyAuthError(e, 'Login failed');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: message,
@@ -157,6 +108,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> googleLogin() async {
     try {
+      state = state.copyWith(error: null);
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         return;
@@ -187,7 +139,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         error: null,
       );
     } on DioException catch (e) {
-      final message = _extractAuthError(e, 'Google sign-in failed');
+      final message = friendlyAuthError(e, 'Google sign-in failed');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: message,
@@ -209,6 +161,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// We always pass them in the payload so the backend can cache them.
   Future<void> appleSignIn() async {
     try {
+      state = state.copyWith(error: null);
       final credential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
@@ -251,7 +204,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         error: null,
       );
     } on DioException catch (e) {
-      final message = _extractAuthError(e, 'Apple sign-in failed');
+      final message = friendlyAuthError(e, 'Apple sign-in failed');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: message,
@@ -271,10 +224,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> deleteAccount({
-    String? password,
-    String? confirmation,
-  }) async {
+  Future<bool> deleteAccount({String? password, String? confirmation}) async {
     try {
       final authService = _ref.read(authServiceProvider);
       await authService.deleteAccount(
@@ -285,7 +235,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await logout();
       return true;
     } on DioException catch (e) {
-      final message = _extractAuthError(e, 'Account deletion failed');
+      final message = friendlyAuthError(e, 'Account deletion failed');
       state = state.copyWith(error: message);
       return false;
     } catch (e) {
@@ -299,7 +249,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await tokenStorage.deleteToken();
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
-
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {

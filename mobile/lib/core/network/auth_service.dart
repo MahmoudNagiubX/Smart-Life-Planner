@@ -28,6 +28,55 @@ class AuthService {
     return response.data['access_token'];
   }
 
+  Future<String> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/auth/verify-email',
+      data: {'email': email, 'code': code},
+    );
+    return response.data['message'] as String? ?? 'Email verified';
+  }
+
+  Future<String> resendVerification({required String email}) async {
+    final response = await _apiClient.dio.post(
+      '/auth/resend-verification',
+      data: {'email': email},
+    );
+    return response.data['message'] as String? ?? 'Verification code sent';
+  }
+
+  Future<String> forgotPassword({required String email}) async {
+    final response = await _apiClient.dio.post(
+      '/auth/forgot-password',
+      data: {'email': email},
+    );
+    return response.data['message'] as String? ?? 'Reset code sent';
+  }
+
+  Future<String> verifyResetCode({
+    required String email,
+    required String code,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/auth/verify-reset-code',
+      data: {'email': email, 'code': code},
+    );
+    return response.data['reset_token'] as String;
+  }
+
+  Future<String> setNewPassword({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/auth/set-new-password',
+      data: {'reset_token': resetToken, 'new_password': newPassword},
+    );
+    return response.data['message'] as String? ?? 'Password updated';
+  }
+
   Future<String> googleSignIn({required String idToken}) async {
     final response = await _apiClient.dio.post(
       '/auth/google',
@@ -62,16 +111,11 @@ class AuthService {
     return response.data;
   }
 
-  Future<void> deleteAccount({
-    String? password,
-    String? confirmation,
-  }) async {
+  Future<void> deleteAccount({String? password, String? confirmation}) async {
     await _apiClient.dio.delete(
       '/auth/delete-account',
-      data: {
-        'password': password,
-        'confirmation': confirmation,
-      }..removeWhere((_, v) => v == null),
+      data: {'password': password, 'confirmation': confirmation}
+        ..removeWhere((_, v) => v == null),
     );
   }
 }

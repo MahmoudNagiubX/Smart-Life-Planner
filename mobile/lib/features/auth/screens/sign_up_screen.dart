@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_localizations.dart';
+import '../../../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../../../routes/app_routes.dart';
 
@@ -32,7 +33,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
-    await ref.read(authProvider.notifier).register(
+    await ref
+        .read(authProvider.notifier)
+        .register(
           email: _emailController.text.trim(),
           fullName: _fullNameController.text.trim(),
           password: _passwordController.text,
@@ -44,8 +47,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authState.error!),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created. Check your email for the code.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        context.go(
+          Uri(
+            path: AppRoutes.verifyEmail,
+            queryParameters: {'email': _emailController.text.trim()},
+          ).toString(),
         );
       }
       setState(() => _isLoading = false);
@@ -75,8 +91,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 Text(
                   l10n.signUp,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -121,9 +137,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     labelText: l10n.password,
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined),
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
