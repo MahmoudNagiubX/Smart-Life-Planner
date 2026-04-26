@@ -1,3 +1,60 @@
+class OnboardingWorkStudyWindow {
+  final String windowType;
+  final String? label;
+  final String startTime;
+  final String endTime;
+  final List<int> days;
+
+  const OnboardingWorkStudyWindow({
+    this.windowType = 'custom',
+    this.label,
+    required this.startTime,
+    required this.endTime,
+    this.days = const [],
+  });
+
+  OnboardingWorkStudyWindow copyWith({
+    String? windowType,
+    Object? label = OnboardingData._unset,
+    String? startTime,
+    String? endTime,
+    List<int>? days,
+  }) {
+    return OnboardingWorkStudyWindow(
+      windowType: windowType ?? this.windowType,
+      label: label == OnboardingData._unset
+          ? this.label
+          : OnboardingData._emptyToNull(label as String?),
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      days: days ?? this.days,
+    );
+  }
+
+  factory OnboardingWorkStudyWindow.fromJson(Map<String, dynamic> json) {
+    return OnboardingWorkStudyWindow(
+      windowType: json['window_type'] as String? ?? 'custom',
+      label: OnboardingData._emptyToNull(json['label'] as String?),
+      startTime: json['start_time'] as String,
+      endTime: json['end_time'] as String,
+      days: (json['days'] as List<dynamic>? ?? const [])
+          .whereType<int>()
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'window_type': windowType,
+      if (OnboardingData._emptyToNull(label) != null)
+        'label': OnboardingData._emptyToNull(label),
+      'start_time': startTime,
+      'end_time': endTime,
+      'days': days,
+    };
+  }
+}
+
 class OnboardingData {
   static const Object _unset = Object();
 
@@ -9,7 +66,7 @@ class OnboardingData {
   final List<String> goals;
   final String? wakeTime;
   final String? sleepTime;
-  final List<Map<String, dynamic>> workStudyWindows;
+  final List<OnboardingWorkStudyWindow> workStudyWindows;
   final bool notificationsEnabled;
   final bool microphoneEnabled;
   final bool locationEnabled;
@@ -43,7 +100,7 @@ class OnboardingData {
     List<String>? goals,
     Object? wakeTime = _unset,
     Object? sleepTime = _unset,
-    List<Map<String, dynamic>>? workStudyWindows,
+    List<OnboardingWorkStudyWindow>? workStudyWindows,
     bool? notificationsEnabled,
     bool? microphoneEnabled,
     bool? locationEnabled,
@@ -81,11 +138,37 @@ class OnboardingData {
       'goals': goals,
       if (wakeTime != null) 'wake_time': wakeTime,
       if (sleepTime != null) 'sleep_time': sleepTime,
-      'work_study_windows': workStudyWindows,
+      'work_study_windows': workStudyWindows
+          .map((window) => window.toJson())
+          .toList(growable: false),
       'notifications_enabled': notificationsEnabled,
       'microphone_enabled': microphoneEnabled,
       'location_enabled': locationEnabled,
     };
+  }
+
+  factory OnboardingData.fromJson(Map<String, dynamic> json) {
+    return OnboardingData(
+      timezone: json['timezone'] as String? ?? 'UTC',
+      language: json['language'] as String? ?? 'en',
+      prayerCalculationMethod:
+          json['prayer_calculation_method'] as String? ?? 'MWL',
+      country: _emptyToNull(json['country'] as String?),
+      city: _emptyToNull(json['city'] as String?),
+      goals: (json['goals'] as List<dynamic>? ?? const [])
+          .whereType<String>()
+          .toList(),
+      wakeTime: _emptyToNull(json['wake_time'] as String?),
+      sleepTime: _emptyToNull(json['sleep_time'] as String?),
+      workStudyWindows:
+          (json['work_study_windows'] as List<dynamic>? ?? const [])
+              .whereType<Map<String, dynamic>>()
+              .map(OnboardingWorkStudyWindow.fromJson)
+              .toList(),
+      notificationsEnabled: json['notifications_enabled'] as bool? ?? true,
+      microphoneEnabled: json['microphone_enabled'] as bool? ?? false,
+      locationEnabled: json['location_enabled'] as bool? ?? false,
+    );
   }
 
   static String? _emptyToNull(String? value) {

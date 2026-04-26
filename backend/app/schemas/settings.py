@@ -1,9 +1,25 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pydantic import Field, field_validator
-from typing import Optional
+from typing import Literal, Optional
 import uuid
 from datetime import datetime
 from app.services.onboarding_defaults import normalize_goal_keys
+
+ALLOWED_ONBOARDING_GOALS = {
+    "study",
+    "work",
+    "self_improvement",
+    "fitness",
+    "spiritual_growth",
+}
+
+ALLOWED_PRAYER_METHODS = {
+    "MWL",
+    "Egypt",
+    "Makkah",
+    "ISNA",
+    "Karachi",
+}
 
 
 def _validate_hh_mm(value: str | None, field_name: str) -> str | None:
@@ -20,6 +36,67 @@ def _validate_hh_mm(value: str | None, field_name: str) -> str | None:
     if hour_int > 23 or minute_int > 59:
         raise ValueError(f"{field_name} must be a valid 24-hour time")
     return f"{hour_int:02d}:{minute_int:02d}"
+
+
+def _validate_goal_contract(goals: list[str]) -> list[str]:
+    normalized = normalize_goal_keys(goals)
+    unsupported = [
+        goal for goal in normalized if goal not in ALLOWED_ONBOARDING_GOALS
+    ]
+    if unsupported:
+        raise ValueError(
+            "Unsupported onboarding goals: " + ", ".join(sorted(unsupported))
+        )
+    return normalized
+
+
+class WorkStudyWindow(BaseModel):
+    """Structured JSON payload for first-run work or study availability."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    window_type: Literal["work", "study", "custom"] = "custom"
+    label: Optional[str] = Field(default=None, max_length=80)
+    start_time: str
+    end_time: str
+    days: list[int] = Field(default_factory=list)
+
+    @field_validator("label")
+    @classmethod
+    def label_trimmed(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        stripped = value.strip()
+        return stripped or None
+
+    @field_validator("start_time")
+    @classmethod
+    def start_time_valid(cls, value: str) -> str:
+        checked = _validate_hh_mm(value, "start_time")
+        if checked is None:
+            raise ValueError("start_time is required")
+        return checked
+
+    @field_validator("end_time")
+    @classmethod
+    def end_time_valid(cls, value: str) -> str:
+        checked = _validate_hh_mm(value, "end_time")
+        if checked is None:
+            raise ValueError("end_time is required")
+        return checked
+
+    @field_validator("days")
+    @classmethod
+    def days_valid(cls, value: list[int]) -> list[int]:
+        seen: set[int] = set()
+        normalized: list[int] = []
+        for day in value:
+            if day < 0 or day > 6:
+                raise ValueError("days must use integers 0 through 6")
+            if day not in seen:
+                seen.add(day)
+                normalized.append(day)
+        return normalized
 
 
 class SettingsResponse(BaseModel):
@@ -66,7 +143,7 @@ class SettingsUpdate(BaseModel):
     goals: Optional[list[str]] = Field(default=None)
     wake_time: Optional[str] = None
     sleep_time: Optional[str] = None
-    work_study_windows: Optional[list[dict]] = Field(default=None)
+    work_study_windows: Optional[list[WorkStudyWindow]] = Field(default=None)
     microphone_enabled: Optional[bool] = None
     location_enabled: Optional[bool] = None
     onboarding_completed: Optional[bool] = None
@@ -93,19 +170,26 @@ class SettingsUpdate(BaseModel):
     def settings_goals_normalized(cls, value: list[str] | None) -> list[str] | None:
         if value is None:
             return value
-        return normalize_goal_keys(value)
+        return _validate_goal_contract(value)
+
+    @field_validator("prayer_calculation_method")
+    @classmethod
+    def prayer_method_supported(cls, value: str | None) -> str | None:
+        if value is not None and value not in ALLOWED_PRAYER_METHODS:
+            raise ValueError("Unsupported prayer calculation method")
+        return value
 
 
 class OnboardingRequest(BaseModel):
     timezone: str
     language: str
     prayer_calculation_method: str
-    country: Optional[str] = None
-    city: Optional[str] = None
+    country: Optional[str] = Field(default=None, max_length=100)
+    city: Optional[str] = Field(default=None, max_length=100)
     goals: list[str] = Field(default_factory=list)
     wake_time: Optional[str] = None
     sleep_time: Optional[str] = None
-    work_study_windows: list[dict] = Field(default_factory=list)
+    work_study_windows: list[WorkStudyWindow] = Field(default_factory=list)
     notifications_enabled: bool = True
     microphone_enabled: bool = False
     location_enabled: bool = False
@@ -116,6 +200,13 @@ class OnboardingRequest(BaseModel):
         if not value.strip():
             raise ValueError("Value cannot be empty")
         return value.strip()
+
+    @field_validator("prayer_calculation_method")
+    @classmethod
+    def onboarding_prayer_method_supported(cls, value: str) -> str:
+        if value not in ALLOWED_PRAYER_METHODS:
+            raise ValueError("Unsupported prayer calculation method")
+        return value
 
     @field_validator("language")
     @classmethod
@@ -135,7 +226,7 @@ class OnboardingRequest(BaseModel):
     @field_validator("goals")
     @classmethod
     def goals_trimmed(cls, value: list[str]) -> list[str]:
-        return normalize_goal_keys(value)
+        return _validate_goal_contract(value)
 
     @field_validator("wake_time")
     @classmethod
