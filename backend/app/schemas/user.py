@@ -58,3 +58,31 @@ class VerifyEmailRequest(BaseModel):
 
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyResetCodeRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+    @field_validator("code")
+    @classmethod
+    def code_is_digits(cls, v: str) -> str:
+        if not v.strip().isdigit() or len(v.strip()) != 6:
+            raise ValueError("Code must be a 6-digit number")
+        return v.strip()
+
+
+class SetNewPasswordRequest(BaseModel):
+    reset_token: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v

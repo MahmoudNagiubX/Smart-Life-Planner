@@ -14,7 +14,7 @@ from app.core.security import (
     create_access_token,
     decode_access_token,
 )
-from app.models.verification import EmailVerification
+from app.models.verification import EmailVerification, PasswordReset
 from app.repositories.user_repository import (
     get_user_by_email,
     create_user,
@@ -27,8 +27,14 @@ from app.schemas.user import (
     TokenResponse,
     VerifyEmailRequest,
     ResendVerificationRequest,
+    ForgotPasswordRequest,
+    VerifyResetCodeRequest,
+    SetNewPasswordRequest,
 )
-from app.services.email_service import send_verification_email
+from app.services.email_service import (
+    send_verification_email,
+    send_password_reset_email,
+)
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -179,6 +185,93 @@ async def resend_verification(
     code = await _create_verification_code(db, user.id)
     await send_verification_email(user.email, code)
     return {"message": "If that email exists, a code was sent"}
+
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+async def forgot_password(
+    payload: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)
+):
+    user = await get_user_by_email(db, payload.email)
+    # Always return 200 — never reveal if email exists
+    if not user or not user.is_active:
+        return {"message": "If that email exists, a reset code was sent"}
+
+    # Rate-limit: 1 code per 60 seconds
+    result = await db.execute(
+        select(PasswordReset).where(
+            PasswordReset.user_id == user.id,
+            PasswordReset.created_at > datetime.now(timezone.utc) - timedelta(seconds=60),
+        ).limit(1)
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=429, detail="Please wait before requesting another code")
+
+    code = _generate_code()
+    expires = datetime.now(timezone.utc) + timedelta(minutes=15)
+    reset = PasswordReset(user_id=user.id, code=code, expires_at=expires)
+    db.add(reset)
+    await db.commit()
+
+    await send_password_reset_email(user.email, code)
+    return {"message": "If that email exists, a reset code was sent"}
+
+
+@router.post("/verify-reset-code", status_code=status.HTTP_200_OK)
+async def verify_reset_code(
+    payload: VerifyResetCodeRequest, db: AsyncSession = Depends(get_db)
+):
+    user = await get_user_by_email(db, payload.email)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid code")
+
+    result = await db.execute(
+        select(PasswordReset).where(
+            PasswordReset.user_id == user.id,
+            PasswordReset.code == payload.code,
+            PasswordReset.used_at.is_(None),
+            PasswordReset.reset_token.is_(None),
+            PasswordReset.expires_at > datetime.now(timezone.utc),
+        ).order_by(PasswordReset.created_at.desc()).limit(1)
+    )
+    reset = result.scalar_one_or_none()
+    if not reset:
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+    # Issue a one-time reset token
+    reset_token = "".join(
+        random.choices(string.ascii_letters + string.digits, k=64)
+    )
+    reset.reset_token = reset_token
+    await db.commit()
+
+    return {"reset_token": reset_token}
+
+
+@router.post("/set-new-password", status_code=status.HTTP_200_OK)
+async def set_new_password(
+    payload: SetNewPasswordRequest, db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(PasswordReset).where(
+            PasswordReset.reset_token == payload.reset_token,
+            PasswordReset.used_at.is_(None),
+            PasswordReset.expires_at > datetime.now(timezone.utc),
+        ).limit(1)
+    )
+    reset = result.scalar_one_or_none()
+    if not reset:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    user = await get_user_by_id(db, reset.user_id)
+    if not user or not user.is_active:
+        raise HTTPException(status_code=400, detail="Invalid request")
+
+    # Set new password + mark token used
+    user.hashed_password = hash_password(payload.new_password)
+    reset.used_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    return {"message": "Password updated successfully"}
 
 
 @router.get("/me", response_model=UserResponse)

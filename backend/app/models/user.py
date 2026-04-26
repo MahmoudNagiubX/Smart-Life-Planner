@@ -1,10 +1,12 @@
+import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Boolean, DateTime, ForeignKey, Text, Enum
+
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.database import Base
-import enum
 
 
 class AuthProvider(str, enum.Enum):
@@ -23,13 +25,7 @@ class User(Base):
         String(255), unique=True, nullable=False, index=True
     )
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-
-    # Nullable: Google/Apple users have no password
-    hashed_password: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
-
-    # Auth provider tracking
+    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
     auth_provider: Mapped[AuthProvider] = mapped_column(
         Enum(AuthProvider, name="authprovider"),
         nullable=False,
@@ -38,10 +34,8 @@ class User(Base):
     provider_user_id: Mapped[str | None] = mapped_column(
         String(255), nullable=True, index=True
     )
-
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, nullable=False
     )
