@@ -38,6 +38,17 @@ class Task(Base):
     estimated_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     category: Mapped[str | None] = mapped_column(String(80), nullable=True)
     ai_parsed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # H-ASAE execution metadata
+    difficulty_level: Mapped[str] = mapped_column(String(20), default="medium", nullable=False)
+    energy_required: Mapped[str] = mapped_column(String(20), default="medium", nullable=False)
+    is_splittable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_strict_time: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    earliest_start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    latest_finish_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    auto_schedule_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    schedule_flexibility: Mapped[str] = mapped_column(String(20), default="flexible", nullable=False)
+
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
@@ -45,6 +56,8 @@ class Task(Base):
 
     project: Mapped["TaskProject | None"] = relationship("TaskProject", back_populates="tasks")
     subtasks: Mapped[list["TaskSubtask"]] = relationship("TaskSubtask", back_populates="task", cascade="all, delete-orphan")
+    dependencies: Mapped[list["TaskDependency"]] = relationship("TaskDependency", foreign_keys="TaskDependency.task_id", back_populates="task", cascade="all, delete-orphan")
+    dependents: Mapped[list["TaskDependency"]] = relationship("TaskDependency", foreign_keys="TaskDependency.depends_on_task_id", back_populates="prerequisite")
 
 
 class TaskSubtask(Base):
@@ -60,3 +73,22 @@ class TaskSubtask(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     task: Mapped["Task"] = relationship("Task", back_populates="subtasks")
+
+
+class TaskDependency(Base):
+    __tablename__ = "task_dependencies"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    task_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    depends_on_task_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    dependency_type: Mapped[str] = mapped_column(String(30), default="finish_to_start", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+    task: Mapped["Task"] = relationship("Task", foreign_keys=[task_id], back_populates="dependencies")
+    prerequisite: Mapped["Task"] = relationship("Task", foreign_keys=[depends_on_task_id], back_populates="dependents")
+
+    from sqlalchemy import UniqueConstraint
+    __table_args__ = (
+        UniqueConstraint("task_id", "depends_on_task_id", name="uq_task_dependency"),
+    )
