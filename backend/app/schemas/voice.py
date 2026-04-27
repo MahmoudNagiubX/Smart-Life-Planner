@@ -43,7 +43,9 @@ class VoiceTaskParseResponse(BaseModel):
     confidence: Literal["low", "medium", "high"]
     tasks: List[ParsedVoiceTask]
     confirmation_required: bool = True
+    requires_confirmation: bool = True
     display_text: str
+    fallback_reason: Optional[str] = None
 
 
 class VoiceTranscribeAndParseResponse(BaseModel):
@@ -54,7 +56,9 @@ class VoiceTranscribeAndParseResponse(BaseModel):
     confidence: Literal["low", "medium", "high"]
     tasks: List[ParsedVoiceTask]
     confirmation_required: bool = True
+    requires_confirmation: bool = True
     display_text: str
+    fallback_reason: Optional[str] = None
 
 
 class BulkTaskItem(BaseModel):

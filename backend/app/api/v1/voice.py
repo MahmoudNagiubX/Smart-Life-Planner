@@ -14,6 +14,10 @@ from app.services.voice_service import (
     transcribe_audio_with_groq,
     parse_tasks_from_transcript,
 )
+from app.services.voice_fallback import (
+    normalize_voice_task_parse,
+    voice_task_parse_fallback,
+)
 from app.core.config import settings
 from app.core.logging import logger
 
@@ -34,6 +38,49 @@ def _get_dates() -> tuple[str, str]:
     today = date.today()
     tomorrow = today + timedelta(days=1)
     return today.isoformat(), tomorrow.isoformat()
+
+
+def _voice_task_parse_response(result: dict) -> VoiceTaskParseResponse:
+    tasks = [ParsedVoiceTask(**t) for t in result.get("tasks", [])]
+    confirmation_required = result.get("confirmation_required", True)
+    return VoiceTaskParseResponse(
+        detected_intent=result.get("detected_intent", "unknown_intent"),
+        confidence=result.get("confidence", "low"),
+        tasks=tasks,
+        confirmation_required=confirmation_required,
+        requires_confirmation=result.get(
+            "requires_confirmation",
+            confirmation_required,
+        ),
+        display_text=result.get("display_text", "Review your tasks."),
+        fallback_reason=result.get("fallback_reason"),
+    )
+
+
+def _voice_transcribe_parse_response(
+    *,
+    transcribed_text: str,
+    language: str | None,
+    provider: str,
+    result: dict,
+) -> VoiceTranscribeAndParseResponse:
+    tasks = [ParsedVoiceTask(**t) for t in result.get("tasks", [])]
+    confirmation_required = result.get("confirmation_required", True)
+    return VoiceTranscribeAndParseResponse(
+        transcribed_text=transcribed_text,
+        language=language,
+        provider=provider,
+        detected_intent=result.get("detected_intent", "unknown_intent"),
+        confidence=result.get("confidence", "low"),
+        tasks=tasks,
+        confirmation_required=confirmation_required,
+        requires_confirmation=result.get(
+            "requires_confirmation",
+            confirmation_required,
+        ),
+        display_text=result.get("display_text", "Review your tasks."),
+        fallback_reason=result.get("fallback_reason"),
+    )
 
 
 @router.post("/transcribe", response_model=VoiceTranscriptionResponse)
@@ -85,7 +132,13 @@ async def parse_voice_tasks(
     payload: VoiceTaskParseRequest,
     current_user=Depends(get_current_user),
 ):
-    _check_ai_configured()
+    if not settings.GROQ_API_KEY:
+        result = voice_task_parse_fallback(
+            payload.transcribed_text,
+            "ai_not_configured",
+        )
+        return _voice_task_parse_response(result)
+
     today, tomorrow = _get_dates()
 
     try:
@@ -95,24 +148,29 @@ async def parse_voice_tasks(
             today,
             tomorrow,
         )
-        tasks = [ParsedVoiceTask(**t) for t in result.get("tasks", [])]
-        return VoiceTaskParseResponse(
-            detected_intent=result.get("detected_intent", "unknown_intent"),
-            confidence=result.get("confidence", "low"),
-            tasks=tasks,
-            confirmation_required=result.get("confirmation_required", True),
-            display_text=result.get("display_text", "Review your tasks."),
+        return _voice_task_parse_response(
+            normalize_voice_task_parse(result, payload.transcribed_text)
         )
     except Exception as e:
-        logger.error(f"Voice parse error: {e}")
+        logger.error(
+            "Voice parse error",
+            exc_info=True,
+            extra={
+                "failure_area": "ai_service",
+                "exception_type": type(e).__name__,
+                "safe_context": "voice_parse_tasks",
+            },
+        )
         if "rate_limit" in str(e).lower() or "429" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="AI limit reached. Try again later.",
             )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Task parsing failed. Please try again.",
+        return _voice_task_parse_response(
+            voice_task_parse_fallback(
+                payload.transcribed_text,
+                "voice_parse_failure",
+            )
         )
 
 
@@ -149,24 +207,34 @@ async def transcribe_and_parse(
         detected_language = transcription.get("language", language)
 
         # Step 2: Parse tasks
-        result = await parse_tasks_from_transcript(
-            transcribed_text,
-            detected_language,
-            today,
-            tomorrow,
-        )
+        try:
+            result = await parse_tasks_from_transcript(
+                transcribed_text,
+                detected_language,
+                today,
+                tomorrow,
+            )
+            result = normalize_voice_task_parse(result, transcribed_text)
+        except Exception as e:
+            logger.error(
+                "Voice parse after transcription failed",
+                exc_info=True,
+                extra={
+                    "failure_area": "ai_service",
+                    "exception_type": type(e).__name__,
+                    "safe_context": "voice_transcribe_and_parse_parse_step",
+                },
+            )
+            result = voice_task_parse_fallback(
+                transcribed_text,
+                "voice_parse_failure",
+            )
 
-        tasks = [ParsedVoiceTask(**t) for t in result.get("tasks", [])]
-
-        return VoiceTranscribeAndParseResponse(
+        return _voice_transcribe_parse_response(
             transcribed_text=transcribed_text,
             language=detected_language,
             provider=transcription.get("provider", "groq_whisper_large_v3_turbo"),
-            detected_intent=result.get("detected_intent", "unknown_intent"),
-            confidence=result.get("confidence", "low"),
-            tasks=tasks,
-            confirmation_required=result.get("confirmation_required", True),
-            display_text=result.get("display_text", "Review your tasks."),
+            result=result,
         )
     except ValueError as e:
         raise HTTPException(

@@ -46,13 +46,13 @@ class ParsedVoiceTaskModel {
       dueDate: json['due_date'] as String?,
       dueTime: json['due_time'] as String?,
       priority: json['priority'] as String? ?? 'medium',
-      estimatedDurationMinutes:
-          json['estimated_duration_minutes'] as int?,
+      estimatedDurationMinutes: json['estimated_duration_minutes'] as int?,
       project: json['project'] as String?,
       category: json['category'] as String?,
       subtasks: (json['subtasks'] as List<dynamic>? ?? [])
-          .map((s) => ParsedVoiceSubtaskModel.fromJson(
-              s as Map<String, dynamic>))
+          .map(
+            (s) => ParsedVoiceSubtaskModel.fromJson(s as Map<String, dynamic>),
+          )
           .toList(),
     );
   }
@@ -86,7 +86,9 @@ class VoiceParseResult {
   final String confidence;
   final List<ParsedVoiceTaskModel> tasks;
   final bool confirmationRequired;
+  final bool requiresConfirmation;
   final String displayText;
+  final String? fallbackReason;
 
   VoiceParseResult({
     required this.transcribedText,
@@ -96,7 +98,9 @@ class VoiceParseResult {
     required this.confidence,
     required this.tasks,
     required this.confirmationRequired,
+    required this.requiresConfirmation,
     required this.displayText,
+    this.fallbackReason,
   });
 
   factory VoiceParseResult.fromJson(Map<String, dynamic> json) {
@@ -107,12 +111,15 @@ class VoiceParseResult {
       detectedIntent: json['detected_intent'] as String,
       confidence: json['confidence'] as String,
       tasks: (json['tasks'] as List<dynamic>? ?? [])
-          .map((t) => ParsedVoiceTaskModel.fromJson(
-              t as Map<String, dynamic>))
+          .map((t) => ParsedVoiceTaskModel.fromJson(t as Map<String, dynamic>))
           .toList(),
-      confirmationRequired:
-          json['confirmation_required'] as bool? ?? true,
+      confirmationRequired: json['confirmation_required'] as bool? ?? true,
+      requiresConfirmation:
+          json['requires_confirmation'] as bool? ??
+          json['confirmation_required'] as bool? ??
+          true,
       displayText: json['display_text'] as String,
+      fallbackReason: json['fallback_reason'] as String?,
     );
   }
 }

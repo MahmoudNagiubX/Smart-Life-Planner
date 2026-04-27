@@ -24,6 +24,9 @@ class VoiceConfirmationScreen extends ConsumerWidget {
     }
 
     final selectedCount = state.editableTasks.where((t) => t.isSelected).length;
+    final transcriptText = state.editableTranscript.isNotEmpty
+        ? state.editableTranscript
+        : result.transcribedText;
 
     return Scaffold(
       appBar: AppBar(
@@ -95,9 +98,22 @@ class VoiceConfirmationScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  result.transcribedText,
-                  style: const TextStyle(fontSize: 14),
+                Directionality(
+                  textDirection: _isRtl(transcriptText)
+                      ? TextDirection.rtl
+                      : TextDirection.ltr,
+                  child: TextFormField(
+                    initialValue: transcriptText,
+                    maxLines: 3,
+                    minLines: 1,
+                    decoration: const InputDecoration(
+                      labelText: 'Editable transcript',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) => ref
+                        .read(voiceProvider.notifier)
+                        .updateTranscript(value),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -107,6 +123,26 @@ class VoiceConfirmationScreen extends ConsumerWidget {
                     color: AppColors.textSecondary,
                   ),
                 ),
+                if (result.requiresConfirmation ||
+                    result.confidence == 'low' ||
+                    result.fallbackReason != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: const Text(
+                      'Review and edit before saving.',
+                      style: TextStyle(color: AppColors.warning),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -114,10 +150,28 @@ class VoiceConfirmationScreen extends ConsumerWidget {
           // Tasks list
           Expanded(
             child: state.editableTasks.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No tasks detected.\nTry speaking again.',
-                      textAlign: TextAlign.center,
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'No tasks detected.',
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: transcriptText.trim().isEmpty
+                                ? null
+                                : () => ref
+                                      .read(voiceProvider.notifier)
+                                      .addManualTaskFromTranscript(),
+                            icon: const Icon(Icons.edit_note),
+                            label: const Text('Create task manually'),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 : ListView.builder(
@@ -161,13 +215,25 @@ class VoiceConfirmationScreen extends ConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    task.title,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      decoration: task.isSelected
-                                          ? null
-                                          : TextDecoration.lineThrough,
+                                  Directionality(
+                                    textDirection: _isRtl(task.title)
+                                        ? TextDirection.rtl
+                                        : TextDirection.ltr,
+                                    child: TextFormField(
+                                      initialValue: task.title,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Task title',
+                                        isDense: true,
+                                      ),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        decoration: task.isSelected
+                                            ? null
+                                            : TextDecoration.lineThrough,
+                                      ),
+                                      onChanged: (value) => ref
+                                          .read(voiceProvider.notifier)
+                                          .updateTaskTitle(index, value),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -353,5 +419,9 @@ class VoiceConfirmationScreen extends ConsumerWidget {
     if (c == 'high') return AppColors.success;
     if (c == 'medium') return AppColors.warning;
     return AppColors.error;
+  }
+
+  bool _isRtl(String value) {
+    return RegExp(r'[\u0600-\u06FF]').hasMatch(value);
   }
 }

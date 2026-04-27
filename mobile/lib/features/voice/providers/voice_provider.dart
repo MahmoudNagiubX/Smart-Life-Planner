@@ -10,12 +10,20 @@ final voiceApiServiceProvider = Provider<VoiceApiService>((ref) {
   return VoiceApiService(ref.watch(apiClientProvider));
 });
 
-enum VoiceScreenState { idle, recording, processing, preview, success, failed }
+enum VoiceScreenState {
+  idle,
+  listening,
+  processing,
+  transcriptPreview,
+  success,
+  failed,
+}
 
 class VoiceState {
   final VoiceScreenState screenState;
   final VoiceParseResult? result;
   final List<ParsedVoiceTaskModel> editableTasks;
+  final String editableTranscript;
   final String? error;
   final int recordingSeconds;
   final String? audioPath;
@@ -24,6 +32,7 @@ class VoiceState {
     this.screenState = VoiceScreenState.idle,
     this.result,
     this.editableTasks = const [],
+    this.editableTranscript = '',
     this.error,
     this.recordingSeconds = 0,
     this.audioPath,
@@ -33,6 +42,7 @@ class VoiceState {
     VoiceScreenState? screenState,
     VoiceParseResult? result,
     List<ParsedVoiceTaskModel>? editableTasks,
+    String? editableTranscript,
     String? error,
     int? recordingSeconds,
     String? audioPath,
@@ -41,6 +51,7 @@ class VoiceState {
       screenState: screenState ?? this.screenState,
       result: result ?? this.result,
       editableTasks: editableTasks ?? this.editableTasks,
+      editableTranscript: editableTranscript ?? this.editableTranscript,
       error: error,
       recordingSeconds: recordingSeconds ?? this.recordingSeconds,
       audioPath: audioPath ?? this.audioPath,
@@ -60,7 +71,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
 
   Future<void> startRecording() async {
     state = state.copyWith(
-      screenState: VoiceScreenState.recording,
+      screenState: VoiceScreenState.listening,
       recordingSeconds: 0,
       error: null,
     );
@@ -87,9 +98,10 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       final result = await service.transcribeAndParse(audioPath: path);
 
       state = state.copyWith(
-        screenState: VoiceScreenState.preview,
+        screenState: VoiceScreenState.transcriptPreview,
         result: result,
         editableTasks: List.from(result.tasks),
+        editableTranscript: result.transcribedText,
       );
     } on DioException catch (e) {
       state = state.copyWith(
@@ -132,6 +144,44 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     final tasks = List<ParsedVoiceTaskModel>.from(state.editableTasks);
     tasks[index] = tasks[index].copyWith(priority: priority);
     state = state.copyWith(editableTasks: tasks);
+  }
+
+  void updateTranscript(String transcript) {
+    state = state.copyWith(editableTranscript: transcript);
+  }
+
+  void addManualTaskFromTranscript() {
+    final title = state.editableTranscript.trim();
+    if (title.isEmpty) return;
+
+    final tasks = List<ParsedVoiceTaskModel>.from(state.editableTasks)
+      ..add(
+        ParsedVoiceTaskModel(
+          title: title,
+          priority: 'medium',
+          isSelected: true,
+        ),
+      );
+    state = state.copyWith(editableTasks: tasks);
+  }
+
+  void startManualEntry() {
+    state = VoiceState(
+      screenState: VoiceScreenState.transcriptPreview,
+      result: VoiceParseResult(
+        transcribedText: '',
+        language: 'manual',
+        provider: 'manual',
+        detectedIntent: 'manual_task_fallback',
+        confidence: 'low',
+        tasks: const [],
+        confirmationRequired: true,
+        requiresConfirmation: true,
+        displayText: 'Enter the transcript or task manually.',
+        fallbackReason: 'manual_entry',
+      ),
+      editableTranscript: '',
+    );
   }
 
   Future<int> confirmTasks() async {

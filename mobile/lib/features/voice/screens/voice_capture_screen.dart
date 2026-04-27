@@ -78,7 +78,8 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen>
 
     // Navigate to confirmation when preview is ready
     ref.listen<VoiceState>(voiceProvider, (prev, next) {
-      if (next.screenState == VoiceScreenState.preview && next.result != null) {
+      if (next.screenState == VoiceScreenState.transcriptPreview &&
+          next.result != null) {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const VoiceConfirmationScreen()),
@@ -117,7 +118,7 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen>
               if (state.screenState == VoiceScreenState.idle)
                 _buildIdleButton(),
 
-              if (state.screenState == VoiceScreenState.recording)
+              if (state.screenState == VoiceScreenState.listening)
                 _buildRecordingButton(state),
 
               if (state.screenState == VoiceScreenState.processing)
@@ -179,7 +180,7 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen>
           ],
         );
 
-      case VoiceScreenState.recording:
+      case VoiceScreenState.listening:
         return Column(
           children: [
             const Text('🔴', style: TextStyle(fontSize: 48)),
@@ -320,6 +321,12 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen>
           onPressed: () => ref.read(voiceProvider.notifier).reset(),
           icon: const Icon(Icons.refresh),
           label: const Text('Try Again'),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => ref.read(voiceProvider.notifier).startManualEntry(),
+          icon: const Icon(Icons.edit_note),
+          label: const Text('Enter Manually'),
         ),
       ],
     );
