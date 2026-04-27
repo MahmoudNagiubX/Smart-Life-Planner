@@ -20,6 +20,7 @@ class CreateNoteSheet extends ConsumerStatefulWidget {
 
 class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
   final _titleController = TextEditingController();
+  final _headingController = TextEditingController();
   final _contentController = TextEditingController();
   final _bulletController = TextEditingController();
   final _tagsController = TextEditingController();
@@ -30,6 +31,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
   DateTime? _reminderAt;
   String _noteType = 'text';
   String _selectedColorKey = 'default';
+  bool _dividerEnabled = false;
   bool _isLoading = false;
 
   bool get _isEditing => widget.initialNote != null;
@@ -51,8 +53,12 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
     _attachments.addAll(note.attachments);
 
     for (final block in note.structuredBlocks) {
-      if (block.type == 'bullet_list') {
+      if (block.type == 'heading') {
+        _headingController.text = block.text ?? '';
+      } else if (block.type == 'bullet_list') {
         _bulletController.text = block.items.join('\n');
+      } else if (block.type == 'divider') {
+        _dividerEnabled = true;
       } else if (_reminderAt == null &&
           block.type == 'reminder' &&
           block.reminderAt != null) {
@@ -82,6 +88,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
   @override
   void dispose() {
     _titleController.dispose();
+    _headingController.dispose();
     _contentController.dispose();
     _bulletController.dispose();
     _tagsController.dispose();
@@ -140,6 +147,17 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
     required List<ChecklistItemModel> checklistItems,
   }) {
     final blocks = <NoteStructuredBlockModel>[];
+    final heading = _headingController.text.trim();
+    if (heading.isNotEmpty) {
+      blocks.add(
+        NoteStructuredBlockModel(
+          id: 'heading_main',
+          type: 'heading',
+          text: heading,
+        ),
+      );
+    }
+
     if (content.trim().isNotEmpty) {
       blocks.add(
         NoteStructuredBlockModel(
@@ -171,6 +189,12 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
       );
     }
 
+    if (_dividerEnabled) {
+      blocks.add(
+        const NoteStructuredBlockModel(id: 'divider_main', type: 'divider'),
+      );
+    }
+
     if (_reminderAt != null) {
       blocks.add(
         NoteStructuredBlockModel(
@@ -188,6 +212,19 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
           id: 'task_link_main',
           type: 'task_link',
           taskTitle: linkedTaskText,
+        ),
+      );
+    }
+
+    for (var index = 0; index < _attachments.length; index++) {
+      final attachment = _attachments[index];
+      blocks.add(
+        NoteStructuredBlockModel(
+          id: 'image_$index',
+          type: 'image',
+          imageUrl: attachment.fileUrl,
+          localPath: attachment.localPath,
+          fileType: attachment.fileType,
         ),
       );
     }
@@ -270,9 +307,14 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
     final checklistItems = _noteType == 'checklist'
         ? _buildChecklistItems()
         : <ChecklistItemModel>[];
-    final content = _noteType == 'checklist'
+    final rawContent = _noteType == 'checklist'
         ? checklistItems.map((item) => item.text).join('\n')
         : _contentController.text.trim();
+    final content = rawContent.isNotEmpty
+        ? rawContent
+        : _headingController.text.trim().isNotEmpty
+        ? _headingController.text.trim()
+        : _titleController.text.trim();
     if (content.isEmpty) return;
     final structuredBlocks = _buildStructuredBlocks(
       content: content,
@@ -419,6 +461,14 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
               decoration: const InputDecoration(labelText: 'Title (optional)'),
             ),
             const SizedBox(height: 12),
+            TextField(
+              controller: _headingController,
+              decoration: const InputDecoration(
+                labelText: 'Heading block',
+                prefixIcon: Icon(Icons.title),
+              ),
+            ),
+            const SizedBox(height: 12),
             SegmentedButton<String>(
               segments: const [
                 ButtonSegment(
@@ -477,6 +527,14 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
                 hintText: 'One bullet per line',
                 prefixIcon: Icon(Icons.format_list_bulleted),
               ),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: const Icon(Icons.horizontal_rule),
+              title: const Text('Divider block'),
+              value: _dividerEnabled,
+              onChanged: (value) => setState(() => _dividerEnabled = value),
             ),
             const SizedBox(height: 12),
             TextField(

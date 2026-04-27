@@ -36,6 +36,9 @@ class NoteStructuredBlockModel {
   final String? text;
   final List<String> items;
   final List<ChecklistItemModel> checklistItems;
+  final String? imageUrl;
+  final String? localPath;
+  final String? fileType;
   final String? reminderAt;
   final String? taskId;
   final String? taskTitle;
@@ -46,6 +49,9 @@ class NoteStructuredBlockModel {
     this.text,
     this.items = const [],
     this.checklistItems = const [],
+    this.imageUrl,
+    this.localPath,
+    this.fileType,
     this.reminderAt,
     this.taskId,
     this.taskTitle,
@@ -67,6 +73,9 @@ class NoteStructuredBlockModel {
                 .map(ChecklistItemModel.fromJson)
                 .toList()
           : const [],
+      imageUrl: json['image_url'] as String?,
+      localPath: json['local_path'] as String?,
+      fileType: json['file_type'] as String?,
       reminderAt: json['reminder_at'] as String?,
       taskId: json['task_id'] as String?,
       taskTitle: json['task_title'] as String?,
@@ -80,6 +89,11 @@ class NoteStructuredBlockModel {
     if (type == 'checklist') {
       data['items'] = checklistItems.map((item) => item.toJson()).toList();
     }
+    if (imageUrl != null && imageUrl!.isNotEmpty) data['image_url'] = imageUrl;
+    if (localPath != null && localPath!.isNotEmpty) {
+      data['local_path'] = localPath;
+    }
+    if (fileType != null && fileType!.isNotEmpty) data['file_type'] = fileType;
     if (reminderAt != null) data['reminder_at'] = reminderAt;
     if (taskId != null && taskId!.isNotEmpty) data['task_id'] = taskId;
     if (taskTitle != null && taskTitle!.isNotEmpty) {

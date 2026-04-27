@@ -81,6 +81,9 @@ class NoteStructuredBlock(BaseModel):
     type: str
     text: Optional[str] = None
     items: Optional[List[NoteChecklistItem | str]] = None
+    image_url: Optional[str] = None
+    local_path: Optional[str] = None
+    file_type: Optional[str] = None
     reminder_at: Optional[datetime] = None
     task_id: Optional[str] = None
     task_title: Optional[str] = None
@@ -100,16 +103,19 @@ class NoteStructuredBlock(BaseModel):
     def type_valid(cls, v: str) -> str:
         clean = v.strip().lower()
         if clean not in (
+            "heading",
             "paragraph",
             "bullet_list",
             "checklist",
+            "divider",
+            "image",
             "reminder",
             "task_link",
         ):
             raise ValueError("Unsupported structured block type")
         return clean
 
-    @field_validator("text", "task_id", "task_title")
+    @field_validator("text", "task_id", "task_title", "image_url", "local_path", "file_type")
     @classmethod
     def optional_text_valid(cls, v: str | None) -> str | None:
         if v is None:
@@ -118,6 +124,24 @@ class NoteStructuredBlock(BaseModel):
         if len(clean) > 1000:
             raise ValueError("Structured block text is too long")
         return clean or None
+
+    @model_validator(mode="after")
+    def block_content_valid(self) -> "NoteStructuredBlock":
+        if self.type in {"heading", "paragraph"} and not self.text:
+            raise ValueError(f"{self.type} block requires text")
+        if self.type == "bullet_list":
+            if not self.items:
+                raise ValueError("bullet_list block requires items")
+            for item in self.items:
+                if isinstance(item, str) and not item.strip():
+                    raise ValueError("bullet_list item cannot be empty")
+        if self.type == "checklist" and not self.items:
+            raise ValueError("checklist block requires items")
+        if self.type == "image" and not (self.image_url or self.local_path):
+            raise ValueError("image block requires image_url or local_path")
+        if self.type == "task_link" and not (self.task_id or self.task_title):
+            raise ValueError("task_link block requires task_id or task_title")
+        return self
 
 
 def _normalize_checklist_items(

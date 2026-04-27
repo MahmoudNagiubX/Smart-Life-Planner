@@ -671,21 +671,42 @@ class _StructuredBlocksPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NoteStructuredBlockModel? headingBlock;
     NoteStructuredBlockModel? bulletBlock;
     NoteStructuredBlockModel? taskBlock;
+    NoteStructuredBlockModel? dividerBlock;
+    NoteStructuredBlockModel? imageBlock;
     for (final block in blocks) {
-      if (bulletBlock == null &&
+      if (headingBlock == null && block.type == 'heading') {
+        headingBlock = block;
+      } else if (bulletBlock == null &&
           block.type == 'bullet_list' &&
           block.items.isNotEmpty) {
         bulletBlock = block;
       } else if (taskBlock == null && block.type == 'task_link') {
         taskBlock = block;
+      } else if (dividerBlock == null && block.type == 'divider') {
+        dividerBlock = block;
+      } else if (imageBlock == null && block.type == 'image') {
+        imageBlock = block;
       }
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (headingBlock != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 5),
+            child: Text(
+              headingBlock.text ?? '',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
         if (bulletBlock != null)
           ...bulletBlock.items
               .take(3)
@@ -713,6 +734,23 @@ class _StructuredBlocksPreview extends StatelessWidget {
                   ),
                 ),
               ),
+        if (dividerBlock != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Divider(
+              color: AppColors.textSecondary.withValues(alpha: 0.25),
+            ),
+          ),
+        if (imageBlock != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Chip(
+              avatar: const Icon(Icons.image_outlined, size: 15),
+              label: Text(
+                imageBlock.localPath == null ? 'Image block' : 'Local image',
+              ),
+            ),
+          ),
         if (taskBlock != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),
