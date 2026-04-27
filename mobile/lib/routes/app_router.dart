@@ -22,6 +22,7 @@ import '../features/ai/screens/daily_plan_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
+import '../features/prayer/screens/qibla_screen.dart';
 import '../features/voice/screens/voice_capture_screen.dart';
 import 'app_routes.dart';
 
@@ -190,12 +191,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.qibla,
-            builder: (context, state) => const FeaturePlaceholderScreen(
-              title: 'Qibla',
-              description: 'Qibla direction and location guidance.',
-              icon: Icons.explore_outlined,
-              accentColor: AppColors.prayerGold,
-            ),
+            builder: (context, state) => const QiblaScreen(),
           ),
           GoRoute(
             path: AppRoutes.ramadan,
