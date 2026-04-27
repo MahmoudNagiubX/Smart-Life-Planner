@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_error_state.dart';
+import '../../../core/widgets/app_loading_state.dart';
 import '../models/daily_plan_model.dart';
 import '../providers/ai_provider.dart';
 
@@ -44,16 +47,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         ],
       ),
       body: state.isPlanLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('AI is building your plan...'),
-                ],
-              ),
-            )
+          ? const AppLoadingState(message: 'AI is building your plan...')
           : RefreshIndicator(
               onRefresh: _refreshPlan,
               child: ListView(
@@ -98,32 +92,25 @@ class _NoPlanState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (error != null) {
+      return AppErrorState(
+        title: 'Daily plan could not load',
+        message: error!,
+        onRetry: onGenerate,
+      );
+    }
+
     return SizedBox(
       height: MediaQuery.sizeOf(context).height * 0.65,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            error == null ? Icons.calendar_today : Icons.error_outline,
-            size: 40,
-            color: error == null ? AppColors.primary : AppColors.error,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            error ?? 'No plan yet',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: error == null ? null : AppColors.error,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: onGenerate,
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text('Generate Plan'),
-          ),
-        ],
+      child: AppEmptyState(
+        icon: Icons.calendar_today,
+        title: 'No plan yet',
+        message: 'Generate a daily plan when you are ready.',
+        action: ElevatedButton.icon(
+          onPressed: onGenerate,
+          icon: const Icon(Icons.auto_awesome),
+          label: const Text('Generate Plan'),
+        ),
       ),
     );
   }

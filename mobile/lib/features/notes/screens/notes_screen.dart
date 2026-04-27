@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_loading_state.dart';
 import '../../voice/screens/voice_note_sheet.dart';
 import '../providers/note_provider.dart';
 import '../models/note_model.dart';
@@ -74,9 +76,13 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           // Notes list
           Expanded(
             child: state.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const AppLoadingState(message: 'Loading notes...')
                 : state.error != null
-                ? Center(child: Text(state.error!))
+                ? AppErrorState(
+                    title: 'Notes could not load',
+                    message: state.error!,
+                    onRetry: () => ref.read(notesProvider.notifier).loadNotes(),
+                  )
                 : state.notes.isEmpty
                 ? const AppEmptyState(
                     icon: Icons.note_add_outlined,

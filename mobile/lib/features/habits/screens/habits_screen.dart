@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_loading_state.dart';
 import '../providers/habit_provider.dart';
 import '../models/habit_model.dart';
 import 'create_habit_sheet.dart';
@@ -34,9 +36,13 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
         ),
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppLoadingState(message: 'Loading habits...')
           : state.error != null
-          ? Center(child: Text(state.error!))
+          ? AppErrorState(
+              title: 'Habits could not load',
+              message: state.error!,
+              onRetry: () => ref.read(habitsProvider.notifier).loadHabits(),
+            )
           : state.habits.isEmpty
           ? const AppEmptyState(
               icon: Icons.local_fire_department_outlined,

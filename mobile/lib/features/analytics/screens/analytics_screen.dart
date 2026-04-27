@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_loading_state.dart';
 import '../providers/analytics_provider.dart';
 import '../models/analytics_model.dart';
 
@@ -56,9 +58,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         ),
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppLoadingState(message: 'Loading analytics...')
           : state.error != null
-          ? Center(child: Text(state.error!))
+          ? AppErrorState(
+              title: 'Analytics could not load',
+              message: state.error!,
+              onRetry: () => ref.read(analyticsProvider.notifier).loadAll(),
+            )
           : TabBarView(
               controller: _tabController,
               children: [

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_loading_state.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/screens/create_task_sheet.dart';
@@ -51,9 +53,13 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
         ),
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppLoadingState(message: 'Loading tasks...')
           : state.error != null
-          ? Center(child: Text(state.error!))
+          ? AppErrorState(
+              title: 'Tasks could not load',
+              message: state.error!,
+              onRetry: () => ref.read(tasksProvider.notifier).loadTasks(),
+            )
           : TabBarView(
               controller: _tabController,
               children: [

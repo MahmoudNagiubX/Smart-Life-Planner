@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
+import '../../../core/widgets/app_loading_state.dart';
 import '../../prayer/providers/prayer_provider.dart';
 import '../../prayer/models/prayer_model.dart';
 
@@ -67,122 +69,105 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
         ),
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppLoadingState(message: 'Loading prayer times...')
           : state.error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(state.error!),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => ref
-                            .read(prayerProvider.notifier)
-                            .loadTodayPrayers(),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: () =>
-                      ref.read(prayerProvider.notifier).loadTodayPrayers(),
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Progress card
-                        if (data != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: AppColors.prayerGold.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppColors.prayerGold.withOpacity(0.4),
-                              ),
-                            ),
-                            child: Row(
+          ? AppErrorState(
+              title: 'Prayer times could not load',
+              message: state.error!,
+              onRetry: () =>
+                  ref.read(prayerProvider.notifier).loadTodayPrayers(),
+            )
+          : RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(prayerProvider.notifier).loadTodayPrayers(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Progress card
+                    if (data != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppColors.prayerGold.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.prayerGold.withOpacity(0.4),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text('🕌', style: TextStyle(fontSize: 40)),
+                            const SizedBox(width: 16),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  '🕌',
-                                  style: TextStyle(fontSize: 40),
+                                Text(
+                                  '${data.completedCount} / ${data.totalCount} Prayers',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.prayerGold,
+                                      ),
                                 ),
-                                const SizedBox(width: 16),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${data.completedCount} / ${data.totalCount} Prayers',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.prayerGold,
-                                          ),
-                                    ),
-                                    Text(
-                                      data.completedCount == 5
-                                          ? 'All prayers completed today 🎉'
-                                          : 'Keep going, you\'re doing great!',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall,
-                                    ),
-                                  ],
+                                Text(
+                                  data.completedCount == 5
+                                      ? 'All prayers completed today 🎉'
+                                      : 'Keep going, you\'re doing great!',
+                                  style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
 
-                          // Progress bar
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: LinearProgressIndicator(
-                              value: data.completedCount / data.totalCount,
-                              minHeight: 8,
-                              backgroundColor:
-                                  AppColors.prayerGold.withOpacity(0.2),
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                AppColors.prayerGold,
+                      // Progress bar
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: data.completedCount / data.totalCount,
+                          minHeight: 8,
+                          backgroundColor: AppColors.prayerGold.withOpacity(
+                            0.2,
+                          ),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.prayerGold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // Prayer list
+                      Text(
+                        "Today's Prayers",
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+
+                      ...data.prayers.map(
+                        (prayer) => _PrayerCard(
+                          prayer: prayer,
+                          displayName: _prayerDisplayName(prayer.prayerName),
+                          emoji: _prayerEmoji(prayer.prayerName),
+                          formattedTime: _formatTime(prayer.scheduledAt),
+                          onToggle: () => ref
+                              .read(prayerProvider.notifier)
+                              .togglePrayer(
+                                prayer.prayerName,
+                                prayer.completed,
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-
-                          // Prayer list
-                          Text(
-                            "Today's Prayers",
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 12),
-
-                          ...data.prayers.map(
-                            (prayer) => _PrayerCard(
-                              prayer: prayer,
-                              displayName: _prayerDisplayName(prayer.prayerName),
-                              emoji: _prayerEmoji(prayer.prayerName),
-                              formattedTime: _formatTime(prayer.scheduledAt),
-                              onToggle: () => ref
-                                  .read(prayerProvider.notifier)
-                                  .togglePrayer(
-                                    prayer.prayerName,
-                                    prayer.completed,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
+              ),
+            ),
     );
   }
 }
@@ -232,16 +217,14 @@ class _PrayerCard extends StatelessWidget {
                   displayName,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: isCompleted
-                        ? AppColors.prayerGold
-                        : null,
+                    color: isCompleted ? AppColors.prayerGold : null,
                   ),
                 ),
                 Text(
                   formattedTime,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -253,9 +236,7 @@ class _PrayerCard extends StatelessWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: isCompleted
-                    ? AppColors.prayerGold
-                    : Colors.transparent,
+                color: isCompleted ? AppColors.prayerGold : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isCompleted
