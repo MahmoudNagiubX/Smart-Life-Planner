@@ -35,6 +35,7 @@ class NoteService {
     List<String>? tags,
     List<ChecklistItemModel>? checklistItems,
     List<NoteStructuredBlockModel>? structuredBlocks,
+    List<NoteAttachmentModel>? attachments,
     String colorKey = 'default',
   }) async {
     final data = <String, dynamic>{
@@ -58,6 +59,11 @@ class NoteService {
           .map((block) => block.toJson())
           .toList();
     }
+    if (attachments != null) {
+      data['attachments'] = attachments
+          .map((attachment) => attachment.toJson())
+          .toList();
+    }
 
     final response = await _apiClient.dio.post('/notes', data: data);
     return NoteModel.fromJson(response.data as Map<String, dynamic>);
@@ -71,6 +77,7 @@ class NoteService {
     List<String>? tags,
     List<ChecklistItemModel>? checklistItems,
     List<NoteStructuredBlockModel>? structuredBlocks,
+    List<NoteAttachmentModel>? attachments,
     String? colorKey,
     bool? isPinned,
     bool? isArchived,
@@ -94,6 +101,11 @@ class NoteService {
     if (structuredBlocks != null) {
       data['structured_blocks'] = structuredBlocks
           .map((block) => block.toJson())
+          .toList();
+    }
+    if (attachments != null) {
+      data['attachments'] = attachments
+          .map((attachment) => attachment.toJson())
           .toList();
     }
 

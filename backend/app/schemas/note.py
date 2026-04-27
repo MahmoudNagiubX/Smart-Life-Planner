@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 ALLOWED_NOTE_COLORS = {
     "default",
@@ -136,6 +136,58 @@ def _normalize_structured_blocks(
     return blocks
 
 
+class NoteAttachmentPayload(BaseModel):
+    file_url: Optional[str] = None
+    local_path: Optional[str] = None
+    file_type: str
+    file_size: int = 0
+
+    @model_validator(mode="after")
+    def has_location(self) -> "NoteAttachmentPayload":
+        if not self.file_url and not self.local_path:
+            raise ValueError("Attachment requires file_url or local_path")
+        return self
+
+    @field_validator("file_url", "local_path")
+    @classmethod
+    def optional_path_valid(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        clean = v.strip()
+        if len(clean) > 1024:
+            raise ValueError("Attachment path is too long")
+        return clean or None
+
+    @field_validator("file_type")
+    @classmethod
+    def file_type_valid(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if clean not in ("image/jpeg", "image/png", "image/webp", "image/heic"):
+            raise ValueError("Unsupported attachment type")
+        return clean
+
+    @field_validator("file_size")
+    @classmethod
+    def file_size_valid(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("Attachment size cannot be negative")
+        if v > 15 * 1024 * 1024:
+            raise ValueError("Attachment image is too large")
+        return v
+
+
+class NoteAttachmentResponse(BaseModel):
+    id: uuid.UUID
+    note_id: uuid.UUID
+    file_url: Optional[str]
+    local_path: Optional[str]
+    file_type: str
+    file_size: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class NoteCreate(BaseModel):
     title: Optional[str] = None
     content: str
@@ -143,6 +195,7 @@ class NoteCreate(BaseModel):
     tags: Optional[List[str]] = None
     checklist_items: Optional[List[NoteChecklistItem]] = None
     structured_blocks: Optional[List[NoteStructuredBlock]] = None
+    attachments: Optional[List[NoteAttachmentPayload]] = None
     color_key: Optional[str] = "default"
 
     @field_validator("content")
@@ -191,6 +244,7 @@ class NoteUpdate(BaseModel):
     tags: Optional[List[str]] = None
     checklist_items: Optional[List[NoteChecklistItem]] = None
     structured_blocks: Optional[List[NoteStructuredBlock]] = None
+    attachments: Optional[List[NoteAttachmentPayload]] = None
     color_key: Optional[str] = None
     is_pinned: Optional[bool] = None
     is_archived: Optional[bool] = None
@@ -238,6 +292,7 @@ class NoteResponse(BaseModel):
     tags: Optional[list]
     checklist_items: Optional[list]
     structured_blocks: Optional[list]
+    attachments: list[NoteAttachmentResponse] = []
     color_key: str
     is_pinned: bool
     is_archived: bool

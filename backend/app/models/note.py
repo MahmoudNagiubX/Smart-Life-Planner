@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Boolean, Text, DateTime, ForeignKey
+from sqlalchemy import String, Boolean, Text, DateTime, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
@@ -42,3 +42,29 @@ class Note(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
+    attachments: Mapped[list["NoteAttachment"]] = relationship(
+        "NoteAttachment", back_populates="note", cascade="all, delete-orphan"
+    )
+
+
+class NoteAttachment(Base):
+    __tablename__ = "note_attachments"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    note_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("notes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    file_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    local_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    file_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+
+    note: Mapped["Note"] = relationship("Note", back_populates="attachments")

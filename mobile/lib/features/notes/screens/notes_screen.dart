@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -403,6 +405,10 @@ class _NoteCard extends ConsumerWidget {
             const SizedBox(height: 10),
             _StructuredBlocksPreview(blocks: note.structuredBlocks),
           ],
+          if (note.attachments.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _AttachmentPreview(attachments: note.attachments),
+          ],
           if (note.tags.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
@@ -710,6 +716,49 @@ class _StructuredBlocksPreview extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _AttachmentPreview extends StatelessWidget {
+  final List<NoteAttachmentModel> attachments;
+
+  const _AttachmentPreview({required this.attachments});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 76,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: attachments.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final path = attachments[index].localPath;
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: path == null
+                ? Container(
+                    width: 76,
+                    height: 76,
+                    color: Colors.black.withValues(alpha: 0.18),
+                    child: const Icon(Icons.image_outlined),
+                  )
+                : Image.file(
+                    File(path),
+                    width: 76,
+                    height: 76,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 76,
+                      height: 76,
+                      color: Colors.black.withValues(alpha: 0.18),
+                      child: const Icon(Icons.broken_image_outlined),
+                    ),
+                  ),
+          );
+        },
+      ),
     );
   }
 }

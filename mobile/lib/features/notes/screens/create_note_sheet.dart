@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../providers/note_provider.dart';
 import '../models/note_model.dart';
@@ -21,6 +24,8 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
   final _tagsController = TextEditingController();
   final _linkedTaskController = TextEditingController();
   final List<_ChecklistDraftItem> _checklistItems = [];
+  final List<NoteAttachmentModel> _attachments = [];
+  final ImagePicker _imagePicker = ImagePicker();
   DateTime? _reminderAt;
   String _noteType = 'text';
   String _selectedColorKey = 'default';
@@ -39,6 +44,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
     _tagsController.text = note.tags.join(', ');
     _noteType = note.noteType == 'checklist' ? 'checklist' : 'text';
     _selectedColorKey = note.colorKey;
+    _attachments.addAll(note.attachments);
 
     for (final block in note.structuredBlocks) {
       if (block.type == 'bullet_list') {
@@ -208,6 +214,52 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
     });
   }
 
+  String _imageMimeType(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.heic')) return 'image/heic';
+    return 'image/jpeg';
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (image == null) return;
+      final size = await image.length();
+      if (size > 15 * 1024 * 1024) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Image is too large.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+      setState(() {
+        _attachments.add(
+          NoteAttachmentModel(
+            localPath: image.path,
+            fileType: _imageMimeType(image.path),
+            fileSize: size,
+          ),
+        );
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image could not be added.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
   Future<void> _submit() async {
     final checklistItems = _noteType == 'checklist'
         ? _buildChecklistItems()
@@ -236,6 +288,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
             tags: _parseTags(),
             checklistItems: _noteType == 'checklist' ? checklistItems : null,
             structuredBlocks: structuredBlocks,
+            attachments: _attachments,
             colorKey: _selectedColorKey,
           );
     } else {
@@ -250,6 +303,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
             tags: _parseTags(),
             checklistItems: _noteType == 'checklist' ? checklistItems : null,
             structuredBlocks: structuredBlocks,
+            attachments: _attachments,
             colorKey: _selectedColorKey,
           );
     }
@@ -470,6 +524,14 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
               ),
             ),
             const SizedBox(height: 12),
+            _AttachmentEditor(
+              attachments: _attachments,
+              onAdd: _pickImage,
+              onRemove: (attachment) {
+                setState(() => _attachments.remove(attachment));
+              },
+            ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -592,6 +654,97 @@ class _ChecklistEditor extends StatelessWidget {
             label: const Text('Add item'),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _AttachmentEditor extends StatelessWidget {
+  final List<NoteAttachmentModel> attachments;
+  final VoidCallback onAdd;
+  final ValueChanged<NoteAttachmentModel> onRemove;
+
+  const _AttachmentEditor({
+    required this.attachments,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextButton.icon(
+          onPressed: onAdd,
+          icon: const Icon(Icons.image_outlined),
+          label: const Text('Add image'),
+        ),
+        if (attachments.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 92,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: attachments.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final attachment = attachments[index];
+                final path = attachment.localPath;
+                return Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: path == null
+                          ? Container(
+                              width: 92,
+                              height: 92,
+                              color: AppColors.cardDark,
+                              child: const Icon(Icons.broken_image_outlined),
+                            )
+                          : Image.file(
+                              File(path),
+                              width: 92,
+                              height: 92,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    width: 92,
+                                    height: 92,
+                                    color: AppColors.cardDark,
+                                    child: const Icon(
+                                      Icons.broken_image_outlined,
+                                    ),
+                                  ),
+                            ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => onRemove(attachment),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.55),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ],
     );
   }

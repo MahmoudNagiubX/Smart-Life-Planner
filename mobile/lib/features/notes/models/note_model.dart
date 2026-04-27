@@ -89,6 +89,47 @@ class NoteStructuredBlockModel {
   }
 }
 
+class NoteAttachmentModel {
+  final String? id;
+  final String? noteId;
+  final String? fileUrl;
+  final String? localPath;
+  final String fileType;
+  final int fileSize;
+  final String? createdAt;
+
+  const NoteAttachmentModel({
+    this.id,
+    this.noteId,
+    this.fileUrl,
+    this.localPath,
+    required this.fileType,
+    required this.fileSize,
+    this.createdAt,
+  });
+
+  factory NoteAttachmentModel.fromJson(Map<String, dynamic> json) {
+    return NoteAttachmentModel(
+      id: json['id'] as String?,
+      noteId: json['note_id'] as String?,
+      fileUrl: json['file_url'] as String?,
+      localPath: json['local_path'] as String?,
+      fileType: json['file_type'] as String,
+      fileSize: json['file_size'] as int? ?? 0,
+      createdAt: json['created_at'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (fileUrl != null) 'file_url': fileUrl,
+      if (localPath != null) 'local_path': localPath,
+      'file_type': fileType,
+      'file_size': fileSize,
+    };
+  }
+}
+
 class NoteModel {
   final String id;
   final String? title;
@@ -97,6 +138,7 @@ class NoteModel {
   final List<String> tags;
   final List<ChecklistItemModel> checklistItems;
   final List<NoteStructuredBlockModel> structuredBlocks;
+  final List<NoteAttachmentModel> attachments;
   final String colorKey;
   final bool isPinned;
   final bool isArchived;
@@ -112,6 +154,7 @@ class NoteModel {
     required this.tags,
     required this.checklistItems,
     required this.structuredBlocks,
+    required this.attachments,
     required this.colorKey,
     required this.isPinned,
     required this.isArchived,
@@ -139,6 +182,12 @@ class NoteModel {
           (json['structured_blocks'] as List<dynamic>?)
               ?.whereType<Map<String, dynamic>>()
               .map(NoteStructuredBlockModel.fromJson)
+              .toList() ??
+          [],
+      attachments:
+          (json['attachments'] as List<dynamic>?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(NoteAttachmentModel.fromJson)
               .toList() ??
           [],
       colorKey: json['color_key'] as String? ?? 'default',

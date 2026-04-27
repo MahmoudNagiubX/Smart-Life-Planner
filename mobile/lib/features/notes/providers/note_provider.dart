@@ -99,6 +99,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
     List<String>? tags,
     List<ChecklistItemModel>? checklistItems,
     List<NoteStructuredBlockModel>? structuredBlocks,
+    List<NoteAttachmentModel>? attachments,
     String colorKey = 'default',
   }) async {
     try {
@@ -110,6 +111,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
         tags: tags,
         checklistItems: checklistItems,
         structuredBlocks: structuredBlocks,
+        attachments: attachments,
         colorKey: colorKey,
       );
       await loadNotes(
@@ -132,6 +134,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
     List<String>? tags,
     List<ChecklistItemModel>? checklistItems,
     List<NoteStructuredBlockModel>? structuredBlocks,
+    List<NoteAttachmentModel>? attachments,
     String? colorKey,
   }) async {
     try {
@@ -144,6 +147,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
         tags: tags,
         checklistItems: checklistItems,
         structuredBlocks: structuredBlocks,
+        attachments: attachments,
         colorKey: colorKey,
       );
       await loadNotes(
