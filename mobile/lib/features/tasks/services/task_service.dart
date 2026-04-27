@@ -25,6 +25,22 @@ class TaskService {
     return TaskModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<List<TaskModel>> getTasksForRange({
+    required DateTime dateFrom,
+    required DateTime dateTo,
+  }) async {
+    final response = await _apiClient.dio.get(
+      '/tasks/range',
+      queryParameters: {
+        'date_from': dateFrom.toIso8601String().substring(0, 10),
+        'date_to': dateTo.toIso8601String().substring(0, 10),
+      },
+    );
+    return (response.data as List<dynamic>)
+        .map((t) => TaskModel.fromJson(t as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<TaskModel> createTask({
     required String title,
     String? description,

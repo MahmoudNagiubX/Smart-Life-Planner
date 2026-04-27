@@ -198,3 +198,74 @@ class TasksNotifier extends StateNotifier<TasksState> {
 final tasksProvider = StateNotifierProvider<TasksNotifier, TasksState>((ref) {
   return TasksNotifier(ref);
 });
+
+class TaskCalendarState {
+  final List<TaskModel> tasks;
+  final bool isLoading;
+  final String? error;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+
+  const TaskCalendarState({
+    this.tasks = const [],
+    this.isLoading = false,
+    this.error,
+    this.dateFrom,
+    this.dateTo,
+  });
+
+  TaskCalendarState copyWith({
+    List<TaskModel>? tasks,
+    bool? isLoading,
+    String? error,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) {
+    return TaskCalendarState(
+      tasks: tasks ?? this.tasks,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+      dateFrom: dateFrom ?? this.dateFrom,
+      dateTo: dateTo ?? this.dateTo,
+    );
+  }
+}
+
+class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
+  final Ref _ref;
+
+  TaskCalendarNotifier(this._ref) : super(const TaskCalendarState());
+
+  Future<void> loadRange({
+    required DateTime dateFrom,
+    required DateTime dateTo,
+  }) async {
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+    );
+    try {
+      final tasks = await _ref
+          .read(taskServiceProvider)
+          .getTasksForRange(dateFrom: dateFrom, dateTo: dateTo);
+      state = state.copyWith(tasks: tasks, isLoading: false);
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: friendlyApiError(e, 'Failed to load calendar tasks'),
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load calendar tasks',
+      );
+    }
+  }
+}
+
+final taskCalendarProvider =
+    StateNotifierProvider<TaskCalendarNotifier, TaskCalendarState>((ref) {
+      return TaskCalendarNotifier(ref);
+    });

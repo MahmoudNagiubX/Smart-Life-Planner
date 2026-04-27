@@ -6,6 +6,12 @@ import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
+import '../../focus/providers/focus_provider.dart';
+import '../../habits/providers/habit_provider.dart';
+import '../../prayer/providers/prayer_provider.dart';
+import '../../focus/models/focus_model.dart';
+import '../../habits/models/habit_model.dart';
+import '../../prayer/models/prayer_model.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/screens/create_task_sheet.dart';
@@ -24,9 +30,12 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tasksProvider.notifier).loadTasks();
+      ref.read(focusProvider.notifier).loadAnalytics();
+      ref.read(habitsProvider.notifier).loadHabits();
+      ref.read(prayerProvider.notifier).loadTodayPrayers();
     });
   }
 
@@ -51,6 +60,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Completed'),
+            Tab(text: 'Calendar'),
           ],
         ),
       ),
@@ -77,6 +87,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                       .toList(),
                   status: 'completed',
                 ),
+                const _TaskCalendarView(),
               ],
             ),
       floatingActionButton: FloatingActionButton(
@@ -90,6 +101,359 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
       ),
     );
   }
+}
+
+enum _CalendarMode { today, week, month }
+
+class _TaskCalendarView extends ConsumerStatefulWidget {
+  const _TaskCalendarView();
+
+  @override
+  ConsumerState<_TaskCalendarView> createState() => _TaskCalendarViewState();
+}
+
+class _TaskCalendarViewState extends ConsumerState<_TaskCalendarView> {
+  _CalendarMode _mode = _CalendarMode.today;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCalendar());
+  }
+
+  Future<void> _loadCalendar() async {
+    final range = _rangeForMode(_mode);
+    await ref
+        .read(taskCalendarProvider.notifier)
+        .loadRange(dateFrom: range.$1, dateTo: range.$2);
+  }
+
+  (DateTime, DateTime) _rangeForMode(_CalendarMode mode) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (mode == _CalendarMode.today) {
+      return (today, today);
+    }
+    if (mode == _CalendarMode.week) {
+      final start = today.subtract(Duration(days: today.weekday - 1));
+      return (start, start.add(const Duration(days: 6)));
+    }
+    return (
+      DateTime(today.year, today.month),
+      DateTime(today.year, today.month + 1, 0),
+    );
+  }
+
+  Future<void> _setMode(_CalendarMode mode) async {
+    setState(() => _mode = mode);
+    await _loadCalendar();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final calendarState = ref.watch(taskCalendarProvider);
+    final focusState = ref.watch(focusProvider);
+    final habitsState = ref.watch(habitsProvider);
+    final prayerState = ref.watch(prayerProvider);
+    final range = _rangeForMode(_mode);
+    final days = _daysBetween(range.$1, range.$2);
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _loadCalendar();
+        await ref.read(focusProvider.notifier).loadAnalytics();
+        await ref.read(habitsProvider.notifier).loadHabits();
+        await ref.read(prayerProvider.notifier).loadTodayPrayers();
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          SegmentedButton<_CalendarMode>(
+            segments: const [
+              ButtonSegment(value: _CalendarMode.today, label: Text('Today')),
+              ButtonSegment(value: _CalendarMode.week, label: Text('Week')),
+              ButtonSegment(value: _CalendarMode.month, label: Text('Month')),
+            ],
+            selected: {_mode},
+            onSelectionChanged: (selection) => _setMode(selection.first),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            _rangeLabel(range.$1, range.$2),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          if (calendarState.isLoading)
+            const AppLoadingState(message: 'Loading agenda...')
+          else if (calendarState.error != null)
+            AppErrorState(
+              title: 'Calendar could not load',
+              message: calendarState.error!,
+              onRetry: _loadCalendar,
+            )
+          else if (calendarState.tasks.isEmpty &&
+              _focusForRange(focusState.sessions, range.$1, range.$2).isEmpty &&
+              habitsState.habits.where((habit) => habit.isActive).isEmpty &&
+              prayerState.data?.prayers.isEmpty != false)
+            const AppEmptyState(
+              icon: Icons.calendar_month_outlined,
+              title: 'No agenda items',
+              message:
+                  'Tasks, focus sessions, habits, and prayer anchors will appear here.',
+            )
+          else
+            ...days.map(
+              (day) => _AgendaDaySection(
+                day: day,
+                tasks: calendarState.tasks.where((task) {
+                  final dueAt = task.dueAt == null
+                      ? null
+                      : DateTime.tryParse(task.dueAt!)?.toLocal();
+                  return dueAt != null && _sameDay(dueAt, day);
+                }).toList(),
+                focusSessions: focusState.sessions.where((session) {
+                  final startedAt = DateTime.tryParse(
+                    session.startedAt,
+                  )?.toLocal();
+                  return startedAt != null && _sameDay(startedAt, day);
+                }).toList(),
+                habits: _sameDay(day, DateTime.now())
+                    ? habitsState.habits
+                          .where((habit) => habit.isActive)
+                          .toList()
+                    : const [],
+                prayers: _sameDay(day, DateTime.now())
+                    ? prayerState.data?.prayers ?? const []
+                    : const [],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  List<DateTime> _daysBetween(DateTime start, DateTime end) {
+    final days = <DateTime>[];
+    var cursor = DateTime(start.year, start.month, start.day);
+    final finalDay = DateTime(end.year, end.month, end.day);
+    while (!cursor.isAfter(finalDay)) {
+      days.add(cursor);
+      cursor = cursor.add(const Duration(days: 1));
+    }
+    return days;
+  }
+
+  List<FocusSession> _focusForRange(
+    List<FocusSession> sessions,
+    DateTime start,
+    DateTime end,
+  ) {
+    return sessions.where((session) {
+      final startedAt = DateTime.tryParse(session.startedAt)?.toLocal();
+      if (startedAt == null) return false;
+      final day = DateTime(startedAt.year, startedAt.month, startedAt.day);
+      return !day.isBefore(start) && !day.isAfter(end);
+    }).toList();
+  }
+
+  String _rangeLabel(DateTime start, DateTime end) {
+    if (_sameDay(start, end)) return _dateLabel(start);
+    return '${_dateLabel(start)} - ${_dateLabel(end)}';
+  }
+}
+
+class _AgendaDaySection extends StatelessWidget {
+  final DateTime day;
+  final List<TaskModel> tasks;
+  final List<FocusSession> focusSessions;
+  final List<HabitModel> habits;
+  final List<PrayerTime> prayers;
+
+  const _AgendaDaySection({
+    required this.day,
+    required this.tasks,
+    required this.focusSessions,
+    required this.habits,
+    required this.prayers,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasItems =
+        tasks.isNotEmpty ||
+        focusSessions.isNotEmpty ||
+        habits.isNotEmpty ||
+        prayers.isNotEmpty;
+    if (!hasItems) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _dateLabel(day),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          ...tasks.map(
+            (task) => _AgendaItem(
+              icon: Icons.task_alt,
+              title: task.title,
+              subtitle: task.dueAt == null
+                  ? task.priority
+                  : '${_timeLabel(task.dueAt!)} • ${task.priority}',
+              color: AppColors.primary,
+            ),
+          ),
+          ...focusSessions.map(
+            (session) => _AgendaItem(
+              icon: Icons.timer_outlined,
+              title: 'Focus session',
+              subtitle:
+                  '${session.actualMinutes ?? session.plannedMinutes} min • ${session.status}',
+              color: AppColors.warning,
+            ),
+          ),
+          ...habits
+              .take(6)
+              .map(
+                (habit) => _AgendaItem(
+                  icon: Icons.repeat,
+                  title: habit.title,
+                  subtitle: '${habit.frequencyType} habit',
+                  color: AppColors.success,
+                ),
+              ),
+          if (habits.length > 6)
+            _AgendaItem(
+              icon: Icons.more_horiz,
+              title: '${habits.length - 6} more habits',
+              subtitle: 'Open Habits to review all',
+              color: AppColors.success,
+            ),
+          ...prayers.map(
+            (prayer) => _AgendaItem(
+              icon: Icons.mosque_outlined,
+              title: _prayerName(prayer.prayerName),
+              subtitle: prayer.scheduledAt == null
+                  ? 'Prayer anchor'
+                  : _timeLabel(prayer.scheduledAt!),
+              color: AppColors.prayerGold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AgendaItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+
+  const _AgendaItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 17, color: color),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+bool _sameDay(DateTime first, DateTime second) {
+  return first.year == second.year &&
+      first.month == second.month &&
+      first.day == second.day;
+}
+
+String _dateLabel(DateTime date) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${months[date.month - 1]} ${date.day}, ${date.year}';
+}
+
+String _timeLabel(String iso) {
+  final parsed = DateTime.tryParse(iso)?.toLocal();
+  if (parsed == null) return 'Time set';
+  final hour = parsed.hour.toString().padLeft(2, '0');
+  final minute = parsed.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
+}
+
+String _prayerName(String name) {
+  return switch (name) {
+    'fajr' => 'Fajr',
+    'dhuhr' => 'Dhuhr',
+    'asr' => 'Asr',
+    'maghrib' => 'Maghrib',
+    'isha' => 'Isha',
+    _ => name,
+  };
 }
 
 class _TaskList extends ConsumerWidget {

@@ -71,6 +71,27 @@ async def get_tasks(
     return list(result.scalars().all())
 
 
+async def get_tasks_in_date_range(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    start_at: datetime,
+    end_at: datetime,
+) -> list[Task]:
+    result = await db.execute(
+        select(Task)
+        .where(
+            Task.user_id == user_id,
+            Task.is_deleted == False,
+            Task.due_at.is_not(None),
+            Task.due_at >= start_at,
+            Task.due_at < end_at,
+        )
+        .options(selectinload(Task.subtasks))
+        .order_by(Task.due_at.asc())
+    )
+    return list(result.scalars().all())
+
+
 async def get_task_by_id(db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:
     result = await db.execute(
         select(Task)

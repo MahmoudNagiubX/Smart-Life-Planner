@@ -1,4 +1,5 @@
 import uuid
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,7 @@ from app.schemas.task import (
 from app.repositories.task_repository import (
     get_tasks, get_task_by_id, create_task, update_task,
     complete_task, reopen_task, soft_delete_task,
+    get_tasks_in_date_range,
     get_projects, get_project_by_id, create_project, update_project,
     create_subtask, complete_subtask, delete_subtask, get_subtask_by_id,
 )
@@ -65,6 +67,32 @@ async def list_tasks(
     db: AsyncSession = Depends(get_db),
 ):
     return await get_tasks(db, current_user.id, status, priority, project_id)
+
+
+@router.get("/range", response_model=list[TaskResponse])
+async def list_tasks_in_range(
+    date_from: date = Query(...),
+    date_to: date = Query(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if date_to < date_from:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="date_to must be on or after date_from",
+        )
+    if (date_to - date_from).days > 62:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Date range cannot exceed 62 days",
+        )
+    start_at = datetime.combine(date_from, time.min, tzinfo=timezone.utc)
+    end_at = datetime.combine(
+        date_to + timedelta(days=1),
+        time.min,
+        tzinfo=timezone.utc,
+    )
+    return await get_tasks_in_date_range(db, current_user.id, start_at, end_at)
 
 
 @router.post("", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
