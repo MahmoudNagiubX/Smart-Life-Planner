@@ -30,7 +30,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tasksProvider.notifier).loadTasks();
       ref.read(focusProvider.notifier).loadAnalytics();
@@ -60,6 +60,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Completed'),
+            Tab(text: 'Matrix'),
             Tab(text: 'Calendar'),
           ],
         ),
@@ -87,6 +88,11 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                       .toList(),
                   status: 'completed',
                 ),
+                _EisenhowerMatrixView(
+                  tasks: state.tasks
+                      .where((t) => t.status == 'pending' && !t.isDeleted)
+                      .toList(),
+                ),
                 const _TaskCalendarView(),
               ],
             ),
@@ -98,6 +104,275 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
         ),
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _EisenhowerMatrixView extends StatelessWidget {
+  final List<TaskModel> tasks;
+
+  const _EisenhowerMatrixView({required this.tasks});
+
+  bool _isUrgent(TaskModel task) {
+    if (task.dueAt == null) return false;
+    final dueAt = DateTime.tryParse(task.dueAt!)?.toLocal();
+    if (dueAt == null) return false;
+    final now = DateTime.now();
+    return dueAt.isBefore(now) ||
+        dueAt.difference(now) <= const Duration(hours: 48);
+  }
+
+  bool _isImportant(TaskModel task) => task.priority == 'high';
+
+  @override
+  Widget build(BuildContext context) {
+    if (tasks.isEmpty) {
+      return const AppEmptyState(
+        icon: Icons.grid_view_outlined,
+        title: 'No pending tasks',
+        message:
+            'Create tasks with priorities and deadlines to fill the matrix.',
+      );
+    }
+
+    final urgentImportant = <TaskModel>[];
+    final importantNotUrgent = <TaskModel>[];
+    final urgentNotImportant = <TaskModel>[];
+    final notUrgentNotImportant = <TaskModel>[];
+
+    for (final task in tasks) {
+      final urgent = _isUrgent(task);
+      final important = _isImportant(task);
+      if (urgent && important) {
+        urgentImportant.add(task);
+      } else if (important) {
+        importantNotUrgent.add(task);
+      } else if (urgent) {
+        urgentNotImportant.add(task);
+      } else {
+        notUrgentNotImportant.add(task);
+      }
+    }
+
+    final quadrants = [
+      _MatrixQuadrantData(
+        title: 'Urgent + Important',
+        subtitle: 'Do first',
+        tasks: urgentImportant,
+        color: AppColors.error,
+        icon: Icons.priority_high,
+      ),
+      _MatrixQuadrantData(
+        title: 'Important, Not Urgent',
+        subtitle: 'Schedule',
+        tasks: importantNotUrgent,
+        color: AppColors.primary,
+        icon: Icons.event_available_outlined,
+      ),
+      _MatrixQuadrantData(
+        title: 'Urgent, Not Important',
+        subtitle: 'Reduce or delegate',
+        tasks: urgentNotImportant,
+        color: AppColors.warning,
+        icon: Icons.schedule_outlined,
+      ),
+      _MatrixQuadrantData(
+        title: 'Not Urgent + Not Important',
+        subtitle: 'Batch later',
+        tasks: notUrgentNotImportant,
+        color: AppColors.textSecondary,
+        icon: Icons.low_priority,
+      ),
+    ];
+
+    return RefreshIndicator(
+      onRefresh: () async {},
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 640;
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(
+                'Priority Matrix',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Urgent means overdue or due within 48 hours. Important means high priority.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 14),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: quadrants.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: isWide ? 2 : 1,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: isWide ? 1.1 : 1.35,
+                ),
+                itemBuilder: (context, index) {
+                  return _MatrixQuadrant(data: quadrants[index]);
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MatrixQuadrantData {
+  final String title;
+  final String subtitle;
+  final List<TaskModel> tasks;
+  final Color color;
+  final IconData icon;
+
+  const _MatrixQuadrantData({
+    required this.title,
+    required this.subtitle,
+    required this.tasks,
+    required this.color,
+    required this.icon,
+  });
+}
+
+class _MatrixQuadrant extends StatelessWidget {
+  final _MatrixQuadrantData data;
+
+  const _MatrixQuadrant({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: data.color.withValues(alpha: 0.26)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: data.color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(data.icon, color: data.color, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '${data.subtitle} - ${data.tasks.length}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: data.tasks.isEmpty
+                ? Center(
+                    child: Text(
+                      'No tasks',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: data.tasks.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      return _MatrixTaskTile(task: data.tasks[index]);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MatrixTaskTile extends StatelessWidget {
+  final TaskModel task;
+
+  const _MatrixTaskTile({required this.task});
+
+  @override
+  Widget build(BuildContext context) {
+    final dueAt = task.dueAt == null
+        ? null
+        : DateTime.tryParse(task.dueAt!)?.toLocal();
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => context.push('/home/tasks/${task.id}'),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    dueAt == null
+                        ? task.priority
+                        : '${_dateLabel(dueAt)} - ${task.priority}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, size: 18),
+          ],
+        ),
       ),
     );
   }
@@ -311,7 +586,7 @@ class _AgendaDaySection extends StatelessWidget {
               title: task.title,
               subtitle: task.dueAt == null
                   ? task.priority
-                  : '${_timeLabel(task.dueAt!)} • ${task.priority}',
+                  : '${_timeLabel(task.dueAt!)} - ${task.priority}',
               color: AppColors.primary,
             ),
           ),
@@ -320,7 +595,7 @@ class _AgendaDaySection extends StatelessWidget {
               icon: Icons.timer_outlined,
               title: 'Focus session',
               subtitle:
-                  '${session.actualMinutes ?? session.plannedMinutes} min • ${session.status}',
+                  '${session.actualMinutes ?? session.plannedMinutes} min - ${session.status}',
               color: AppColors.warning,
             ),
           ),
