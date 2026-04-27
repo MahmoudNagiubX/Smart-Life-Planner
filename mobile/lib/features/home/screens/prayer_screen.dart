@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
+import '../../../routes/app_routes.dart';
 import '../../prayer/providers/prayer_provider.dart';
 import '../../prayer/models/prayer_model.dart';
 
@@ -67,6 +69,13 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
           '🕌 Prayer Times',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Prayer settings',
+            onPressed: () => context.push(AppRoutes.prayerSettings),
+            icon: const Icon(Icons.settings_outlined),
+          ),
+        ],
       ),
       body: state.isLoading
           ? const AppLoadingState(message: 'Loading prayer times...')
@@ -91,10 +100,10 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppColors.prayerGold.withOpacity(0.15),
+                          color: AppColors.prayerGold.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: AppColors.prayerGold.withOpacity(0.4),
+                            color: AppColors.prayerGold.withValues(alpha: 0.4),
                           ),
                         ),
                         child: Row(
@@ -131,13 +140,27 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                         child: LinearProgressIndicator(
                           value: data.completedCount / data.totalCount,
                           minHeight: 8,
-                          backgroundColor: AppColors.prayerGold.withOpacity(
-                            0.2,
+                          backgroundColor: AppColors.prayerGold.withValues(
+                            alpha: 0.2,
                           ),
                           valueColor: const AlwaysStoppedAnimation<Color>(
                             AppColors.prayerGold,
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      Text(
+                        'Spiritual Tools',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      _PrayerToolsGrid(
+                        onQibla: () => context.push(AppRoutes.qibla),
+                        onRamadan: () => context.push(AppRoutes.ramadan),
+                        onQuranGoal: () => context.push(AppRoutes.quranGoal),
+                        onHistory: () => context.push(AppRoutes.prayerHistory),
                       ),
                       const SizedBox(height: 28),
 
@@ -196,12 +219,12 @@ class _PrayerCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: isCompleted
-            ? AppColors.prayerGold.withOpacity(0.12)
+            ? AppColors.prayerGold.withValues(alpha: 0.12)
             : Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCompleted
-              ? AppColors.prayerGold.withOpacity(0.4)
+              ? AppColors.prayerGold.withValues(alpha: 0.4)
               : Colors.transparent,
         ),
       ),
@@ -251,6 +274,97 @@ class _PrayerCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PrayerToolsGrid extends StatelessWidget {
+  final VoidCallback onQibla;
+  final VoidCallback onRamadan;
+  final VoidCallback onQuranGoal;
+  final VoidCallback onHistory;
+
+  const _PrayerToolsGrid({
+    required this.onQibla,
+    required this.onRamadan,
+    required this.onQuranGoal,
+    required this.onHistory,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tools = [
+      _PrayerTool(icon: Icons.explore_outlined, label: 'Qibla', onTap: onQibla),
+      _PrayerTool(
+        icon: Icons.nights_stay_outlined,
+        label: 'Ramadan',
+        onTap: onRamadan,
+      ),
+      _PrayerTool(
+        icon: Icons.menu_book_outlined,
+        label: 'Quran Goal',
+        onTap: onQuranGoal,
+      ),
+      _PrayerTool(icon: Icons.history, label: 'History', onTap: onHistory),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: tools.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 2.5,
+      ),
+      itemBuilder: (context, index) => tools[index],
+    );
+  }
+}
+
+class _PrayerTool extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _PrayerTool({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).cardTheme.color,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.prayerGold, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

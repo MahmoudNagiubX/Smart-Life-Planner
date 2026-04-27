@@ -98,7 +98,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textSecondary.withOpacity(0.4),
+                color: AppColors.textSecondary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -125,7 +125,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _priority,
+            initialValue: _priority,
             decoration: const InputDecoration(labelText: 'Priority'),
             items: const [
               DropdownMenuItem(value: 'low', child: Text('🟢 Low')),

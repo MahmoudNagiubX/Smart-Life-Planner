@@ -27,7 +27,9 @@ class _CreateHabitSheetState extends ConsumerState<CreateHabitSheet> {
     if (_titleController.text.trim().isEmpty) return;
     setState(() => _isLoading = true);
 
-    await ref.read(habitsProvider.notifier).createHabit(
+    await ref
+        .read(habitsProvider.notifier)
+        .createHabit(
           title: _titleController.text.trim(),
           description: _descController.text.trim().isEmpty
               ? null
@@ -59,7 +61,7 @@ class _CreateHabitSheetState extends ConsumerState<CreateHabitSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textSecondary.withOpacity(0.4),
+                color: AppColors.textSecondary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -67,10 +69,9 @@ class _CreateHabitSheetState extends ConsumerState<CreateHabitSheet> {
           const SizedBox(height: 20),
           Text(
             '💪 New Habit',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -81,12 +82,13 @@ class _CreateHabitSheetState extends ConsumerState<CreateHabitSheet> {
           const SizedBox(height: 12),
           TextField(
             controller: _descController,
-            decoration:
-                const InputDecoration(labelText: 'Description (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Description (optional)',
+            ),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _frequency,
+            initialValue: _frequency,
             decoration: const InputDecoration(labelText: 'Frequency'),
             items: const [
               DropdownMenuItem(value: 'daily', child: Text('📅 Daily')),

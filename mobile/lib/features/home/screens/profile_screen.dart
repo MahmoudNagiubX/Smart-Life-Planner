@@ -113,7 +113,7 @@ class ProfileScreen extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 28,
-                      backgroundColor: AppColors.primary.withOpacity(0.2),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                       child: const Icon(
                         Icons.person,
                         size: 28,
@@ -181,7 +181,35 @@ class ProfileScreen extends ConsumerWidget {
                 icon: Icons.lock_outlined,
                 label: 'Change Password',
                 color: AppColors.textSecondary,
-                onTap: () => context.push('/home/change-password'),
+                onTap: () => context.push(AppRoutes.changePassword),
+              ),
+              const SizedBox(height: 10),
+              _MenuItem(
+                icon: Icons.settings_outlined,
+                label: 'Settings',
+                color: AppColors.textSecondary,
+                onTap: () => context.push(AppRoutes.settings),
+              ),
+              const SizedBox(height: 10),
+              _MenuItem(
+                icon: Icons.notifications_outlined,
+                label: 'Notification Settings',
+                color: AppColors.warning,
+                onTap: () => context.push(AppRoutes.notificationSettings),
+              ),
+              const SizedBox(height: 10),
+              _MenuItem(
+                icon: Icons.language,
+                label: 'Language',
+                color: AppColors.success,
+                onTap: () => context.push(AppRoutes.languageSettings),
+              ),
+              const SizedBox(height: 10),
+              _MenuItem(
+                icon: Icons.mosque_outlined,
+                label: 'Prayer Settings',
+                color: AppColors.prayerGold,
+                onTap: () => context.push(AppRoutes.prayerSettings),
               ),
 
               const SizedBox(height: 32),

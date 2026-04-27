@@ -14,8 +14,7 @@ class HasaeNextActionCard extends ConsumerStatefulWidget {
       _HasaeNextActionCardState();
 }
 
-class _HasaeNextActionCardState
-    extends ConsumerState<HasaeNextActionCard> {
+class _HasaeNextActionCardState extends ConsumerState<HasaeNextActionCard> {
   @override
   void initState() {
     super.initState();
@@ -66,23 +65,22 @@ class _HasaeNextActionCardState
     }
 
     final scorePercent = (next.score * 100).round();
-    final prayerWarning = next.nextPrayer != null &&
-        next.minutesUntilPrayer < 60;
+    final prayerWarning =
+        next.nextPrayer != null && next.minutesUntilPrayer < 60;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withOpacity(0.12),
-            AppColors.primary.withOpacity(0.04),
+            AppColors.primary.withValues(alpha: 0.12),
+            AppColors.primary.withValues(alpha: 0.04),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: AppColors.primary.withOpacity(0.25)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,17 +93,16 @@ class _HasaeNextActionCardState
               Text(
                 'Next Best Action',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const Spacer(),
               // Score badge
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
+                  color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -119,10 +116,12 @@ class _HasaeNextActionCardState
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: () =>
-                    ref.read(hasaeProvider.notifier).loadAll(),
-                child: const Icon(Icons.refresh,
-                    size: 16, color: AppColors.primary),
+                onTap: () => ref.read(hasaeProvider.notifier).loadAll(),
+                child: const Icon(
+                  Icons.refresh,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
               ),
             ],
           ),
@@ -131,19 +130,16 @@ class _HasaeNextActionCardState
           // Task title
           Text(
             next.title ?? '',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
           const SizedBox(height: 4),
 
           // Reason
           Text(
             '💡 ${next.reason.split('|').first.trim()}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -152,17 +148,15 @@ class _HasaeNextActionCardState
           if (prayerWarning) ...[
             const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.prayerGold.withOpacity(0.1),
+                color: AppColors.prayerGold.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('🕌',
-                      style: TextStyle(fontSize: 12)),
+                  const Text('🕌', style: TextStyle(fontSize: 12)),
                   const SizedBox(width: 6),
                   Text(
                     '${_prayerDisplayName(next.nextPrayer!)} in ${next.minutesUntilPrayer} min',
@@ -198,9 +192,7 @@ class _HasaeNextActionCardState
                       await ref
                           .read(dashboardProvider.notifier)
                           .loadDashboard();
-                      ref
-                          .read(hasaeProvider.notifier)
-                          .loadAll();
+                      ref.read(hasaeProvider.notifier).loadAll();
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -217,8 +209,7 @@ class _HasaeNextActionCardState
                     onPressed: () => _showAlternative(context, next),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 38),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                     child: const Text('↕ Alt'),
                   ),
@@ -226,8 +217,7 @@ class _HasaeNextActionCardState
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () =>
-                      context.push('/home/ranked-tasks'),
+                  onPressed: () => context.push('/home/ranked-tasks'),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(0, 38),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -255,20 +245,20 @@ class _HasaeNextActionCardState
           children: [
             const Text(
               '↕ Alternative Task',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 12),
             Text(
               alt.title ?? '',
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 15),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
             const SizedBox(height: 4),
             Text(
               'Score: ${(alt.score * 100).round()}',
               style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 13),
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -300,10 +290,8 @@ class _ScoreBreakdown extends StatelessWidget {
     final items = [
       _ScoreItem('Priority', components['priority'] as double? ?? 0),
       _ScoreItem('Urgency', components['urgency'] as double? ?? 0),
-      _ScoreItem(
-          'Energy', components['energy_time_match'] as double? ?? 0),
-      _ScoreItem(
-          'Duration', components['duration_fit'] as double? ?? 0),
+      _ScoreItem('Energy', components['energy_time_match'] as double? ?? 0),
+      _ScoreItem('Duration', components['duration_fit'] as double? ?? 0),
     ];
 
     return Row(
@@ -316,9 +304,9 @@ class _ScoreBreakdown extends StatelessWidget {
                 Text(
                   item.label,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 9,
-                        color: AppColors.textSecondary,
-                      ),
+                    fontSize: 9,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 ClipRRect(
@@ -326,14 +314,13 @@ class _ScoreBreakdown extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: item.value.clamp(0.0, 1.0),
                     minHeight: 4,
-                    backgroundColor:
-                        AppColors.primary.withOpacity(0.1),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       item.value > 0.7
                           ? AppColors.success
                           : item.value > 0.4
-                              ? AppColors.warning
-                              : AppColors.error,
+                          ? AppColors.warning
+                          : AppColors.error,
                     ),
                   ),
                 ),

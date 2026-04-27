@@ -21,17 +21,14 @@ class OverloadWarningCard extends ConsumerWidget {
     final overloadedBy = overload.overloadedByMinutes;
     final hours = overloadedBy ~/ 60;
     final mins = overloadedBy % 60;
-    final overloadStr =
-        hours > 0 ? '${hours}h ${mins}m' : '${mins}m';
+    final overloadStr = hours > 0 ? '${hours}h ${mins}m' : '${mins}m';
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.warning.withOpacity(0.1),
+        color: AppColors.warning.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.warning.withOpacity(0.4),
-        ),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,16 +40,15 @@ class OverloadWarningCard extends ConsumerWidget {
               Text(
                 'Overload Detected',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppColors.warning,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: AppColors.warning,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.2),
+                  color: AppColors.warning.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -71,8 +67,8 @@ class OverloadWarningCard extends ConsumerWidget {
             'Your schedule is overloaded by $overloadStr. '
             'Consider deferring low-priority tasks.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.warning.withOpacity(0.9),
-                ),
+              color: AppColors.warning.withValues(alpha: 0.9),
+            ),
           ),
           const SizedBox(height: 10),
           // Load bar
@@ -81,11 +77,9 @@ class OverloadWarningCard extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: overload.loadRatio.clamp(0.0, 1.0),
               minHeight: 6,
-              backgroundColor: AppColors.warning.withOpacity(0.15),
+              backgroundColor: AppColors.warning.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation<Color>(
-                overload.loadRatio > 1.0
-                    ? AppColors.error
-                    : AppColors.warning,
+                overload.loadRatio > 1.0 ? AppColors.error : AppColors.warning,
               ),
             ),
           ),

@@ -62,7 +62,9 @@ class _RankedTasksScreenState extends ConsumerState<RankedTasksScreen> {
                     color: Theme.of(context).cardTheme.color,
                     borderRadius: BorderRadius.circular(12),
                     border: rank == 1
-                        ? Border.all(color: AppColors.primary.withOpacity(0.4))
+                        ? Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.4),
+                          )
                         : null,
                   ),
                   child: Row(
@@ -76,7 +78,7 @@ class _RankedTasksScreenState extends ConsumerState<RankedTasksScreen> {
                           color: rank == 1
                               ? AppColors.primary
                               : rank == 2
-                              ? AppColors.warning.withOpacity(0.8)
+                              ? AppColors.warning.withValues(alpha: 0.8)
                               : Theme.of(context).cardTheme.color,
                           shape: BoxShape.circle,
                         ),
@@ -207,7 +209,7 @@ class _MiniBar extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: value.clamp(0.0, 1.0),
                 minHeight: 4,
-                backgroundColor: AppColors.primary.withOpacity(0.1),
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                 valueColor: AlwaysStoppedAnimation<Color>(
                   value > 0.7
                       ? AppColors.success

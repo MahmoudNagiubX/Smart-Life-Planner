@@ -11,11 +11,15 @@ class FocusService {
     String sessionType = 'pomodoro',
     String? taskId,
   }) async {
-    final response = await _apiClient.dio.post('/focus/sessions', data: {
-      'planned_minutes': plannedMinutes,
-      'session_type': sessionType,
-      if (taskId != null) 'task_id': taskId,
-    });
+    final response = await _apiClient.dio.post(
+      '/focus/sessions',
+      data: {
+        'planned_minutes': plannedMinutes,
+        'session_type': sessionType,
+        // ignore: use_null_aware_elements
+        if (taskId != null) 'task_id': taskId,
+      },
+    );
     return FocusSession.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -29,14 +33,16 @@ class FocusService {
   }
 
   Future<FocusSession> completeSession(String sessionId) async {
-    final response =
-        await _apiClient.dio.patch('/focus/sessions/$sessionId/complete');
+    final response = await _apiClient.dio.patch(
+      '/focus/sessions/$sessionId/complete',
+    );
     return FocusSession.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<FocusSession> cancelSession(String sessionId) async {
-    final response =
-        await _apiClient.dio.patch('/focus/sessions/$sessionId/cancel');
+    final response = await _apiClient.dio.patch(
+      '/focus/sessions/$sessionId/cancel',
+    );
     return FocusSession.fromJson(response.data as Map<String, dynamic>);
   }
 
