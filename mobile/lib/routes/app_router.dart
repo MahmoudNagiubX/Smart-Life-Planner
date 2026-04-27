@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../core/theme/app_colors.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/change_password_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
@@ -13,6 +15,7 @@ import '../features/home/screens/tasks_screen.dart';
 import '../features/home/screens/focus_screen.dart';
 import '../features/home/screens/prayer_screen.dart';
 import '../features/home/screens/profile_screen.dart';
+import '../features/home/screens/feature_placeholder_screen.dart';
 import '../features/habits/screens/habits_screen.dart';
 import '../features/notes/screens/notes_screen.dart';
 import '../features/ai/screens/daily_plan_screen.dart';
@@ -32,6 +35,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isUnknown = authState.status == AuthStatus.unknown;
       final isAuthRoute =
           state.matchedLocation == AppRoutes.welcome ||
+          state.matchedLocation == AppRoutes.splash ||
           state.matchedLocation == AppRoutes.signIn ||
           state.matchedLocation == AppRoutes.signUp ||
           state.matchedLocation == AppRoutes.verifyEmail ||
@@ -54,6 +58,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: AppRoutes.splash,
+        builder: (context, state) => const FeaturePlaceholderScreen(
+          title: 'Splash',
+          description: 'Startup status and session checks will appear here.',
+          icon: Icons.bolt,
+        ),
+      ),
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
@@ -96,12 +108,106 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const TasksScreen(),
           ),
           GoRoute(
+            path: AppRoutes.taskCreate,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Create Task',
+              description: 'Task creation is available from the task sheet.',
+              icon: Icons.add_task,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.taskEdit,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Edit Task',
+              description:
+                  'Task editing will open here once full details land.',
+              icon: Icons.edit_note,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.taskDetails,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Task Details',
+              description: 'Detailed task view with subtasks and reminders.',
+              icon: Icons.task_alt,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.projectDetails,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Project Details',
+              description: 'Project task lists and progress will appear here.',
+              icon: Icons.folder_outlined,
+            ),
+          ),
+          GoRoute(
             path: AppRoutes.focus,
             builder: (context, state) => const FocusScreen(),
           ),
           GoRoute(
+            path: AppRoutes.focusSession,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Active Focus Session',
+              description: 'Live focus timer and session controls.',
+              icon: Icons.timer_outlined,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.focusHistory,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Focus History',
+              description: 'Past focus sessions and summaries.',
+              icon: Icons.history,
+            ),
+          ),
+          GoRoute(
             path: AppRoutes.prayer,
             builder: (context, state) => const PrayerScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.prayerHistory,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Prayer History',
+              description: 'Prayer tracking history and consistency.',
+              icon: Icons.calendar_month,
+              accentColor: AppColors.prayerGold,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.quranGoal,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Quran Goal',
+              description: 'Daily Quran reading targets and progress.',
+              icon: Icons.menu_book_outlined,
+              accentColor: AppColors.prayerGold,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.qibla,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Qibla',
+              description: 'Qibla direction and location guidance.',
+              icon: Icons.explore_outlined,
+              accentColor: AppColors.prayerGold,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.ramadan,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Ramadan Mode',
+              description: 'Fasting reminders and Ramadan goals.',
+              icon: Icons.nights_stay_outlined,
+              accentColor: AppColors.prayerGold,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.prayerSettings,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Prayer Settings',
+              description: 'Calculation method, location, and reminder timing.',
+              icon: Icons.tune,
+              accentColor: AppColors.prayerGold,
+            ),
           ),
           GoRoute(
             path: AppRoutes.profile,
@@ -118,6 +224,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.notes,
             builder: (context, state) => const NotesScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.journal,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Journal',
+              description: 'Daily reflections and journal entries.',
+              icon: Icons.auto_stories_outlined,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.settings,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Settings',
+              description: 'Account, app preferences, and privacy controls.',
+              icon: Icons.settings_outlined,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.notificationSettings,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Notification Settings',
+              description: 'Reminder channels, quiet hours, and permissions.',
+              icon: Icons.notifications_outlined,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.languageSettings,
+            builder: (context, state) => const FeaturePlaceholderScreen(
+              title: 'Language And Localization',
+              description: 'Arabic and English language preferences.',
+              icon: Icons.language,
+            ),
           ),
           GoRoute(
             path: AppRoutes.analytics,
