@@ -6,8 +6,12 @@ class NoteService {
 
   NoteService(this._apiClient);
 
-  Future<List<NoteModel>> getNotes({String? search, String? tag}) async {
-    final queryParameters = <String, dynamic>{};
+  Future<List<NoteModel>> getNotes({
+    String? search,
+    String? tag,
+    bool isArchived = false,
+  }) async {
+    final queryParameters = <String, dynamic>{'is_archived': isArchived};
     if (search != null && search.isNotEmpty) {
       queryParameters['search'] = search;
     }
@@ -28,8 +32,9 @@ class NoteService {
     required String content,
     String? title,
     List<String>? tags,
+    String colorKey = 'default',
   }) async {
-    final data = <String, dynamic>{'content': content};
+    final data = <String, dynamic>{'content': content, 'color_key': colorKey};
     if (title != null && title.isNotEmpty) {
       data['title'] = title;
     }
@@ -46,12 +51,16 @@ class NoteService {
     String? title,
     String? content,
     List<String>? tags,
+    String? colorKey,
     bool? isPinned,
+    bool? isArchived,
   }) async {
     final data = <String, dynamic>{
       'title': ?title,
       'content': ?content,
+      'color_key': ?colorKey,
       'is_pinned': ?isPinned,
+      'is_archived': ?isArchived,
     };
     if (tags != null) {
       data['tags'] = tags;

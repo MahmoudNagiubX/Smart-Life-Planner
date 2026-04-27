@@ -15,6 +15,7 @@ class NotesState {
   final String? error;
   final String? search;
   final String? selectedTag;
+  final bool showingArchived;
 
   const NotesState({
     this.notes = const [],
@@ -22,6 +23,7 @@ class NotesState {
     this.error,
     this.search,
     this.selectedTag,
+    this.showingArchived = false,
   });
 
   NotesState copyWith({
@@ -30,6 +32,7 @@ class NotesState {
     String? error,
     String? search,
     String? selectedTag,
+    bool? showingArchived,
     bool clearSearch = false,
     bool clearSelectedTag = false,
   }) {
@@ -39,6 +42,7 @@ class NotesState {
       error: error,
       search: clearSearch ? null : search ?? this.search,
       selectedTag: clearSelectedTag ? null : selectedTag ?? this.selectedTag,
+      showingArchived: showingArchived ?? this.showingArchived,
     );
   }
 
@@ -57,18 +61,28 @@ class NotesNotifier extends StateNotifier<NotesState> {
 
   NotesNotifier(this._ref) : super(const NotesState());
 
-  Future<void> loadNotes({String? search, String? tag}) async {
+  Future<void> loadNotes({
+    String? search,
+    String? tag,
+    bool? isArchived,
+  }) async {
+    final archived = isArchived ?? state.showingArchived;
     state = state.copyWith(
       isLoading: true,
       error: null,
       search: search,
       selectedTag: tag,
+      showingArchived: archived,
       clearSearch: search == null,
       clearSelectedTag: tag == null,
     );
     try {
       final service = _ref.read(noteServiceProvider);
-      final notes = await service.getNotes(search: search, tag: tag);
+      final notes = await service.getNotes(
+        search: search,
+        tag: tag,
+        isArchived: archived,
+      );
       state = state.copyWith(notes: notes, isLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(
@@ -82,11 +96,21 @@ class NotesNotifier extends StateNotifier<NotesState> {
     required String content,
     String? title,
     List<String>? tags,
+    String colorKey = 'default',
   }) async {
     try {
       final service = _ref.read(noteServiceProvider);
-      await service.createNote(content: content, title: title, tags: tags);
-      await loadNotes(search: state.search, tag: state.selectedTag);
+      await service.createNote(
+        content: content,
+        title: title,
+        tags: tags,
+        colorKey: colorKey,
+      );
+      await loadNotes(
+        search: state.search,
+        tag: state.selectedTag,
+        isArchived: state.showingArchived,
+      );
     } on DioException catch (e) {
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to create note'),
@@ -98,15 +122,58 @@ class NotesNotifier extends StateNotifier<NotesState> {
     try {
       final service = _ref.read(noteServiceProvider);
       await service.updateNote(noteId: noteId, isPinned: !currentlyPinned);
-      await loadNotes(search: state.search, tag: state.selectedTag);
+      await loadNotes(
+        search: state.search,
+        tag: state.selectedTag,
+        isArchived: state.showingArchived,
+      );
     } catch (_) {}
+  }
+
+  Future<void> updateColor(String noteId, String colorKey) async {
+    try {
+      final service = _ref.read(noteServiceProvider);
+      await service.updateNote(noteId: noteId, colorKey: colorKey);
+      await loadNotes(
+        search: state.search,
+        tag: state.selectedTag,
+        isArchived: state.showingArchived,
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to update note color'),
+      );
+    }
+  }
+
+  Future<void> archiveNote(String noteId, bool archive) async {
+    try {
+      final service = _ref.read(noteServiceProvider);
+      await service.updateNote(noteId: noteId, isArchived: archive);
+      await loadNotes(
+        search: state.search,
+        tag: state.selectedTag,
+        isArchived: state.showingArchived,
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(
+          e,
+          archive ? 'Failed to archive note' : 'Failed to unarchive note',
+        ),
+      );
+    }
   }
 
   Future<void> updateTags(String noteId, List<String> tags) async {
     try {
       final service = _ref.read(noteServiceProvider);
       await service.updateNote(noteId: noteId, tags: tags);
-      await loadNotes(search: state.search, tag: state.selectedTag);
+      await loadNotes(
+        search: state.search,
+        tag: state.selectedTag,
+        isArchived: state.showingArchived,
+      );
     } on DioException catch (e) {
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to update note tags'),

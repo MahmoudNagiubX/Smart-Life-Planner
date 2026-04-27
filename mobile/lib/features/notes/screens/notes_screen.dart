@@ -45,6 +45,27 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           '📝 Notes',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            tooltip: state.showingArchived
+                ? 'Show active notes'
+                : 'Show archive',
+            onPressed: () => ref
+                .read(notesProvider.notifier)
+                .loadNotes(
+                  search: _searchController.text.trim().isEmpty
+                      ? null
+                      : _searchController.text.trim(),
+                  tag: selectedTag,
+                  isArchived: !state.showingArchived,
+                ),
+            icon: Icon(
+              state.showingArchived
+                  ? Icons.note_alt_outlined
+                  : Icons.archive_outlined,
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -134,11 +155,17 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   )
                 : state.notes.isEmpty
                 ? AppEmptyState(
-                    icon: Icons.note_add_outlined,
-                    title: 'No notes yet',
-                    message: selectedTag == null
-                        ? 'Capture a note, idea, or voice transcript when you are ready.'
-                        : 'No notes found with #$selectedTag.',
+                    icon: state.showingArchived
+                        ? Icons.archive_outlined
+                        : Icons.note_add_outlined,
+                    title: state.showingArchived
+                        ? 'No archived notes'
+                        : 'No notes yet',
+                    message: selectedTag != null
+                        ? 'No notes found with #$selectedTag.'
+                        : state.showingArchived
+                        ? 'Archived notes will appear here.'
+                        : 'Capture a note, idea, or voice transcript when you are ready.',
                   )
                 : RefreshIndicator(
                     onRefresh: () => ref
@@ -146,6 +173,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                         .loadNotes(
                           search: state.search,
                           tag: state.selectedTag,
+                          isArchived: state.showingArchived,
                         ),
                     child: ListView.builder(
                       padding: const EdgeInsets.all(16),
@@ -158,50 +186,72 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           ),
         ],
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton.small(
-            heroTag: 'voice_note',
-            onPressed: () async {
-              await showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      floatingActionButton: state.showingArchived
+          ? null
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton.small(
+                  heroTag: 'voice_note',
+                  onPressed: () async {
+                    await showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).scaffoldBackgroundColor,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
+                      ),
+                      builder: (_) => const VoiceNoteSheet(),
+                    );
+                    if (context.mounted) {
+                      ref
+                          .read(notesProvider.notifier)
+                          .loadNotes(
+                            search: state.search,
+                            tag: state.selectedTag,
+                            isArchived: state.showingArchived,
+                          );
+                    }
+                  },
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.7),
+                  child: const Icon(Icons.mic, size: 20),
                 ),
-                builder: (_) => const VoiceNoteSheet(),
-              );
-              if (context.mounted) {
-                ref.read(notesProvider.notifier).loadNotes();
-              }
-            },
-            backgroundColor: AppColors.primary.withValues(alpha: 0.7),
-            child: const Icon(Icons.mic, size: 20),
-          ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            heroTag: 'text_note',
-            onPressed: () async {
-              await showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                const SizedBox(height: 8),
+                FloatingActionButton(
+                  heroTag: 'text_note',
+                  onPressed: () async {
+                    await showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).scaffoldBackgroundColor,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
+                      ),
+                      builder: (_) => const CreateNoteSheet(),
+                    );
+                    if (context.mounted) {
+                      ref
+                          .read(notesProvider.notifier)
+                          .loadNotes(
+                            search: state.search,
+                            tag: state.selectedTag,
+                            isArchived: state.showingArchived,
+                          );
+                    }
+                  },
+                  backgroundColor: AppColors.primary,
+                  child: const Icon(Icons.add),
                 ),
-                builder: (_) => const CreateNoteSheet(),
-              );
-              if (context.mounted) {
-                ref.read(notesProvider.notifier).loadNotes();
-              }
-            },
-            backgroundColor: AppColors.primary,
-            child: const Icon(Icons.add),
-          ),
-        ],
-      ),
+              ],
+            ),
     );
   }
 }
@@ -217,7 +267,7 @@ class _NoteCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
+        color: _noteBackgroundColor(context, note.colorKey),
         borderRadius: BorderRadius.circular(12),
         border: note.isPinned
             ? Border.all(color: AppColors.prayerGold.withValues(alpha: 0.5))
@@ -253,6 +303,19 @@ class _NoteCard extends ConsumerWidget {
                     ref
                         .read(notesProvider.notifier)
                         .togglePin(note.id, note.isPinned);
+                  } else if (value == 'color') {
+                    final colorKey = await _showColorPicker(
+                      context,
+                      note.colorKey,
+                    );
+                    if (colorKey == null) return;
+                    await ref
+                        .read(notesProvider.notifier)
+                        .updateColor(note.id, colorKey);
+                  } else if (value == 'archive') {
+                    await ref
+                        .read(notesProvider.notifier)
+                        .archiveNote(note.id, !note.isArchived);
                   } else if (value == 'tags') {
                     final tags = await _showTagEditor(context, note.tags);
                     if (tags == null) return;
@@ -274,6 +337,14 @@ class _NoteCard extends ConsumerWidget {
                   PopupMenuItem(
                     value: 'pin',
                     child: Text(note.isPinned ? 'Unpin' : 'Pin'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'color',
+                    child: Text('Change color'),
+                  ),
+                  PopupMenuItem(
+                    value: 'archive',
+                    child: Text(note.isArchived ? 'Unarchive' : 'Archive'),
                   ),
                   const PopupMenuItem(value: 'tags', child: Text('Edit tags')),
                   const PopupMenuItem(
@@ -315,7 +386,9 @@ class _NoteCard extends ConsumerWidget {
           ],
           const SizedBox(height: 8),
           Text(
-            note.updatedAt.substring(0, 10),
+            note.isArchived && note.archivedAt != null
+                ? 'Archived ${note.archivedAt!.substring(0, 10)}'
+                : note.updatedAt.substring(0, 10),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.textSecondary.withValues(alpha: 0.6),
             ),
@@ -359,6 +432,61 @@ class _NoteCard extends ConsumerWidget {
     return result;
   }
 
+  Future<String?> _showColorPicker(
+    BuildContext context,
+    String currentColorKey,
+  ) async {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Note color'),
+        content: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: _noteColorOptions
+              .map(
+                (option) => Tooltip(
+                  message: option.label,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => Navigator.of(context).pop(option.key),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color:
+                            option.color ?? Theme.of(context).cardTheme.color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: currentColorKey == option.key
+                              ? AppColors.primary
+                              : AppColors.textSecondary.withValues(alpha: 0.35),
+                          width: currentColorKey == option.key ? 2 : 1,
+                        ),
+                      ),
+                      child: currentColorKey == option.key
+                          ? const Icon(
+                              Icons.check,
+                              color: AppColors.primary,
+                              size: 18,
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<String> _parseTags(String value) {
     final tags = <String>[];
     final seen = <String>{};
@@ -397,3 +525,33 @@ class _TagChip extends StatelessWidget {
     );
   }
 }
+
+Color _noteBackgroundColor(BuildContext context, String colorKey) {
+  return switch (colorKey) {
+    'red' => AppColors.noteRed,
+    'orange' => AppColors.noteOrange,
+    'yellow' => AppColors.noteYellow,
+    'green' => AppColors.noteGreen,
+    'blue' => AppColors.noteBlue,
+    'purple' => AppColors.notePurple,
+    _ => Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor,
+  };
+}
+
+class _NoteColorOption {
+  final String key;
+  final String label;
+  final Color? color;
+
+  const _NoteColorOption(this.key, this.label, this.color);
+}
+
+const _noteColorOptions = [
+  _NoteColorOption('default', 'Default color', null),
+  _NoteColorOption('red', 'Red', AppColors.noteRed),
+  _NoteColorOption('orange', 'Orange', AppColors.noteOrange),
+  _NoteColorOption('yellow', 'Yellow', AppColors.noteYellow),
+  _NoteColorOption('green', 'Green', AppColors.noteGreen),
+  _NoteColorOption('blue', 'Blue', AppColors.noteBlue),
+  _NoteColorOption('purple', 'Purple', AppColors.notePurple),
+];

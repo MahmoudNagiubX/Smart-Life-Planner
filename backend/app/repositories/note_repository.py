@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from app.models.note import Note
@@ -18,9 +19,14 @@ async def get_notes(
     tag: str | None = None,
     is_archived: bool = False,
 ) -> list[Note]:
+    archived_filter = (
+        Note.archived_at.is_not(None)
+        if is_archived
+        else Note.archived_at.is_(None)
+    )
     query = (
         select(Note)
-        .where(Note.user_id == user_id, Note.is_archived == is_archived)
+        .where(Note.user_id == user_id, archived_filter)
         .order_by(Note.is_pinned.desc(), Note.updated_at.desc())
     )
     if search:
@@ -46,9 +52,7 @@ async def get_note_by_id(
     return result.scalar_one_or_none()
 
 
-async def create_note(
-    db: AsyncSession, user_id: uuid.UUID, data: dict
-) -> Note:
+async def create_note(db: AsyncSession, user_id: uuid.UUID, data: dict) -> Note:
     note = Note(user_id=user_id, **data)
     db.add(note)
     await db.commit()
@@ -56,9 +60,11 @@ async def create_note(
     return note
 
 
-async def update_note(
-    db: AsyncSession, note: Note, data: dict
-) -> Note:
+async def update_note(db: AsyncSession, note: Note, data: dict) -> Note:
+    if "is_archived" in data:
+        is_archived = bool(data["is_archived"])
+        data["archived_at"] = datetime.now(timezone.utc) if is_archived else None
+
     for key, value in data.items():
         setattr(note, key, value)
     await db.commit()

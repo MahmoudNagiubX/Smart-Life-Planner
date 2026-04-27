@@ -3,6 +3,16 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, field_validator
 
+ALLOWED_NOTE_COLORS = {
+    "default",
+    "red",
+    "orange",
+    "yellow",
+    "green",
+    "blue",
+    "purple",
+}
+
 
 def _normalize_tags(tags: list[str] | None) -> list[str] | None:
     if tags is None:
@@ -21,11 +31,21 @@ def _normalize_tags(tags: list[str] | None) -> list[str] | None:
     return normalized
 
 
+def _normalize_color_key(color_key: str | None) -> str | None:
+    if color_key is None:
+        return None
+    clean = color_key.strip().lower()
+    if clean not in ALLOWED_NOTE_COLORS:
+        raise ValueError("Unsupported note color")
+    return clean
+
+
 class NoteCreate(BaseModel):
     title: Optional[str] = None
     content: str
     note_type: Optional[str] = "text"
     tags: Optional[List[str]] = None
+    color_key: Optional[str] = "default"
 
     @field_validator("content")
     @classmethod
@@ -46,11 +66,17 @@ class NoteCreate(BaseModel):
     def tags_valid(cls, v: list[str] | None) -> list[str] | None:
         return _normalize_tags(v)
 
+    @field_validator("color_key")
+    @classmethod
+    def color_key_valid(cls, v: str | None) -> str | None:
+        return _normalize_color_key(v)
+
 
 class NoteUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     tags: Optional[List[str]] = None
+    color_key: Optional[str] = None
     is_pinned: Optional[bool] = None
     is_archived: Optional[bool] = None
 
@@ -58,6 +84,11 @@ class NoteUpdate(BaseModel):
     @classmethod
     def tags_valid(cls, v: list[str] | None) -> list[str] | None:
         return _normalize_tags(v)
+
+    @field_validator("color_key")
+    @classmethod
+    def color_key_valid(cls, v: str | None) -> str | None:
+        return _normalize_color_key(v)
 
 
 class NoteResponse(BaseModel):
@@ -67,8 +98,10 @@ class NoteResponse(BaseModel):
     content: str
     note_type: str
     tags: Optional[list]
+    color_key: str
     is_pinned: bool
     is_archived: bool
+    archived_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
 

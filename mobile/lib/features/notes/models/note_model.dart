@@ -4,8 +4,10 @@ class NoteModel {
   final String content;
   final String noteType;
   final List<String> tags;
+  final String colorKey;
   final bool isPinned;
   final bool isArchived;
+  final String? archivedAt;
   final String createdAt;
   final String updatedAt;
 
@@ -15,8 +17,10 @@ class NoteModel {
     required this.content,
     required this.noteType,
     required this.tags,
+    required this.colorKey,
     required this.isPinned,
     required this.isArchived,
+    this.archivedAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -30,8 +34,10 @@ class NoteModel {
       tags:
           (json['tags'] as List<dynamic>?)?.map((t) => t.toString()).toList() ??
           [],
+      colorKey: json['color_key'] as String? ?? 'default',
       isPinned: json['is_pinned'] as bool,
       isArchived: json['is_archived'] as bool,
+      archivedAt: json['archived_at'] as String?,
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
     );

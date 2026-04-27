@@ -27,4 +27,12 @@ class AppColors {
 
   // Prayer accent
   static const prayerGold = Color(0xFFD4A843);
+
+  // Notes
+  static const noteRed = Color(0xFF5C2A32);
+  static const noteOrange = Color(0xFF5C3A24);
+  static const noteYellow = Color(0xFF4F4320);
+  static const noteGreen = Color(0xFF234632);
+  static const noteBlue = Color(0xFF243E5C);
+  static const notePurple = Color(0xFF3D315C);
 }

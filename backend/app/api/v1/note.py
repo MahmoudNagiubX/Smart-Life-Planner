@@ -6,7 +6,11 @@ from app.core.dependencies import get_db
 from app.api.v1.auth import get_current_user
 from app.schemas.note import NoteCreate, NoteUpdate, NoteResponse
 from app.repositories.note_repository import (
-    get_notes, get_note_by_id, create_note, update_note, delete_note,
+    get_notes,
+    get_note_by_id,
+    create_note,
+    update_note,
+    delete_note,
 )
 
 router = APIRouter(prefix="/notes", tags=["notes"])
@@ -29,7 +33,7 @@ async def create_new_note(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    data = payload.model_dump()
+    data = payload.model_dump(exclude_none=True)
     return await create_note(db, current_user.id, data)
 
 
@@ -41,7 +45,9 @@ async def get_note(
 ):
     note = await get_note_by_id(db, note_id, current_user.id)
     if not note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
     return note
 
 
@@ -54,7 +60,9 @@ async def update_existing_note(
 ):
     note = await get_note_by_id(db, note_id, current_user.id)
     if not note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
     return await update_note(db, note, payload.model_dump(exclude_none=True))
 
 
@@ -66,5 +74,7 @@ async def delete_existing_note(
 ):
     note = await get_note_by_id(db, note_id, current_user.id)
     if not note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
     await delete_note(db, note)

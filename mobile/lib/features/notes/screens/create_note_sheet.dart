@@ -15,6 +15,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _tagsController = TextEditingController();
+  String _selectedColorKey = 'default';
   bool _isLoading = false;
 
   @override
@@ -49,6 +50,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
               ? null
               : _titleController.text.trim(),
           tags: _parseTags(),
+          colorKey: _selectedColorKey,
         );
 
     if (mounted) {
@@ -166,6 +168,46 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
               prefixIcon: Icon(Icons.label_outline),
             ),
           ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _noteColorOptions
+                .map(
+                  (option) => Tooltip(
+                    message: option.label,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () =>
+                          setState(() => _selectedColorKey = option.key),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: option.color ?? Theme.of(context).cardColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: _selectedColorKey == option.key
+                                ? AppColors.primary
+                                : AppColors.textSecondary.withValues(
+                                    alpha: 0.35,
+                                  ),
+                            width: _selectedColorKey == option.key ? 2 : 1,
+                          ),
+                        ),
+                        child: _selectedColorKey == option.key
+                            ? const Icon(
+                                Icons.check,
+                                color: AppColors.primary,
+                                size: 18,
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
           const SizedBox(height: 20),
           _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -178,3 +220,21 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
     );
   }
 }
+
+class _NoteColorOption {
+  final String key;
+  final String label;
+  final Color? color;
+
+  const _NoteColorOption(this.key, this.label, this.color);
+}
+
+const _noteColorOptions = [
+  _NoteColorOption('default', 'Default color', null),
+  _NoteColorOption('red', 'Red', AppColors.noteRed),
+  _NoteColorOption('orange', 'Orange', AppColors.noteOrange),
+  _NoteColorOption('yellow', 'Yellow', AppColors.noteYellow),
+  _NoteColorOption('green', 'Green', AppColors.noteGreen),
+  _NoteColorOption('blue', 'Blue', AppColors.noteBlue),
+  _NoteColorOption('purple', 'Purple', AppColors.notePurple),
+];
