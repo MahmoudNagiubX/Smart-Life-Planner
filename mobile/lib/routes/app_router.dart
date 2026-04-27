@@ -19,6 +19,7 @@ import '../features/ai/screens/daily_plan_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
+import '../features/voice/screens/voice_capture_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -83,48 +84,52 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => MainShell(child: child),
         routes: [
           GoRoute(
-            path: '/home',
+            path: AppRoutes.home,
             builder: (context, state) => const HomeScreen(),
           ),
           GoRoute(
-            path: '/home/daily-plan',
+            path: AppRoutes.dailyPlan,
             builder: (context, state) => const DailyPlanScreen(),
           ),
           GoRoute(
-            path: '/home/tasks',
+            path: AppRoutes.tasks,
             builder: (context, state) => const TasksScreen(),
           ),
           GoRoute(
-            path: '/home/focus',
+            path: AppRoutes.focus,
             builder: (context, state) => const FocusScreen(),
           ),
           GoRoute(
-            path: '/home/prayer',
+            path: AppRoutes.prayer,
             builder: (context, state) => const PrayerScreen(),
           ),
           GoRoute(
-            path: '/home/profile',
+            path: AppRoutes.profile,
             builder: (context, state) => const ProfileScreen(),
           ),
           GoRoute(
-            path: '/home/change-password',
+            path: AppRoutes.changePassword,
             builder: (context, state) => const ChangePasswordScreen(),
           ),
           GoRoute(
-            path: '/home/habits',
+            path: AppRoutes.habits,
             builder: (context, state) => const HabitsScreen(),
           ),
           GoRoute(
-            path: '/home/notes',
+            path: AppRoutes.notes,
             builder: (context, state) => const NotesScreen(),
           ),
           GoRoute(
-            path: '/home/analytics',
+            path: AppRoutes.analytics,
             builder: (context, state) => const AnalyticsScreen(),
           ),
           GoRoute(
-            path: '/home/ranked-tasks',
+            path: AppRoutes.rankedTasks,
             builder: (context, state) => const RankedTasksScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.voiceCapture,
+            builder: (context, state) => const VoiceCaptureScreen(),
           ),
         ],
       ),
