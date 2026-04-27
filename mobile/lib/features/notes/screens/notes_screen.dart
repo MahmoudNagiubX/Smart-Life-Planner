@@ -49,6 +49,11 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Smart note tools',
+            onPressed: () => _showSmartNoteMenu(context),
+            icon: const Icon(Icons.auto_awesome_outlined),
+          ),
+          IconButton(
             tooltip: state.showingArchived
                 ? 'Show active notes'
                 : 'Show archive',
@@ -338,6 +343,8 @@ class _NoteCard extends ConsumerWidget {
                     await ref
                         .read(notesProvider.notifier)
                         .updateTags(note.id, tags);
+                  } else if (value == 'smart') {
+                    _showSmartNoteMenu(context, note: note);
                   } else if (value == 'delete') {
                     final confirmed = await confirmDestructiveAction(
                       context: context,
@@ -364,6 +371,10 @@ class _NoteCard extends ConsumerWidget {
                     child: Text(note.isArchived ? 'Unarchive' : 'Archive'),
                   ),
                   const PopupMenuItem(value: 'tags', child: Text('Edit tags')),
+                  const PopupMenuItem(
+                    value: 'smart',
+                    child: Text('Smart tools'),
+                  ),
                   const PopupMenuItem(
                     value: 'delete',
                     child: Text(
@@ -817,3 +828,158 @@ const _noteColorOptions = [
   _NoteColorOption('blue', 'Blue', AppColors.noteBlue),
   _NoteColorOption('purple', 'Purple', AppColors.notePurple),
 ];
+
+Future<void> _showSmartNoteMenu(BuildContext context, {NoteModel? note}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) => _SmartNotePlaceholderSheet(note: note),
+  );
+}
+
+class _SmartNotePlaceholderSheet extends StatelessWidget {
+  final NoteModel? note;
+
+  const _SmartNotePlaceholderSheet({this.note});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textSecondary.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                const Icon(
+                  Icons.auto_awesome_outlined,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    note == null ? 'Smart Note Tools' : 'Smart Tools',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (note != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                note!.title ?? 'Untitled note',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+            const SizedBox(height: 18),
+            const _SmartPlaceholderTile(
+              icon: Icons.document_scanner_outlined,
+              title: 'OCR from images',
+              description: 'Extract text from attached images.',
+            ),
+            const _SmartPlaceholderTile(
+              icon: Icons.draw_outlined,
+              title: 'Handwriting support',
+              description: 'Read handwritten notes and sketches.',
+            ),
+            const _SmartPlaceholderTile(
+              icon: Icons.summarize_outlined,
+              title: 'AI note summary',
+              description: 'Create a short editable summary.',
+            ),
+            const _SmartPlaceholderTile(
+              icon: Icons.playlist_add_check_outlined,
+              title: 'AI action extraction',
+              description:
+                  'Find possible tasks without creating them silently.',
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Future features. Current note editing stays unchanged.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SmartPlaceholderTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+
+  const _SmartPlaceholderTile({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppColors.textSecondary.withValues(alpha: 0.18),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.textSecondary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Chip(label: Text('Future')),
+          ],
+        ),
+      ),
+    );
+  }
+}
