@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../../routes/app_routes.dart';
+import '../../prayer/providers/quran_goal_provider.dart';
 import '../../prayer/providers/prayer_provider.dart';
 import '../../prayer/models/prayer_model.dart';
 
@@ -21,6 +22,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(prayerProvider.notifier).loadTodayPrayers();
+      ref.read(quranGoalProvider.notifier).loadSummary();
     });
   }
 
@@ -61,6 +63,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(prayerProvider);
+    final quranState = ref.watch(quranGoalProvider);
     final data = state.data;
 
     return Scaffold(
@@ -149,6 +152,17 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                         ),
                       ),
                       const SizedBox(height: 28),
+
+                      if (quranState.summary != null) ...[
+                        _QuranProgressShortcut(
+                          pagesCompleted:
+                              quranState.summary!.todayPagesCompleted,
+                          dailyTarget: quranState.summary!.dailyPageTarget,
+                          progressPercent: quranState.summary!.progressPercent,
+                          onTap: () => context.push(AppRoutes.quranGoal),
+                        ),
+                        const SizedBox(height: 28),
+                      ],
 
                       Text(
                         'Spiritual Tools',
@@ -274,6 +288,91 @@ class _PrayerCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuranProgressShortcut extends StatelessWidget {
+  final int pagesCompleted;
+  final int dailyTarget;
+  final int progressPercent;
+  final VoidCallback onTap;
+
+  const _QuranProgressShortcut({
+    required this.pagesCompleted,
+    required this.dailyTarget,
+    required this.progressPercent,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = dailyTarget == 0
+        ? 0.0
+        : (pagesCompleted / dailyTarget).clamp(0.0, 1.0);
+
+    return Material(
+      color: Theme.of(context).cardTheme.color,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.menu_book_outlined,
+                    color: AppColors.prayerGold,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Quran Goal',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    dailyTarget == 0
+                        ? 'Set target'
+                        : '$pagesCompleted / $dailyTarget pages',
+                    style: const TextStyle(
+                      color: AppColors.prayerGold,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8,
+                  backgroundColor: AppColors.prayerGold.withValues(alpha: 0.15),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppColors.prayerGold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                dailyTarget == 0
+                    ? 'Create your daily Quran reading target.'
+                    : '$progressPercent% of today\'s Quran goal complete.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, date, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.models.prayer import PrayerLog
+from app.models.prayer import PrayerLog, QuranGoal, QuranProgress
 
 
 async def get_prayer_logs_for_date(
@@ -92,5 +92,85 @@ async def get_prayer_history(
             PrayerLog.prayer_date >= date_from,
             PrayerLog.prayer_date <= date_to,
         ).order_by(PrayerLog.prayer_date.desc(), PrayerLog.scheduled_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_quran_goal(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+) -> QuranGoal | None:
+    result = await db.execute(
+        select(QuranGoal).where(QuranGoal.user_id == user_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def upsert_quran_goal(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    daily_page_target: int,
+) -> QuranGoal:
+    goal = await get_quran_goal(db, user_id)
+    if not goal:
+        goal = QuranGoal(
+            user_id=user_id,
+            daily_page_target=daily_page_target,
+        )
+        db.add(goal)
+    else:
+        goal.daily_page_target = daily_page_target
+    await db.commit()
+    await db.refresh(goal)
+    return goal
+
+
+async def get_quran_progress_for_date(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    progress_date: date,
+) -> QuranProgress | None:
+    result = await db.execute(
+        select(QuranProgress).where(
+            QuranProgress.user_id == user_id,
+            QuranProgress.progress_date == progress_date,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def upsert_quran_progress(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    progress_date: date,
+    pages_completed: int,
+) -> QuranProgress:
+    progress = await get_quran_progress_for_date(db, user_id, progress_date)
+    if not progress:
+        progress = QuranProgress(
+            user_id=user_id,
+            progress_date=progress_date,
+            pages_completed=pages_completed,
+        )
+        db.add(progress)
+    else:
+        progress.pages_completed = pages_completed
+    await db.commit()
+    await db.refresh(progress)
+    return progress
+
+
+async def get_quran_progress_range(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    date_from: date,
+    date_to: date,
+) -> list[QuranProgress]:
+    result = await db.execute(
+        select(QuranProgress).where(
+            QuranProgress.user_id == user_id,
+            QuranProgress.progress_date >= date_from,
+            QuranProgress.progress_date <= date_to,
+        ).order_by(QuranProgress.progress_date.asc())
     )
     return list(result.scalars().all())

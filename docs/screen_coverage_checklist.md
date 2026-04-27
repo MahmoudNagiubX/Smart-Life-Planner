@@ -71,7 +71,7 @@ Current implementation is a single onboarding flow screen. Step 13.2/13.3 should
 | --- | --- | --- | --- |
 | Prayer | `/home/prayer` | Exists | Current prayer screen. |
 | Prayer History | `/home/prayer/history` | Exists | Placeholder route exists and is reachable from Prayer. |
-| Quran Goal | `/home/prayer/quran-goal` | Exists | Placeholder route exists and is reachable from Prayer. |
+| Quran Goal | `/home/prayer/quran-goal` | Exists | Daily target/progress screen exists and is reachable from Prayer. |
 | Qibla | `/home/prayer/qibla` | Exists | Qibla UI and bearing service placeholder are routed and reachable. |
 | Ramadan Mode | `/home/prayer/ramadan` | Exists | Ramadan settings UI is routed and reachable. |
 | Prayer Settings | `/home/prayer/settings` | Exists | Prayer settings UI is routed and reachable from Prayer/Profile. |

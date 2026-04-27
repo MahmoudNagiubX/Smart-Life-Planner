@@ -3,7 +3,15 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_db
 from app.api.v1.auth import get_current_user
-from app.schemas.prayer import DailyPrayerResponse, PrayerResponse, PrayerLogResponse
+from app.schemas.prayer import (
+    DailyPrayerResponse,
+    PrayerResponse,
+    PrayerLogResponse,
+    QuranGoalSummaryResponse,
+    QuranGoalUpsert,
+    QuranProgressUpdate,
+    QuranWeeklyProgressItem,
+)
 from app.repositories.prayer_repository import (
     get_prayer_logs_for_date,
     get_prayer_log,
@@ -11,6 +19,11 @@ from app.repositories.prayer_repository import (
     mark_prayer_complete,
     mark_prayer_incomplete,
     get_prayer_history,
+    get_quran_goal,
+    get_quran_progress_for_date,
+    get_quran_progress_range,
+    upsert_quran_goal,
+    upsert_quran_progress,
 )
 from app.repositories.settings_repository import get_settings_by_user_id
 from app.services.prayer_calculator import calculate_prayer_times, PRAYER_NAMES
@@ -19,6 +32,47 @@ router = APIRouter(prefix="/prayers", tags=["prayers"])
 
 DEFAULT_LAT = 30.0444
 DEFAULT_LNG = 31.2357
+
+
+async def _build_quran_goal_summary(
+    db: AsyncSession,
+    user_id,
+) -> QuranGoalSummaryResponse:
+    today = date.today()
+    week_start = today - timedelta(days=6)
+    goal = await get_quran_goal(db, user_id)
+    today_progress = await get_quran_progress_for_date(db, user_id, today)
+    week_progress = await get_quran_progress_range(db, user_id, week_start, today)
+
+    progress_by_date = {item.progress_date: item for item in week_progress}
+    target = goal.daily_page_target if goal else 0
+    today_pages = today_progress.pages_completed if today_progress else 0
+    weekly_total = sum(item.pages_completed for item in week_progress)
+
+    weekly_summary = []
+    for offset in range(7):
+        current_date = week_start + timedelta(days=offset)
+        progress = progress_by_date.get(current_date)
+        pages_completed = progress.pages_completed if progress else 0
+        weekly_summary.append(
+            QuranWeeklyProgressItem(
+                progress_date=current_date,
+                pages_completed=pages_completed,
+                target_met=target > 0 and pages_completed >= target,
+            )
+        )
+
+    return QuranGoalSummaryResponse(
+        goal=goal,
+        today=today_progress,
+        today_pages_completed=today_pages,
+        progress_percent=0
+        if target == 0
+        else min(100, int(today_pages / target * 100)),
+        weekly_total_pages=weekly_total,
+        weekly_target_pages=target * 7,
+        weekly_summary=weekly_summary,
+    )
 
 
 @router.get("/today", response_model=DailyPrayerResponse)
@@ -67,6 +121,39 @@ async def get_today_prayers(
         completed_count=completed_count,
         total_count=len(PRAYER_NAMES),
     )
+
+
+@router.get("/quran-goal", response_model=QuranGoalSummaryResponse)
+async def get_quran_goal_summary(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await _build_quran_goal_summary(db, current_user.id)
+
+
+@router.put("/quran-goal", response_model=QuranGoalSummaryResponse)
+async def upsert_user_quran_goal(
+    payload: QuranGoalUpsert,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await upsert_quran_goal(db, current_user.id, payload.daily_page_target)
+    return await _build_quran_goal_summary(db, current_user.id)
+
+
+@router.put("/quran-progress/today", response_model=QuranGoalSummaryResponse)
+async def update_today_quran_progress(
+    payload: QuranProgressUpdate,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await upsert_quran_progress(
+        db,
+        current_user.id,
+        date.today(),
+        payload.pages_completed,
+    )
+    return await _build_quran_goal_summary(db, current_user.id)
 
 
 @router.patch("/{prayer_name}/{prayer_date}/complete", response_model=PrayerLogResponse)

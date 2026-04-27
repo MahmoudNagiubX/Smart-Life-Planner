@@ -23,6 +23,7 @@ import '../features/analytics/screens/analytics_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/prayer/screens/prayer_settings_screen.dart';
+import '../features/prayer/screens/quran_goal_screen.dart';
 import '../features/prayer/screens/qibla_screen.dart';
 import '../features/prayer/screens/ramadan_mode_screen.dart';
 import '../features/voice/screens/voice_capture_screen.dart';
@@ -184,12 +185,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.quranGoal,
-            builder: (context, state) => const FeaturePlaceholderScreen(
-              title: 'Quran Goal',
-              description: 'Daily Quran reading targets and progress.',
-              icon: Icons.menu_book_outlined,
-              accentColor: AppColors.prayerGold,
-            ),
+            builder: (context, state) => const QuranGoalScreen(),
           ),
           GoRoute(
             path: AppRoutes.qibla,
