@@ -8,6 +8,7 @@ import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../voice/screens/voice_note_sheet.dart';
+import '../models/app_template_library.dart';
 import '../providers/note_provider.dart';
 import '../models/note_model.dart';
 import 'create_note_sheet.dart';
@@ -48,6 +49,11 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Templates',
+            onPressed: () => _showNoteTemplatePicker(context),
+            icon: const Icon(Icons.dashboard_customize_outlined),
+          ),
           IconButton(
             tooltip: 'Smart note tools',
             onPressed: () => _showSmartNoteMenu(context),
@@ -259,6 +265,66 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 ),
               ],
             ),
+    );
+  }
+
+  Future<void> _showNoteTemplatePicker(BuildContext context) async {
+    final template = await showModalBottomSheet<AppTemplate>(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => const _TemplatePickerSheet(),
+    );
+    if (template == null || !context.mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => CreateNoteSheet(template: template),
+    );
+    if (!context.mounted) return;
+    final state = ref.read(notesProvider);
+    await ref
+        .read(notesProvider.notifier)
+        .loadNotes(
+          search: state.search,
+          tag: state.selectedTag,
+          isArchived: state.showingArchived,
+        );
+  }
+}
+
+class _TemplatePickerSheet extends StatelessWidget {
+  const _TemplatePickerSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        itemCount: appTemplates.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final template = appTemplates[index];
+          return ListTile(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            tileColor: Theme.of(context).cardTheme.color,
+            leading: const Icon(Icons.description_outlined),
+            title: Text(template.title),
+            subtitle: Text(template.description),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.pop(context, template),
+          );
+        },
+      ),
     );
   }
 }

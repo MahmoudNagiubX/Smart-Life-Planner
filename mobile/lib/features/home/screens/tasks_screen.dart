@@ -11,6 +11,7 @@ import '../../habits/providers/habit_provider.dart';
 import '../../prayer/providers/prayer_provider.dart';
 import '../../focus/models/focus_model.dart';
 import '../../habits/models/habit_model.dart';
+import '../../notes/models/app_template_library.dart';
 import '../../prayer/models/prayer_model.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../tasks/models/task_model.dart';
@@ -56,6 +57,11 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Task templates',
+            onPressed: () => _showTaskTemplatePicker(context),
+            icon: const Icon(Icons.dashboard_customize_outlined),
+          ),
           IconButton(
             tooltip: 'Project timelines',
             onPressed: () => _showProjectTimelinePicker(context, ref),
@@ -120,6 +126,74 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
         ),
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Future<void> _showTaskTemplatePicker(BuildContext context) async {
+    final templates = appTemplates
+        .where((template) => template.hasTaskPlan)
+        .toList(growable: false);
+    final template = await showModalBottomSheet<AppTemplate>(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _TaskTemplatePickerSheet(templates: templates),
+    );
+    if (template == null || !context.mounted) return;
+
+    var createdCount = 0;
+    for (final task in template.tasks) {
+      final created = await ref
+          .read(tasksProvider.notifier)
+          .createTask(
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            category: task.category,
+            estimatedMinutes: task.estimatedMinutes,
+          );
+      if (created) createdCount++;
+    }
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Created $createdCount tasks from ${template.title}.'),
+      ),
+    );
+  }
+}
+
+class _TaskTemplatePickerSheet extends StatelessWidget {
+  final List<AppTemplate> templates;
+
+  const _TaskTemplatePickerSheet({required this.templates});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        itemCount: templates.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final template = templates[index];
+          return ListTile(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            tileColor: Theme.of(context).cardTheme.color,
+            leading: const Icon(Icons.playlist_add_check_outlined),
+            title: Text(template.title),
+            subtitle: Text('${template.tasks.length} starter tasks'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.pop(context, template),
+          );
+        },
       ),
     );
   }

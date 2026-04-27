@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
+import '../models/app_template_library.dart';
 import '../providers/note_provider.dart';
 import '../models/note_model.dart';
 import '../../voice/screens/voice_note_sheet.dart';
@@ -11,8 +12,14 @@ import '../../voice/screens/voice_note_sheet.dart';
 class CreateNoteSheet extends ConsumerStatefulWidget {
   final NoteModel? initialNote;
   final String? linkedTaskId;
+  final AppTemplate? template;
 
-  const CreateNoteSheet({super.key, this.initialNote, this.linkedTaskId});
+  const CreateNoteSheet({
+    super.key,
+    this.initialNote,
+    this.linkedTaskId,
+    this.template,
+  });
 
   @override
   ConsumerState<CreateNoteSheet> createState() => _CreateNoteSheetState();
@@ -40,7 +47,18 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
   void initState() {
     super.initState();
     final note = widget.initialNote;
-    if (note == null) return;
+    if (note == null) {
+      final template = widget.template;
+      if (template != null) {
+        _titleController.text = template.noteTitle;
+        _contentController.text = template.noteContent;
+        _tagsController.text = template.tags.join(', ');
+        for (final block in template.blocks) {
+          _hydrateStructuredBlock(block);
+        }
+      }
+      return;
+    }
 
     _titleController.text = note.title ?? '';
     _contentController.text = note.content;
@@ -53,35 +71,52 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
     _attachments.addAll(note.attachments);
 
     for (final block in note.structuredBlocks) {
-      if (block.type == 'heading') {
-        _headingController.text = block.text ?? '';
-      } else if (block.type == 'bullet_list') {
-        _bulletController.text = block.items.join('\n');
-      } else if (block.type == 'divider') {
-        _dividerEnabled = true;
-      } else if (_reminderAt == null &&
-          block.type == 'reminder' &&
-          block.reminderAt != null) {
-        _reminderAt = DateTime.tryParse(block.reminderAt!)?.toLocal();
-      } else if (block.type == 'task_link') {
-        _linkedTaskController.text = block.taskTitle ?? block.taskId ?? '';
-      }
+      _hydrateStructuredBlock(block);
     }
 
-    final checklistItems = note.checklistItems.isNotEmpty
-        ? note.checklistItems
-        : note.structuredBlocks
-              .where((block) => block.type == 'checklist')
-              .expand((block) => block.checklistItems)
-              .toList();
-    for (final item in checklistItems) {
-      _checklistItems.add(
-        _ChecklistDraftItem(
-          id: item.id,
-          text: item.text,
-          isCompleted: item.isCompleted,
-        ),
-      );
+    if (_checklistItems.isEmpty) {
+      final checklistItems = note.checklistItems.isNotEmpty
+          ? note.checklistItems
+          : note.structuredBlocks
+                .where((block) => block.type == 'checklist')
+                .expand((block) => block.checklistItems)
+                .toList();
+      for (final item in checklistItems) {
+        _checklistItems.add(
+          _ChecklistDraftItem(
+            id: item.id,
+            text: item.text,
+            isCompleted: item.isCompleted,
+          ),
+        );
+      }
+    }
+  }
+
+  void _hydrateStructuredBlock(NoteStructuredBlockModel block) {
+    if (block.type == 'heading') {
+      _headingController.text = block.text ?? '';
+    } else if (block.type == 'bullet_list') {
+      _bulletController.text = block.items.join('\n');
+    } else if (block.type == 'divider') {
+      _dividerEnabled = true;
+    } else if (_reminderAt == null &&
+        block.type == 'reminder' &&
+        block.reminderAt != null) {
+      _reminderAt = DateTime.tryParse(block.reminderAt!)?.toLocal();
+    } else if (block.type == 'task_link') {
+      _linkedTaskController.text = block.taskTitle ?? block.taskId ?? '';
+    } else if (block.type == 'checklist') {
+      _noteType = 'checklist';
+      for (final item in block.checklistItems) {
+        _checklistItems.add(
+          _ChecklistDraftItem(
+            id: item.id,
+            text: item.text,
+            isCompleted: item.isCompleted,
+          ),
+        );
+      }
     }
   }
 
