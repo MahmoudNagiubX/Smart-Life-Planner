@@ -66,6 +66,50 @@ class NoteChecklistItem(BaseModel):
         return clean
 
 
+class NoteStructuredBlock(BaseModel):
+    id: str
+    type: str
+    text: Optional[str] = None
+    items: Optional[List[NoteChecklistItem | str]] = None
+    reminder_at: Optional[datetime] = None
+    task_id: Optional[str] = None
+    task_title: Optional[str] = None
+
+    @field_validator("id")
+    @classmethod
+    def id_not_empty(cls, v: str) -> str:
+        clean = v.strip()
+        if not clean:
+            raise ValueError("Structured block id cannot be empty")
+        if len(clean) > 80:
+            raise ValueError("Structured block id is too long")
+        return clean
+
+    @field_validator("type")
+    @classmethod
+    def type_valid(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if clean not in (
+            "paragraph",
+            "bullet_list",
+            "checklist",
+            "reminder",
+            "task_link",
+        ):
+            raise ValueError("Unsupported structured block type")
+        return clean
+
+    @field_validator("text", "task_id", "task_title")
+    @classmethod
+    def optional_text_valid(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        clean = v.strip()
+        if len(clean) > 1000:
+            raise ValueError("Structured block text is too long")
+        return clean or None
+
+
 def _normalize_checklist_items(
     items: list[NoteChecklistItem] | None,
 ) -> list[NoteChecklistItem] | None:
@@ -79,12 +123,26 @@ def _normalize_checklist_items(
     return items
 
 
+def _normalize_structured_blocks(
+    blocks: list[NoteStructuredBlock] | None,
+) -> list[NoteStructuredBlock] | None:
+    if blocks is None:
+        return None
+    seen: set[str] = set()
+    for block in blocks:
+        if block.id in seen:
+            raise ValueError("Structured block ids must be unique")
+        seen.add(block.id)
+    return blocks
+
+
 class NoteCreate(BaseModel):
     title: Optional[str] = None
     content: str
     note_type: Optional[str] = "text"
     tags: Optional[List[str]] = None
     checklist_items: Optional[List[NoteChecklistItem]] = None
+    structured_blocks: Optional[List[NoteStructuredBlock]] = None
     color_key: Optional[str] = "default"
 
     @field_validator("content")
@@ -118,12 +176,21 @@ class NoteCreate(BaseModel):
     ) -> list[NoteChecklistItem] | None:
         return _normalize_checklist_items(v)
 
+    @field_validator("structured_blocks")
+    @classmethod
+    def structured_blocks_valid(
+        cls, v: list[NoteStructuredBlock] | None
+    ) -> list[NoteStructuredBlock] | None:
+        return _normalize_structured_blocks(v)
+
 
 class NoteUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
+    note_type: Optional[str] = None
     tags: Optional[List[str]] = None
     checklist_items: Optional[List[NoteChecklistItem]] = None
+    structured_blocks: Optional[List[NoteStructuredBlock]] = None
     color_key: Optional[str] = None
     is_pinned: Optional[bool] = None
     is_archived: Optional[bool] = None
@@ -132,6 +199,15 @@ class NoteUpdate(BaseModel):
     @classmethod
     def tags_valid(cls, v: list[str] | None) -> list[str] | None:
         return _normalize_tags(v)
+
+    @field_validator("note_type")
+    @classmethod
+    def note_type_valid(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if v not in ("text", "checklist", "voice"):
+            raise ValueError("note_type must be text, checklist, or voice")
+        return v
 
     @field_validator("color_key")
     @classmethod
@@ -145,6 +221,13 @@ class NoteUpdate(BaseModel):
     ) -> list[NoteChecklistItem] | None:
         return _normalize_checklist_items(v)
 
+    @field_validator("structured_blocks")
+    @classmethod
+    def structured_blocks_valid(
+        cls, v: list[NoteStructuredBlock] | None
+    ) -> list[NoteStructuredBlock] | None:
+        return _normalize_structured_blocks(v)
+
 
 class NoteResponse(BaseModel):
     id: uuid.UUID
@@ -154,6 +237,7 @@ class NoteResponse(BaseModel):
     note_type: str
     tags: Optional[list]
     checklist_items: Optional[list]
+    structured_blocks: Optional[list]
     color_key: str
     is_pinned: bool
     is_archived: bool

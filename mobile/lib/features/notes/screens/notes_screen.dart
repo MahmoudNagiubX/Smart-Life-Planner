@@ -303,6 +303,20 @@ class _NoteCard extends ConsumerWidget {
                     ref
                         .read(notesProvider.notifier)
                         .togglePin(note.id, note.isPinned);
+                  } else if (value == 'edit') {
+                    await showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).scaffoldBackgroundColor,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
+                      ),
+                      builder: (_) => CreateNoteSheet(initialNote: note),
+                    );
                   } else if (value == 'color') {
                     final colorKey = await _showColorPicker(
                       context,
@@ -338,6 +352,7 @@ class _NoteCard extends ConsumerWidget {
                     value: 'pin',
                     child: Text(note.isPinned ? 'Unpin' : 'Pin'),
                   ),
+                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
                   const PopupMenuItem(
                     value: 'color',
                     child: Text('Change color'),
@@ -384,6 +399,10 @@ class _NoteCard extends ConsumerWidget {
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
             ),
+          if (note.structuredBlocks.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _StructuredBlocksPreview(blocks: note.structuredBlocks),
+          ],
           if (note.tags.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
@@ -603,6 +622,91 @@ class _ChecklistPreview extends StatelessWidget {
                   color: AppColors.textSecondary.withValues(alpha: 0.7),
                 ),
               ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _StructuredBlocksPreview extends StatelessWidget {
+  final List<NoteStructuredBlockModel> blocks;
+
+  const _StructuredBlocksPreview({required this.blocks});
+
+  @override
+  Widget build(BuildContext context) {
+    NoteStructuredBlockModel? bulletBlock;
+    NoteStructuredBlockModel? reminderBlock;
+    NoteStructuredBlockModel? taskBlock;
+    for (final block in blocks) {
+      if (bulletBlock == null &&
+          block.type == 'bullet_list' &&
+          block.items.isNotEmpty) {
+        bulletBlock = block;
+      } else if (reminderBlock == null &&
+          block.type == 'reminder' &&
+          block.reminderAt != null) {
+        reminderBlock = block;
+      } else if (taskBlock == null && block.type == 'task_link') {
+        taskBlock = block;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (bulletBlock != null)
+          ...bulletBlock.items
+              .take(3)
+              .map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '•',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          item,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        if (reminderBlock != null || taskBlock != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                if (reminderBlock?.reminderAt != null)
+                  Chip(
+                    avatar: const Icon(Icons.notifications_outlined, size: 15),
+                    label: Text(
+                      reminderBlock!.reminderAt!.substring(0, 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                if (taskBlock != null)
+                  Chip(
+                    avatar: const Icon(Icons.task_alt, size: 15),
+                    label: Text(
+                      taskBlock.taskTitle ?? taskBlock.taskId ?? 'Linked task',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
             ),
           ),
       ],

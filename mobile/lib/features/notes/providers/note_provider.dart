@@ -98,6 +98,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
     String noteType = 'text',
     List<String>? tags,
     List<ChecklistItemModel>? checklistItems,
+    List<NoteStructuredBlockModel>? structuredBlocks,
     String colorKey = 'default',
   }) async {
     try {
@@ -108,6 +109,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
         noteType: noteType,
         tags: tags,
         checklistItems: checklistItems,
+        structuredBlocks: structuredBlocks,
         colorKey: colorKey,
       );
       await loadNotes(
@@ -118,6 +120,40 @@ class NotesNotifier extends StateNotifier<NotesState> {
     } on DioException catch (e) {
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to create note'),
+      );
+    }
+  }
+
+  Future<void> updateNote({
+    required String noteId,
+    required String content,
+    String? title,
+    String? noteType,
+    List<String>? tags,
+    List<ChecklistItemModel>? checklistItems,
+    List<NoteStructuredBlockModel>? structuredBlocks,
+    String? colorKey,
+  }) async {
+    try {
+      final service = _ref.read(noteServiceProvider);
+      await service.updateNote(
+        noteId: noteId,
+        title: title,
+        content: content,
+        noteType: noteType,
+        tags: tags,
+        checklistItems: checklistItems,
+        structuredBlocks: structuredBlocks,
+        colorKey: colorKey,
+      );
+      await loadNotes(
+        search: state.search,
+        tag: state.selectedTag,
+        isArchived: state.showingArchived,
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to update note'),
       );
     }
   }

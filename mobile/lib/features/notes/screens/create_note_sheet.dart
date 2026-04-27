@@ -6,7 +6,9 @@ import '../models/note_model.dart';
 import '../../voice/screens/voice_note_sheet.dart';
 
 class CreateNoteSheet extends ConsumerStatefulWidget {
-  const CreateNoteSheet({super.key});
+  final NoteModel? initialNote;
+
+  const CreateNoteSheet({super.key, this.initialNote});
 
   @override
   ConsumerState<CreateNoteSheet> createState() => _CreateNoteSheetState();
@@ -15,17 +17,63 @@ class CreateNoteSheet extends ConsumerStatefulWidget {
 class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
+  final _bulletController = TextEditingController();
   final _tagsController = TextEditingController();
+  final _linkedTaskController = TextEditingController();
   final List<_ChecklistDraftItem> _checklistItems = [];
+  DateTime? _reminderAt;
   String _noteType = 'text';
   String _selectedColorKey = 'default';
   bool _isLoading = false;
+
+  bool get _isEditing => widget.initialNote != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final note = widget.initialNote;
+    if (note == null) return;
+
+    _titleController.text = note.title ?? '';
+    _contentController.text = note.content;
+    _tagsController.text = note.tags.join(', ');
+    _noteType = note.noteType == 'checklist' ? 'checklist' : 'text';
+    _selectedColorKey = note.colorKey;
+
+    for (final block in note.structuredBlocks) {
+      if (block.type == 'bullet_list') {
+        _bulletController.text = block.items.join('\n');
+      } else if (block.type == 'reminder' && block.reminderAt != null) {
+        _reminderAt = DateTime.tryParse(block.reminderAt!)?.toLocal();
+      } else if (block.type == 'task_link') {
+        _linkedTaskController.text = block.taskTitle ?? block.taskId ?? '';
+      }
+    }
+
+    final checklistItems = note.checklistItems.isNotEmpty
+        ? note.checklistItems
+        : note.structuredBlocks
+              .where((block) => block.type == 'checklist')
+              .expand((block) => block.checklistItems)
+              .toList();
+    for (final item in checklistItems) {
+      _checklistItems.add(
+        _ChecklistDraftItem(
+          id: item.id,
+          text: item.text,
+          isCompleted: item.isCompleted,
+        ),
+      );
+    }
+  }
 
   @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _bulletController.dispose();
     _tagsController.dispose();
+    _linkedTaskController.dispose();
     for (final item in _checklistItems) {
       item.controller.dispose();
     }
@@ -67,6 +115,99 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
         .toList();
   }
 
+  List<String> _parseBulletItems() {
+    return _bulletController.text
+        .split('\n')
+        .map((line) => line.trim().replaceFirst(RegExp(r'^[-*]\s*'), ''))
+        .where((line) => line.isNotEmpty)
+        .toList();
+  }
+
+  List<NoteStructuredBlockModel> _buildStructuredBlocks({
+    required String content,
+    required List<ChecklistItemModel> checklistItems,
+  }) {
+    final blocks = <NoteStructuredBlockModel>[];
+    if (content.trim().isNotEmpty) {
+      blocks.add(
+        NoteStructuredBlockModel(
+          id: 'paragraph_main',
+          type: 'paragraph',
+          text: content.trim(),
+        ),
+      );
+    }
+
+    final bulletItems = _parseBulletItems();
+    if (bulletItems.isNotEmpty) {
+      blocks.add(
+        NoteStructuredBlockModel(
+          id: 'bullet_main',
+          type: 'bullet_list',
+          items: bulletItems,
+        ),
+      );
+    }
+
+    if (checklistItems.isNotEmpty) {
+      blocks.add(
+        NoteStructuredBlockModel(
+          id: 'checklist_main',
+          type: 'checklist',
+          checklistItems: checklistItems,
+        ),
+      );
+    }
+
+    if (_reminderAt != null) {
+      blocks.add(
+        NoteStructuredBlockModel(
+          id: 'reminder_main',
+          type: 'reminder',
+          reminderAt: _reminderAt!.toUtc().toIso8601String(),
+        ),
+      );
+    }
+
+    final linkedTaskText = _linkedTaskController.text.trim();
+    if (linkedTaskText.isNotEmpty) {
+      blocks.add(
+        NoteStructuredBlockModel(
+          id: 'task_link_main',
+          type: 'task_link',
+          taskTitle: linkedTaskText,
+        ),
+      );
+    }
+
+    return blocks;
+  }
+
+  Future<void> _pickReminder() async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _reminderAt ?? now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_reminderAt ?? now),
+    );
+    if (time == null) return;
+    setState(() {
+      _reminderAt = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+    });
+  }
+
   Future<void> _submit() async {
     final checklistItems = _noteType == 'checklist'
         ? _buildChecklistItems()
@@ -75,21 +216,43 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
         ? checklistItems.map((item) => item.text).join('\n')
         : _contentController.text.trim();
     if (content.isEmpty) return;
+    final structuredBlocks = _buildStructuredBlocks(
+      content: content,
+      checklistItems: checklistItems,
+    );
 
     setState(() => _isLoading = true);
 
-    await ref
-        .read(notesProvider.notifier)
-        .createNote(
-          content: content,
-          title: _titleController.text.trim().isEmpty
-              ? null
-              : _titleController.text.trim(),
-          noteType: _noteType,
-          tags: _parseTags(),
-          checklistItems: _noteType == 'checklist' ? checklistItems : null,
-          colorKey: _selectedColorKey,
-        );
+    if (_isEditing) {
+      await ref
+          .read(notesProvider.notifier)
+          .updateNote(
+            noteId: widget.initialNote!.id,
+            content: content,
+            title: _titleController.text.trim().isEmpty
+                ? null
+                : _titleController.text.trim(),
+            noteType: _noteType,
+            tags: _parseTags(),
+            checklistItems: _noteType == 'checklist' ? checklistItems : null,
+            structuredBlocks: structuredBlocks,
+            colorKey: _selectedColorKey,
+          );
+    } else {
+      await ref
+          .read(notesProvider.notifier)
+          .createNote(
+            content: content,
+            title: _titleController.text.trim().isEmpty
+                ? null
+                : _titleController.text.trim(),
+            noteType: _noteType,
+            tags: _parseTags(),
+            checklistItems: _noteType == 'checklist' ? checklistItems : null,
+            structuredBlocks: structuredBlocks,
+            colorKey: _selectedColorKey,
+          );
+    }
 
     if (mounted) {
       setState(() => _isLoading = false);
@@ -144,7 +307,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
             Row(
               children: [
                 Text(
-                  '📝 New Note',
+                  _isEditing ? 'Edit Note' : '📝 New Note',
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -241,11 +404,69 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
               ),
             const SizedBox(height: 12),
             TextField(
+              controller: _bulletController,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Bullet list',
+                hintText: 'One bullet per line',
+                prefixIcon: Icon(Icons.format_list_bulleted),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
               controller: _tagsController,
+              onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 labelText: 'Tags',
                 hintText: 'study, ideas, reflection',
                 prefixIcon: Icon(Icons.label_outline),
+              ),
+            ),
+            if (_parseTags().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: _parseTags()
+                    .map(
+                      (tag) => Chip(
+                        avatar: const Icon(Icons.label_outline, size: 15),
+                        label: Text('#$tag'),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ActionChip(
+                  avatar: const Icon(Icons.notifications_outlined, size: 18),
+                  label: Text(
+                    _reminderAt == null
+                        ? 'Reminder'
+                        : _reminderAt!.toLocal().toString().substring(0, 16),
+                  ),
+                  onPressed: _pickReminder,
+                ),
+                if (_reminderAt != null)
+                  ActionChip(
+                    avatar: const Icon(Icons.close, size: 18),
+                    label: const Text('Clear reminder'),
+                    onPressed: () => setState(() => _reminderAt = null),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _linkedTaskController,
+              decoration: const InputDecoration(
+                labelText: 'Linked task block (optional)',
+                hintText: 'Task title or reference',
+                prefixIcon: Icon(Icons.task_alt),
               ),
             ),
             const SizedBox(height: 12),
@@ -293,7 +514,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
                 ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
                     onPressed: _submit,
-                    child: const Text('Save Note'),
+                    child: Text(_isEditing ? 'Update Note' : 'Save Note'),
                   ),
           ],
         ),
@@ -307,7 +528,13 @@ class _ChecklistDraftItem {
   final TextEditingController controller = TextEditingController();
   bool isCompleted = false;
 
-  _ChecklistDraftItem({required this.id});
+  _ChecklistDraftItem({
+    required this.id,
+    String text = '',
+    this.isCompleted = false,
+  }) {
+    controller.text = text;
+  }
 }
 
 class _ChecklistEditor extends StatelessWidget {

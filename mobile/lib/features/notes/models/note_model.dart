@@ -30,6 +30,65 @@ class ChecklistItemModel {
   }
 }
 
+class NoteStructuredBlockModel {
+  final String id;
+  final String type;
+  final String? text;
+  final List<String> items;
+  final List<ChecklistItemModel> checklistItems;
+  final String? reminderAt;
+  final String? taskId;
+  final String? taskTitle;
+
+  const NoteStructuredBlockModel({
+    required this.id,
+    required this.type,
+    this.text,
+    this.items = const [],
+    this.checklistItems = const [],
+    this.reminderAt,
+    this.taskId,
+    this.taskTitle,
+  });
+
+  factory NoteStructuredBlockModel.fromJson(Map<String, dynamic> json) {
+    final type = json['type'] as String? ?? 'paragraph';
+    final rawItems = json['items'] as List<dynamic>? ?? [];
+    return NoteStructuredBlockModel(
+      id: json['id'] as String,
+      type: type,
+      text: json['text'] as String?,
+      items: type == 'bullet_list'
+          ? rawItems.map((item) => item.toString()).toList()
+          : const [],
+      checklistItems: type == 'checklist'
+          ? rawItems
+                .whereType<Map<String, dynamic>>()
+                .map(ChecklistItemModel.fromJson)
+                .toList()
+          : const [],
+      reminderAt: json['reminder_at'] as String?,
+      taskId: json['task_id'] as String?,
+      taskTitle: json['task_title'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    final data = <String, dynamic>{'id': id, 'type': type};
+    if (text != null && text!.isNotEmpty) data['text'] = text;
+    if (type == 'bullet_list') data['items'] = items;
+    if (type == 'checklist') {
+      data['items'] = checklistItems.map((item) => item.toJson()).toList();
+    }
+    if (reminderAt != null) data['reminder_at'] = reminderAt;
+    if (taskId != null && taskId!.isNotEmpty) data['task_id'] = taskId;
+    if (taskTitle != null && taskTitle!.isNotEmpty) {
+      data['task_title'] = taskTitle;
+    }
+    return data;
+  }
+}
+
 class NoteModel {
   final String id;
   final String? title;
@@ -37,6 +96,7 @@ class NoteModel {
   final String noteType;
   final List<String> tags;
   final List<ChecklistItemModel> checklistItems;
+  final List<NoteStructuredBlockModel> structuredBlocks;
   final String colorKey;
   final bool isPinned;
   final bool isArchived;
@@ -51,6 +111,7 @@ class NoteModel {
     required this.noteType,
     required this.tags,
     required this.checklistItems,
+    required this.structuredBlocks,
     required this.colorKey,
     required this.isPinned,
     required this.isArchived,
@@ -72,6 +133,12 @@ class NoteModel {
           (json['checklist_items'] as List<dynamic>?)
               ?.whereType<Map<String, dynamic>>()
               .map(ChecklistItemModel.fromJson)
+              .toList() ??
+          [],
+      structuredBlocks:
+          (json['structured_blocks'] as List<dynamic>?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(NoteStructuredBlockModel.fromJson)
               .toList() ??
           [],
       colorKey: json['color_key'] as String? ?? 'default',
