@@ -133,6 +133,18 @@ class TaskReorderRequest(BaseModel):
         return v
 
 
+class TaskCompletionEventResponse(BaseModel):
+    id: uuid.UUID
+    task_id: uuid.UUID
+    event_type: str
+    previous_status: Optional[str]
+    next_status: str
+    occurred_at: datetime
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class TaskResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID

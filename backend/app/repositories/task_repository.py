@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from app.models.task import Task, TaskProject, TaskSubtask
+from app.models.task import Task, TaskCompletionEvent, TaskProject, TaskSubtask
 from app.services.reminder_lifecycle import (
     log_task_reminders_cancelled,
     log_task_reminders_rescheduled,
@@ -112,8 +112,34 @@ async def create_task(db: AsyncSession, user_id: uuid.UUID, data: dict) -> Task:
 async def update_task(db: AsyncSession, task: Task, data: dict) -> Task:
     previous_due_at = task.due_at
     previous_reminder_at = task.reminder_at
+    previous_status = task.status
     for key, value in data.items():
         setattr(task, key, value)
+
+    now = datetime.now(timezone.utc)
+    if previous_status != "completed" and task.status == "completed":
+        task.completed_at = task.completed_at or now
+        db.add(
+            _task_completion_event(
+                task,
+                "completed",
+                previous_status,
+                "completed",
+                task.completed_at,
+            )
+        )
+    elif previous_status == "completed" and task.status != "completed":
+        task.completed_at = None
+        db.add(
+            _task_completion_event(
+                task,
+                "reopened",
+                previous_status,
+                task.status,
+                now,
+            )
+        )
+
     reminder_fields_changed = (
         ("due_at" in data and data["due_at"] != previous_due_at)
         or ("reminder_at" in data and data["reminder_at"] != previous_reminder_at)
@@ -164,11 +190,22 @@ async def reorder_tasks(
 
 
 async def complete_task(db: AsyncSession, task: Task) -> Task:
+    previous_status = task.status
+    completed_at = datetime.now(timezone.utc)
     task.status = "completed"
-    task.completed_at = datetime.utcnow()
+    task.completed_at = completed_at
     cancelled_reminder = task.reminder_at is not None
     if cancelled_reminder:
         task.reminder_at = None
+    db.add(
+        _task_completion_event(
+            task,
+            "completed",
+            previous_status,
+            "completed",
+            completed_at,
+        )
+    )
     await db.commit()
     await db.refresh(task)
     if cancelled_reminder:
@@ -181,11 +218,57 @@ async def complete_task(db: AsyncSession, task: Task) -> Task:
 
 
 async def reopen_task(db: AsyncSession, task: Task) -> Task:
+    previous_status = task.status
     task.status = "pending"
     task.completed_at = None
+    db.add(
+        _task_completion_event(
+            task,
+            "reopened",
+            previous_status,
+            "pending",
+            datetime.now(timezone.utc),
+        )
+    )
     await db.commit()
     await db.refresh(task)
     return task
+
+
+async def get_task_completion_events(
+    db: AsyncSession,
+    task_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> list[TaskCompletionEvent] | None:
+    task = await get_task_by_id(db, task_id, user_id)
+    if not task:
+        return None
+    result = await db.execute(
+        select(TaskCompletionEvent)
+        .where(
+            TaskCompletionEvent.user_id == user_id,
+            TaskCompletionEvent.task_id == task_id,
+        )
+        .order_by(TaskCompletionEvent.occurred_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+def _task_completion_event(
+    task: Task,
+    event_type: str,
+    previous_status: str | None,
+    next_status: str,
+    occurred_at: datetime,
+) -> TaskCompletionEvent:
+    return TaskCompletionEvent(
+        user_id=task.user_id,
+        task_id=task.id,
+        event_type=event_type,
+        previous_status=previous_status,
+        next_status=next_status,
+        occurred_at=occurred_at,
+    )
 
 
 async def soft_delete_task(db: AsyncSession, task: Task) -> None:

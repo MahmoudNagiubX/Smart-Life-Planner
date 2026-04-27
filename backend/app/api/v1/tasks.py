@@ -13,6 +13,7 @@ from app.schemas.task import (
     ProjectUpdate,
     SubtaskCreate,
     SubtaskResponse,
+    TaskCompletionEventResponse,
     TaskCreate,
     TaskReorderRequest,
     TaskResponse,
@@ -28,6 +29,7 @@ from app.repositories.task_repository import (
     get_project_by_id,
     get_projects,
     get_subtask_by_id,
+    get_task_completion_events,
     get_task_by_id,
     get_tasks,
     get_tasks_in_date_range,
@@ -150,6 +152,24 @@ async def get_task(
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return task
+
+
+@router.get(
+    "/{task_id}/completion-history",
+    response_model=list[TaskCompletionEventResponse],
+)
+async def get_task_completion_history(
+    task_id: uuid.UUID,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    events = await get_task_completion_events(db, task_id, current_user.id)
+    if events is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        )
+    return events
 
 
 @router.patch("/{task_id}", response_model=TaskResponse)

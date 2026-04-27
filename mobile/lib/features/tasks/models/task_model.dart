@@ -78,6 +78,37 @@ class TaskModel {
   );
 }
 
+class TaskCompletionEventModel {
+  final String id;
+  final String taskId;
+  final String eventType;
+  final String? previousStatus;
+  final String nextStatus;
+  final String occurredAt;
+  final String createdAt;
+
+  TaskCompletionEventModel({
+    required this.id,
+    required this.taskId,
+    required this.eventType,
+    this.previousStatus,
+    required this.nextStatus,
+    required this.occurredAt,
+    required this.createdAt,
+  });
+
+  factory TaskCompletionEventModel.fromJson(Map<String, dynamic> json) =>
+      TaskCompletionEventModel(
+        id: json['id'],
+        taskId: json['task_id'],
+        eventType: json['event_type'],
+        previousStatus: json['previous_status'],
+        nextStatus: json['next_status'],
+        occurredAt: json['occurred_at'],
+        createdAt: json['created_at'],
+      );
+}
+
 class SubtaskModel {
   final String id;
   final String title;

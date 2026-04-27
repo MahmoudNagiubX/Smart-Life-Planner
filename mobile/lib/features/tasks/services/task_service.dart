@@ -30,6 +30,20 @@ class TaskService {
     return TaskModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<List<TaskCompletionEventModel>> getCompletionHistory(
+    String taskId,
+  ) async {
+    final response = await _apiClient.dio.get(
+      '/tasks/$taskId/completion-history',
+    );
+    return (response.data as List<dynamic>)
+        .map(
+          (event) =>
+              TaskCompletionEventModel.fromJson(event as Map<String, dynamic>),
+        )
+        .toList();
+  }
+
   Future<List<TaskModel>> getTasksForRange({
     required DateTime dateFrom,
     required DateTime dateTo,

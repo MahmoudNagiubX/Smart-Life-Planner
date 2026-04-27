@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, Boolean, Integer, Text, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -59,6 +59,7 @@ class Task(Base):
     subtasks: Mapped[list["TaskSubtask"]] = relationship("TaskSubtask", back_populates="task", cascade="all, delete-orphan")
     dependencies: Mapped[list["TaskDependency"]] = relationship("TaskDependency", foreign_keys="TaskDependency.task_id", back_populates="task", cascade="all, delete-orphan")
     dependents: Mapped[list["TaskDependency"]] = relationship("TaskDependency", foreign_keys="TaskDependency.depends_on_task_id", back_populates="prerequisite")
+    completion_events: Mapped[list["TaskCompletionEvent"]] = relationship("TaskCompletionEvent", back_populates="task", cascade="all, delete-orphan")
 
 
 class TaskSubtask(Base):
@@ -74,6 +75,21 @@ class TaskSubtask(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     task: Mapped["Task"] = relationship("Task", back_populates="subtasks")
+
+
+class TaskCompletionEvent(Base):
+    __tablename__ = "task_completion_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    task_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    previous_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    next_status: Mapped[str] = mapped_column(String(30), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    task: Mapped["Task"] = relationship("Task", back_populates="completion_events")
 
 
 class TaskDependency(Base):

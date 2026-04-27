@@ -20,19 +20,26 @@ class TaskDetailsScreen extends ConsumerStatefulWidget {
 
 class _TaskDetailsScreenState extends ConsumerState<TaskDetailsScreen> {
   late Future<TaskModel> _taskFuture;
+  late Future<List<TaskCompletionEventModel>> _completionHistoryFuture;
 
   @override
   void initState() {
     super.initState();
-    _taskFuture = ref.read(taskServiceProvider).getTask(widget.taskId);
+    _loadTaskData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(taskLinkedNotesProvider(widget.taskId).notifier).loadNotes();
     });
   }
 
+  void _loadTaskData() {
+    final taskService = ref.read(taskServiceProvider);
+    _taskFuture = taskService.getTask(widget.taskId);
+    _completionHistoryFuture = taskService.getCompletionHistory(widget.taskId);
+  }
+
   Future<void> _refresh() async {
     setState(() {
-      _taskFuture = ref.read(taskServiceProvider).getTask(widget.taskId);
+      _loadTaskData();
     });
     await ref.read(taskLinkedNotesProvider(widget.taskId).notifier).loadNotes();
   }
@@ -78,6 +85,8 @@ class _TaskDetailsScreenState extends ConsumerState<TaskDetailsScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 _TaskSummaryCard(task: task),
+                const SizedBox(height: 18),
+                _CompletionHistorySection(future: _completionHistoryFuture),
                 const SizedBox(height: 18),
                 Row(
                   children: [
@@ -170,6 +179,123 @@ class _TaskDetailsScreenState extends ConsumerState<TaskDetailsScreen> {
   }
 }
 
+class _CompletionHistorySection extends StatelessWidget {
+  final Future<List<TaskCompletionEventModel>> future;
+
+  const _CompletionHistorySection({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<TaskCompletionEventModel>>(
+      future: future,
+      builder: (context, snapshot) {
+        final events = snapshot.data ?? const <TaskCompletionEventModel>[];
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardTheme.color,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.history, size: 20, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Completion History',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (snapshot.connectionState == ConnectionState.waiting)
+                const AppLoadingState(message: 'Loading history...')
+              else if (snapshot.hasError)
+                Text(
+                  'Completion history could not load.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                )
+              else if (events.isEmpty)
+                Text(
+                  'Complete or reopen this task to build its history.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                )
+              else
+                ...events.map((event) => _CompletionHistoryRow(event: event)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CompletionHistoryRow extends StatelessWidget {
+  final TaskCompletionEventModel event;
+
+  const _CompletionHistoryRow({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    final isCompleted = event.eventType == 'completed';
+    final color = isCompleted ? AppColors.success : AppColors.warning;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isCompleted ? Icons.check_circle_outline : Icons.restart_alt,
+              size: 17,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isCompleted ? 'Completed' : 'Reopened',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  _eventSubtitle(event),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _eventSubtitle(TaskCompletionEventModel event) {
+    final previous = event.previousStatus == null
+        ? ''
+        : '${_statusLabel(event.previousStatus!)} to ';
+    return '$previous${_statusLabel(event.nextStatus)} - ${_dateTimeLabel(event.occurredAt)}';
+  }
+}
+
 class _TaskSummaryCard extends StatelessWidget {
   final TaskModel task;
 
@@ -225,4 +351,24 @@ class _TaskSummaryCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _statusLabel(String status) {
+  return switch (status) {
+    'in_progress' => 'In progress',
+    'completed' => 'Done',
+    'waiting' => 'Waiting',
+    'next' => 'Next',
+    _ => 'Pending',
+  };
+}
+
+String _dateTimeLabel(String iso) {
+  final parsed = DateTime.tryParse(iso)?.toLocal();
+  if (parsed == null) return 'Time recorded';
+  final date =
+      '${parsed.year}-${parsed.month.toString().padLeft(2, '0')}-${parsed.day.toString().padLeft(2, '0')}';
+  final time =
+      '${parsed.hour.toString().padLeft(2, '0')}:${parsed.minute.toString().padLeft(2, '0')}';
+  return '$date $time';
 }
