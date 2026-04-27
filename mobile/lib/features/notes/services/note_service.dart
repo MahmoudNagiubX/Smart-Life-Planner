@@ -31,15 +31,26 @@ class NoteService {
   Future<NoteModel> createNote({
     required String content,
     String? title,
+    String noteType = 'text',
     List<String>? tags,
+    List<ChecklistItemModel>? checklistItems,
     String colorKey = 'default',
   }) async {
-    final data = <String, dynamic>{'content': content, 'color_key': colorKey};
+    final data = <String, dynamic>{
+      'content': content,
+      'note_type': noteType,
+      'color_key': colorKey,
+    };
     if (title != null && title.isNotEmpty) {
       data['title'] = title;
     }
     if (tags != null) {
       data['tags'] = tags;
+    }
+    if (checklistItems != null) {
+      data['checklist_items'] = checklistItems
+          .map((item) => item.toJson())
+          .toList();
     }
 
     final response = await _apiClient.dio.post('/notes', data: data);
@@ -51,6 +62,7 @@ class NoteService {
     String? title,
     String? content,
     List<String>? tags,
+    List<ChecklistItemModel>? checklistItems,
     String? colorKey,
     bool? isPinned,
     bool? isArchived,
@@ -64,6 +76,11 @@ class NoteService {
     };
     if (tags != null) {
       data['tags'] = tags;
+    }
+    if (checklistItems != null) {
+      data['checklist_items'] = checklistItems
+          .map((item) => item.toJson())
+          .toList();
     }
 
     final response = await _apiClient.dio.patch('/notes/$noteId', data: data);

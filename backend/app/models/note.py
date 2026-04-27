@@ -22,6 +22,7 @@ class Note(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     note_type: Mapped[str] = mapped_column(String(30), default="text", nullable=False)
     tags: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    checklist_items: Mapped[list[dict] | None] = mapped_column(JSONB, nullable=True)
     color_key: Mapped[str] = mapped_column(String(30), default="default", nullable=False)
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

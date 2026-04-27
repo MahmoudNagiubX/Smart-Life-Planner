@@ -1,9 +1,42 @@
+class ChecklistItemModel {
+  final String id;
+  final String text;
+  final bool isCompleted;
+
+  const ChecklistItemModel({
+    required this.id,
+    required this.text,
+    required this.isCompleted,
+  });
+
+  factory ChecklistItemModel.fromJson(Map<String, dynamic> json) {
+    return ChecklistItemModel(
+      id: json['id'] as String,
+      text: json['text'] as String,
+      isCompleted: json['is_completed'] as bool? ?? false,
+    );
+  }
+
+  ChecklistItemModel copyWith({String? text, bool? isCompleted}) {
+    return ChecklistItemModel(
+      id: id,
+      text: text ?? this.text,
+      isCompleted: isCompleted ?? this.isCompleted,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'text': text, 'is_completed': isCompleted};
+  }
+}
+
 class NoteModel {
   final String id;
   final String? title;
   final String content;
   final String noteType;
   final List<String> tags;
+  final List<ChecklistItemModel> checklistItems;
   final String colorKey;
   final bool isPinned;
   final bool isArchived;
@@ -17,6 +50,7 @@ class NoteModel {
     required this.content,
     required this.noteType,
     required this.tags,
+    required this.checklistItems,
     required this.colorKey,
     required this.isPinned,
     required this.isArchived,
@@ -33,6 +67,12 @@ class NoteModel {
       noteType: json['note_type'] as String,
       tags:
           (json['tags'] as List<dynamic>?)?.map((t) => t.toString()).toList() ??
+          [],
+      checklistItems:
+          (json['checklist_items'] as List<dynamic>?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(ChecklistItemModel.fromJson)
+              .toList() ??
           [],
       colorKey: json['color_key'] as String? ?? 'default',
       isPinned: json['is_pinned'] as bool,

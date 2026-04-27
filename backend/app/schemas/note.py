@@ -40,11 +40,51 @@ def _normalize_color_key(color_key: str | None) -> str | None:
     return clean
 
 
+class NoteChecklistItem(BaseModel):
+    id: str
+    text: str
+    is_completed: bool = False
+
+    @field_validator("id")
+    @classmethod
+    def id_not_empty(cls, v: str) -> str:
+        clean = v.strip()
+        if not clean:
+            raise ValueError("Checklist item id cannot be empty")
+        if len(clean) > 80:
+            raise ValueError("Checklist item id is too long")
+        return clean
+
+    @field_validator("text")
+    @classmethod
+    def text_not_empty(cls, v: str) -> str:
+        clean = v.strip()
+        if not clean:
+            raise ValueError("Checklist item text cannot be empty")
+        if len(clean) > 500:
+            raise ValueError("Checklist item text must be 500 characters or fewer")
+        return clean
+
+
+def _normalize_checklist_items(
+    items: list[NoteChecklistItem] | None,
+) -> list[NoteChecklistItem] | None:
+    if items is None:
+        return None
+    seen: set[str] = set()
+    for item in items:
+        if item.id in seen:
+            raise ValueError("Checklist item ids must be unique")
+        seen.add(item.id)
+    return items
+
+
 class NoteCreate(BaseModel):
     title: Optional[str] = None
     content: str
     note_type: Optional[str] = "text"
     tags: Optional[List[str]] = None
+    checklist_items: Optional[List[NoteChecklistItem]] = None
     color_key: Optional[str] = "default"
 
     @field_validator("content")
@@ -71,11 +111,19 @@ class NoteCreate(BaseModel):
     def color_key_valid(cls, v: str | None) -> str | None:
         return _normalize_color_key(v)
 
+    @field_validator("checklist_items")
+    @classmethod
+    def checklist_items_valid(
+        cls, v: list[NoteChecklistItem] | None
+    ) -> list[NoteChecklistItem] | None:
+        return _normalize_checklist_items(v)
+
 
 class NoteUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     tags: Optional[List[str]] = None
+    checklist_items: Optional[List[NoteChecklistItem]] = None
     color_key: Optional[str] = None
     is_pinned: Optional[bool] = None
     is_archived: Optional[bool] = None
@@ -90,6 +138,13 @@ class NoteUpdate(BaseModel):
     def color_key_valid(cls, v: str | None) -> str | None:
         return _normalize_color_key(v)
 
+    @field_validator("checklist_items")
+    @classmethod
+    def checklist_items_valid(
+        cls, v: list[NoteChecklistItem] | None
+    ) -> list[NoteChecklistItem] | None:
+        return _normalize_checklist_items(v)
+
 
 class NoteResponse(BaseModel):
     id: uuid.UUID
@@ -98,6 +153,7 @@ class NoteResponse(BaseModel):
     content: str
     note_type: str
     tags: Optional[list]
+    checklist_items: Optional[list]
     color_key: str
     is_pinned: bool
     is_archived: bool

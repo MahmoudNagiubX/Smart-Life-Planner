@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../models/voice_note_model.dart';
 import '../services/audio_recorder_service.dart';
 import '../services/voice_api_service.dart';
+import '../../notes/models/note_model.dart';
 import '../../notes/providers/note_provider.dart';
 import '../../../core/network/providers.dart';
 
@@ -162,6 +163,10 @@ class _VoiceNoteSheetState extends ConsumerState<VoiceNoteSheet>
   Future<void> _saveNote() async {
     final content = _contentController.text.trim();
     if (content.isEmpty) return;
+    final noteType = _result?.noteType == 'checklist' ? 'checklist' : 'voice';
+    final checklistItems = noteType == 'checklist'
+        ? _checklistItemsFromContent(content)
+        : null;
 
     setState(() => _state = _VoiceNoteState.saving);
 
@@ -172,9 +177,31 @@ class _VoiceNoteSheetState extends ConsumerState<VoiceNoteSheet>
           title: _titleController.text.trim().isEmpty
               ? null
               : _titleController.text.trim(),
+          noteType: noteType,
+          tags: _result?.tags,
+          checklistItems: checklistItems,
         );
 
     if (mounted) Navigator.pop(context, true);
+  }
+
+  List<ChecklistItemModel> _checklistItemsFromContent(String content) {
+    final items = <ChecklistItemModel>[];
+    for (final rawLine in content.split('\n')) {
+      final text = rawLine
+          .replaceFirst(RegExp(r'^\s*[-*]\s*'), '')
+          .replaceFirst(RegExp(r'^\s*\d+[.)]\s*'), '')
+          .trim();
+      if (text.isEmpty) continue;
+      items.add(
+        ChecklistItemModel(
+          id: 'voice_item_${DateTime.now().microsecondsSinceEpoch}_${items.length}',
+          text: text,
+          isCompleted: false,
+        ),
+      );
+    }
+    return items;
   }
 
   Color _confidenceColor(String c) {

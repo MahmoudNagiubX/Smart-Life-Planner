@@ -359,14 +359,31 @@ class _NoteCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            note.content,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-          ),
+          if (note.noteType == 'checklist' && note.checklistItems.isNotEmpty)
+            _ChecklistPreview(
+              items: note.checklistItems,
+              onToggle: (item) {
+                final updatedItems = note.checklistItems
+                    .map(
+                      (current) => current.id == item.id
+                          ? current.copyWith(isCompleted: !current.isCompleted)
+                          : current,
+                    )
+                    .toList();
+                ref
+                    .read(notesProvider.notifier)
+                    .updateChecklistItems(note.id, updatedItems);
+              },
+            )
+          else
+            Text(
+              note.content,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            ),
           if (note.tags.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
@@ -522,6 +539,73 @@ class _TagChip extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+}
+
+class _ChecklistPreview extends StatelessWidget {
+  final List<ChecklistItemModel> items;
+  final ValueChanged<ChecklistItemModel> onToggle;
+
+  const _ChecklistPreview({required this.items, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleItems = items.take(4).toList();
+    final remaining = items.length - visibleItems.length;
+
+    return Column(
+      children: [
+        ...visibleItems.map(
+          (item) => InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () => onToggle(item),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: Checkbox(
+                      value: item.isCompleted,
+                      onChanged: (_) => onToggle(item),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                        decoration: item.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (remaining > 0)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '+$remaining more',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
