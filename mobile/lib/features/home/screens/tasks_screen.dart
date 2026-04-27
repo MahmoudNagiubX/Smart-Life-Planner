@@ -55,6 +55,13 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
           'Tasks',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Project timelines',
+            onPressed: () => _showProjectTimelinePicker(context, ref),
+            icon: const Icon(Icons.account_tree_outlined),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -108,6 +115,104 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
         ),
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+Future<void> _showProjectTimelinePicker(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) => _ProjectTimelinePicker(ref: ref),
+  );
+}
+
+class _ProjectTimelinePicker extends StatelessWidget {
+  final WidgetRef ref;
+
+  const _ProjectTimelinePicker({required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: FutureBuilder<List<TaskProject>>(
+        future: ref.read(taskServiceProvider).getProjects(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SizedBox(
+              height: 220,
+              child: AppLoadingState(message: 'Loading projects...'),
+            );
+          }
+          if (snapshot.hasError) {
+            return SizedBox(
+              height: 260,
+              child: AppErrorState(
+                title: 'Projects could not load',
+                message: 'Open Tasks again and retry project timelines.',
+              ),
+            );
+          }
+          final projects = snapshot.data ?? const [];
+          if (projects.isEmpty) {
+            return const SizedBox(
+              height: 260,
+              child: AppEmptyState(
+                icon: Icons.folder_outlined,
+                title: 'No projects',
+                message: 'Create a project to view its task timeline.',
+              ),
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Project Timelines',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: projects.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final project = projects[index];
+                      return ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        tileColor: Theme.of(context).cardTheme.color,
+                        leading: const Icon(Icons.timeline_outlined),
+                        title: Text(project.title),
+                        subtitle: Text(project.status),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/home/projects/${project.id}');
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

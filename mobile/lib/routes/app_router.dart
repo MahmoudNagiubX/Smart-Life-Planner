@@ -19,6 +19,7 @@ import '../features/home/screens/feature_placeholder_screen.dart';
 import '../features/habits/screens/habits_screen.dart';
 import '../features/notes/screens/notes_screen.dart';
 import '../features/tasks/screens/task_details_screen.dart';
+import '../features/tasks/screens/project_timeline_screen.dart';
 import '../features/ai/screens/daily_plan_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
@@ -136,16 +137,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.projectDetails,
-            builder: (context, state) => const FeaturePlaceholderScreen(
-              title: 'Project Details',
-              description: 'Project task lists and progress will appear here.',
-              icon: Icons.folder_outlined,
-              destructiveActionLabel: 'Delete Project',
-              destructiveActionTitle: 'Delete Project',
-              destructiveActionMessage:
-                  'Delete this project? Project deletion will require confirmation before any data is removed.',
-              destructiveActionDoneMessage:
-                  'Project deletion is not active on this placeholder screen.',
+            builder: (context, state) => ProjectTimelineScreen(
+              projectId: state.pathParameters['projectId'] ?? '',
             ),
           ),
           GoRoute(

@@ -311,3 +311,79 @@ final taskCalendarProvider =
     StateNotifierProvider<TaskCalendarNotifier, TaskCalendarState>((ref) {
       return TaskCalendarNotifier(ref);
     });
+
+class ProjectTimelineState {
+  final TaskProject? project;
+  final List<TaskModel> tasks;
+  final bool isLoading;
+  final String? error;
+
+  const ProjectTimelineState({
+    this.project,
+    this.tasks = const [],
+    this.isLoading = false,
+    this.error,
+  });
+
+  ProjectTimelineState copyWith({
+    TaskProject? project,
+    List<TaskModel>? tasks,
+    bool? isLoading,
+    String? error,
+  }) {
+    return ProjectTimelineState(
+      project: project ?? this.project,
+      tasks: tasks ?? this.tasks,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+    );
+  }
+}
+
+class ProjectTimelineNotifier extends StateNotifier<ProjectTimelineState> {
+  final Ref _ref;
+  final String projectId;
+
+  ProjectTimelineNotifier(this._ref, this.projectId)
+    : super(const ProjectTimelineState());
+
+  Future<void> load() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final service = _ref.read(taskServiceProvider);
+      final projects = await service.getProjects();
+      TaskProject? project;
+      for (final candidate in projects) {
+        if (candidate.id == projectId) {
+          project = candidate;
+          break;
+        }
+      }
+      if (project == null) {
+        state = state.copyWith(isLoading: false, error: 'Project not found');
+        return;
+      }
+      final tasks = await service.getTasks(projectId: projectId);
+      state = state.copyWith(project: project, tasks: tasks, isLoading: false);
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: friendlyApiError(e, 'Failed to load project timeline'),
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load project timeline',
+      );
+    }
+  }
+}
+
+final projectTimelineProvider =
+    StateNotifierProvider.family<
+      ProjectTimelineNotifier,
+      ProjectTimelineState,
+      String
+    >((ref, projectId) {
+      return ProjectTimelineNotifier(ref, projectId);
+    });

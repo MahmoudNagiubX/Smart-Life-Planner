@@ -6,10 +6,15 @@ class TaskService {
 
   TaskService(this._apiClient);
 
-  Future<List<TaskModel>> getTasks({String? status, String? priority}) async {
+  Future<List<TaskModel>> getTasks({
+    String? status,
+    String? priority,
+    String? projectId,
+  }) async {
     final params = <String, dynamic>{};
     if (status != null) params['status'] = status;
     if (priority != null) params['priority'] = priority;
+    if (projectId != null) params['project_id'] = projectId;
 
     final response = await _apiClient.dio.get(
       '/tasks',

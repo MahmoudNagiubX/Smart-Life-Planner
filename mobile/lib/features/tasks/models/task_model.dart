@@ -12,11 +12,11 @@ class TaskProject {
   });
 
   factory TaskProject.fromJson(Map<String, dynamic> json) => TaskProject(
-        id: json['id'],
-        title: json['title'],
-        colorCode: json['color_code'],
-        status: json['status'],
-      );
+    id: json['id'],
+    title: json['title'],
+    colorCode: json['color_code'],
+    status: json['status'],
+  );
 }
 
 class TaskModel {
@@ -32,6 +32,8 @@ class TaskModel {
   final int? estimatedMinutes;
   final bool isDeleted;
   final String? completedAt;
+  final String createdAt;
+  final String updatedAt;
   final List<SubtaskModel> subtasks;
 
   TaskModel({
@@ -47,26 +49,30 @@ class TaskModel {
     this.estimatedMinutes,
     required this.isDeleted,
     this.completedAt,
+    required this.createdAt,
+    required this.updatedAt,
     this.subtasks = const [],
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) => TaskModel(
-        id: json['id'],
-        title: json['title'],
-        description: json['description'],
-        priority: json['priority'],
-        status: json['status'],
-        projectId: json['project_id'],
-        category: json['category'],
-        dueAt: json['due_at'],
-        reminderAt: json['reminder_at'],
-        estimatedMinutes: json['estimated_minutes'],
-        isDeleted: json['is_deleted'] ?? false,
-        completedAt: json['completed_at'],
-        subtasks: (json['subtasks'] as List<dynamic>? ?? [])
-            .map((s) => SubtaskModel.fromJson(s))
-            .toList(),
-      );
+    id: json['id'],
+    title: json['title'],
+    description: json['description'],
+    priority: json['priority'],
+    status: json['status'],
+    projectId: json['project_id'],
+    category: json['category'],
+    dueAt: json['due_at'],
+    reminderAt: json['reminder_at'],
+    estimatedMinutes: json['estimated_minutes'],
+    isDeleted: json['is_deleted'] ?? false,
+    completedAt: json['completed_at'],
+    createdAt: json['created_at'],
+    updatedAt: json['updated_at'],
+    subtasks: (json['subtasks'] as List<dynamic>? ?? [])
+        .map((s) => SubtaskModel.fromJson(s))
+        .toList(),
+  );
 }
 
 class SubtaskModel {
@@ -81,8 +87,8 @@ class SubtaskModel {
   });
 
   factory SubtaskModel.fromJson(Map<String, dynamic> json) => SubtaskModel(
-        id: json['id'],
-        title: json['title'],
-        isCompleted: json['is_completed'] ?? false,
-      );
+    id: json['id'],
+    title: json['title'],
+    isCompleted: json['is_completed'] ?? false,
+  );
 }
