@@ -37,12 +37,14 @@ class NoteService {
     List<NoteStructuredBlockModel>? structuredBlocks,
     List<NoteAttachmentModel>? attachments,
     String? reminderAt,
+    String sourceType = 'manual',
     String colorKey = 'default',
   }) async {
     final data = <String, dynamic>{
       'content': content,
       'note_type': noteType,
       'color_key': colorKey,
+      'source_type': sourceType,
     };
     if (title != null && title.isNotEmpty) {
       data['title'] = title;
@@ -84,6 +86,7 @@ class NoteService {
     List<NoteAttachmentModel>? attachments,
     String? reminderAt,
     bool clearReminderAt = false,
+    String? sourceType,
     String? colorKey,
     bool? isPinned,
     bool? isArchived,
@@ -93,6 +96,7 @@ class NoteService {
       'content': ?content,
       'note_type': ?noteType,
       'color_key': ?colorKey,
+      'source_type': ?sourceType,
       'reminder_at': ?reminderAt,
       if (clearReminderAt) 'clear_reminder_at': true,
       'is_pinned': ?isPinned,

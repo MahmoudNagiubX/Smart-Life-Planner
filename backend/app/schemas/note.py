@@ -12,6 +12,7 @@ ALLOWED_NOTE_COLORS = {
     "blue",
     "purple",
 }
+ALLOWED_NOTE_SOURCES = {"manual", "voice", "ai", "quick_capture"}
 
 
 def _normalize_tags(tags: list[str] | None) -> list[str] | None:
@@ -37,6 +38,15 @@ def _normalize_color_key(color_key: str | None) -> str | None:
     clean = color_key.strip().lower()
     if clean not in ALLOWED_NOTE_COLORS:
         raise ValueError("Unsupported note color")
+    return clean
+
+
+def _normalize_source_type(source_type: str | None) -> str | None:
+    if source_type is None:
+        return None
+    clean = source_type.strip().lower()
+    if clean not in ALLOWED_NOTE_SOURCES:
+        raise ValueError("Unsupported note source")
     return clean
 
 
@@ -197,6 +207,7 @@ class NoteCreate(BaseModel):
     structured_blocks: Optional[List[NoteStructuredBlock]] = None
     attachments: Optional[List[NoteAttachmentPayload]] = None
     reminder_at: Optional[datetime] = None
+    source_type: Optional[str] = "manual"
     color_key: Optional[str] = "default"
 
     @field_validator("content")
@@ -223,6 +234,11 @@ class NoteCreate(BaseModel):
     def color_key_valid(cls, v: str | None) -> str | None:
         return _normalize_color_key(v)
 
+    @field_validator("source_type")
+    @classmethod
+    def source_type_valid(cls, v: str | None) -> str | None:
+        return _normalize_source_type(v)
+
     @field_validator("checklist_items")
     @classmethod
     def checklist_items_valid(
@@ -248,6 +264,7 @@ class NoteUpdate(BaseModel):
     attachments: Optional[List[NoteAttachmentPayload]] = None
     reminder_at: Optional[datetime] = None
     clear_reminder_at: Optional[bool] = None
+    source_type: Optional[str] = None
     color_key: Optional[str] = None
     is_pinned: Optional[bool] = None
     is_archived: Optional[bool] = None
@@ -270,6 +287,11 @@ class NoteUpdate(BaseModel):
     @classmethod
     def color_key_valid(cls, v: str | None) -> str | None:
         return _normalize_color_key(v)
+
+    @field_validator("source_type")
+    @classmethod
+    def source_type_valid(cls, v: str | None) -> str | None:
+        return _normalize_source_type(v)
 
     @field_validator("checklist_items")
     @classmethod
@@ -301,6 +323,7 @@ class NoteResponse(BaseModel):
     is_archived: bool
     archived_at: Optional[datetime]
     reminder_at: Optional[datetime]
+    source_type: str
     created_at: datetime
     updated_at: datetime
 

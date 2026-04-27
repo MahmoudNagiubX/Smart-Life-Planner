@@ -413,6 +413,13 @@ class _NoteCard extends ConsumerWidget {
             const SizedBox(height: 10),
             _ReminderChip(reminderAt: note.reminderAt!),
           ],
+          if (note.sourceType == 'voice') ...[
+            const SizedBox(height: 10),
+            const Chip(
+              avatar: Icon(Icons.mic_none, size: 15),
+              label: Text('Voice transcript'),
+            ),
+          ],
           if (note.tags.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(

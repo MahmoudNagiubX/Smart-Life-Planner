@@ -180,6 +180,7 @@ class _VoiceNoteSheetState extends ConsumerState<VoiceNoteSheet>
           noteType: noteType,
           tags: _result?.tags,
           checklistItems: checklistItems,
+          sourceType: 'voice',
         );
 
     if (mounted) Navigator.pop(context, true);

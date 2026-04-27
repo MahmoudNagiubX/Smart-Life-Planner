@@ -103,6 +103,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
     List<NoteStructuredBlockModel>? structuredBlocks,
     List<NoteAttachmentModel>? attachments,
     String? reminderAt,
+    String sourceType = 'manual',
     String colorKey = 'default',
   }) async {
     try {
@@ -116,6 +117,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
         structuredBlocks: structuredBlocks,
         attachments: attachments,
         reminderAt: reminderAt,
+        sourceType: sourceType,
         colorKey: colorKey,
       );
       await _syncNoteReminder(note);
@@ -142,6 +144,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
     List<NoteAttachmentModel>? attachments,
     String? reminderAt,
     bool clearReminderAt = false,
+    String? sourceType,
     String? colorKey,
   }) async {
     try {
@@ -157,6 +160,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
         attachments: attachments,
         reminderAt: reminderAt,
         clearReminderAt: clearReminderAt,
+        sourceType: sourceType,
         colorKey: colorKey,
       );
       await _syncNoteReminder(note);
