@@ -72,9 +72,15 @@ async def create_note(db: AsyncSession, user_id: uuid.UUID, data: dict) -> Note:
 
 async def update_note(db: AsyncSession, note: Note, data: dict) -> Note:
     attachments_data = data.pop("attachments", None)
+    clear_reminder_at = bool(data.pop("clear_reminder_at", False))
+    if clear_reminder_at:
+        data["reminder_at"] = None
+
     if "is_archived" in data:
         is_archived = bool(data["is_archived"])
         data["archived_at"] = datetime.now(timezone.utc) if is_archived else None
+        if is_archived:
+            data["reminder_at"] = None
 
     for key, value in data.items():
         setattr(note, key, value)

@@ -36,6 +36,7 @@ class NoteService {
     List<ChecklistItemModel>? checklistItems,
     List<NoteStructuredBlockModel>? structuredBlocks,
     List<NoteAttachmentModel>? attachments,
+    String? reminderAt,
     String colorKey = 'default',
   }) async {
     final data = <String, dynamic>{
@@ -64,6 +65,9 @@ class NoteService {
           .map((attachment) => attachment.toJson())
           .toList();
     }
+    if (reminderAt != null) {
+      data['reminder_at'] = reminderAt;
+    }
 
     final response = await _apiClient.dio.post('/notes', data: data);
     return NoteModel.fromJson(response.data as Map<String, dynamic>);
@@ -78,6 +82,8 @@ class NoteService {
     List<ChecklistItemModel>? checklistItems,
     List<NoteStructuredBlockModel>? structuredBlocks,
     List<NoteAttachmentModel>? attachments,
+    String? reminderAt,
+    bool clearReminderAt = false,
     String? colorKey,
     bool? isPinned,
     bool? isArchived,
@@ -87,6 +93,8 @@ class NoteService {
       'content': ?content,
       'note_type': ?noteType,
       'color_key': ?colorKey,
+      'reminder_at': ?reminderAt,
+      if (clearReminderAt) 'clear_reminder_at': true,
       'is_pinned': ?isPinned,
       'is_archived': ?isArchived,
     };

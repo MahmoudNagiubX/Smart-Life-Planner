@@ -44,12 +44,17 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
     _tagsController.text = note.tags.join(', ');
     _noteType = note.noteType == 'checklist' ? 'checklist' : 'text';
     _selectedColorKey = note.colorKey;
+    if (note.reminderAt != null) {
+      _reminderAt = DateTime.tryParse(note.reminderAt!)?.toLocal();
+    }
     _attachments.addAll(note.attachments);
 
     for (final block in note.structuredBlocks) {
       if (block.type == 'bullet_list') {
         _bulletController.text = block.items.join('\n');
-      } else if (block.type == 'reminder' && block.reminderAt != null) {
+      } else if (_reminderAt == null &&
+          block.type == 'reminder' &&
+          block.reminderAt != null) {
         _reminderAt = DateTime.tryParse(block.reminderAt!)?.toLocal();
       } else if (block.type == 'task_link') {
         _linkedTaskController.text = block.taskTitle ?? block.taskId ?? '';
@@ -289,6 +294,8 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
             checklistItems: _noteType == 'checklist' ? checklistItems : null,
             structuredBlocks: structuredBlocks,
             attachments: _attachments,
+            reminderAt: _reminderAt?.toUtc().toIso8601String(),
+            clearReminderAt: _reminderAt == null,
             colorKey: _selectedColorKey,
           );
     } else {
@@ -304,6 +311,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
             checklistItems: _noteType == 'checklist' ? checklistItems : null,
             structuredBlocks: structuredBlocks,
             attachments: _attachments,
+            reminderAt: _reminderAt?.toUtc().toIso8601String(),
             colorKey: _selectedColorKey,
           );
     }

@@ -409,6 +409,10 @@ class _NoteCard extends ConsumerWidget {
             const SizedBox(height: 10),
             _AttachmentPreview(attachments: note.attachments),
           ],
+          if (note.reminderAt != null) ...[
+            const SizedBox(height: 10),
+            _ReminderChip(reminderAt: note.reminderAt!),
+          ],
           if (note.tags.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
@@ -643,17 +647,12 @@ class _StructuredBlocksPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     NoteStructuredBlockModel? bulletBlock;
-    NoteStructuredBlockModel? reminderBlock;
     NoteStructuredBlockModel? taskBlock;
     for (final block in blocks) {
       if (bulletBlock == null &&
           block.type == 'bullet_list' &&
           block.items.isNotEmpty) {
         bulletBlock = block;
-      } else if (reminderBlock == null &&
-          block.type == 'reminder' &&
-          block.reminderAt != null) {
-        reminderBlock = block;
       } else if (taskBlock == null && block.type == 'task_link') {
         taskBlock = block;
       }
@@ -689,33 +688,45 @@ class _StructuredBlocksPreview extends StatelessWidget {
                   ),
                 ),
               ),
-        if (reminderBlock != null || taskBlock != null)
+        if (taskBlock != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Wrap(
               spacing: 6,
               runSpacing: 6,
               children: [
-                if (reminderBlock?.reminderAt != null)
-                  Chip(
-                    avatar: const Icon(Icons.notifications_outlined, size: 15),
-                    label: Text(
-                      reminderBlock!.reminderAt!.substring(0, 16),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                Chip(
+                  avatar: const Icon(Icons.task_alt, size: 15),
+                  label: Text(
+                    taskBlock.taskTitle ?? taskBlock.taskId ?? 'Linked task',
+                    overflow: TextOverflow.ellipsis,
                   ),
-                if (taskBlock != null)
-                  Chip(
-                    avatar: const Icon(Icons.task_alt, size: 15),
-                    label: Text(
-                      taskBlock.taskTitle ?? taskBlock.taskId ?? 'Linked task',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+                ),
               ],
             ),
           ),
       ],
+    );
+  }
+}
+
+class _ReminderChip extends StatelessWidget {
+  final String reminderAt;
+
+  const _ReminderChip({required this.reminderAt});
+
+  @override
+  Widget build(BuildContext context) {
+    final safeEnd = reminderAt.length < 16 ? reminderAt.length : 16;
+    final label =
+        DateTime.tryParse(reminderAt)?.toLocal().toString().substring(0, 16) ??
+        reminderAt.substring(0, safeEnd);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Chip(
+        avatar: const Icon(Icons.notifications_outlined, size: 15),
+        label: Text(label),
+      ),
     );
   }
 }

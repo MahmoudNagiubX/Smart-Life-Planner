@@ -196,6 +196,7 @@ class NoteCreate(BaseModel):
     checklist_items: Optional[List[NoteChecklistItem]] = None
     structured_blocks: Optional[List[NoteStructuredBlock]] = None
     attachments: Optional[List[NoteAttachmentPayload]] = None
+    reminder_at: Optional[datetime] = None
     color_key: Optional[str] = "default"
 
     @field_validator("content")
@@ -245,6 +246,8 @@ class NoteUpdate(BaseModel):
     checklist_items: Optional[List[NoteChecklistItem]] = None
     structured_blocks: Optional[List[NoteStructuredBlock]] = None
     attachments: Optional[List[NoteAttachmentPayload]] = None
+    reminder_at: Optional[datetime] = None
+    clear_reminder_at: Optional[bool] = None
     color_key: Optional[str] = None
     is_pinned: Optional[bool] = None
     is_archived: Optional[bool] = None
@@ -297,6 +300,7 @@ class NoteResponse(BaseModel):
     is_pinned: bool
     is_archived: bool
     archived_at: Optional[datetime]
+    reminder_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
 

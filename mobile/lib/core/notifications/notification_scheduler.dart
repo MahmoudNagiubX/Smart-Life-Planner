@@ -148,6 +148,39 @@ class NotificationScheduler {
     await cancelTaskReminder(taskId);
   }
 
+  Future<void> scheduleNoteReminder({
+    required String noteId,
+    required String noteTitle,
+    required DateTime reminderAt,
+  }) async {
+    if (reminderAt.isBefore(DateTime.now())) return;
+
+    await _service.scheduleNotification(
+      id: NotificationIds.noteReminder(noteId),
+      title: 'Note Reminder',
+      body: noteTitle,
+      scheduledAt: reminderAt,
+      payload: 'note:$noteId',
+    );
+  }
+
+  Future<void> rescheduleNoteReminder({
+    required String noteId,
+    required String noteTitle,
+    required DateTime reminderAt,
+  }) async {
+    await cancelNoteReminder(noteId);
+    await scheduleNoteReminder(
+      noteId: noteId,
+      noteTitle: noteTitle,
+      reminderAt: reminderAt,
+    );
+  }
+
+  Future<void> cancelNoteReminder(String noteId) async {
+    await _service.cancelNotification(NotificationIds.noteReminder(noteId));
+  }
+
   // ── Habits ─────────────────────────────────────────────
 
   Future<void> showHabitReminder({

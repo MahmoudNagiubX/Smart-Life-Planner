@@ -30,6 +30,9 @@ class Note(Base):
     archived_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    reminder_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     source_type: Mapped[str] = mapped_column(
         String(30), default="manual", nullable=False
     )

@@ -143,6 +143,7 @@ class NoteModel {
   final bool isPinned;
   final bool isArchived;
   final String? archivedAt;
+  final String? reminderAt;
   final String createdAt;
   final String updatedAt;
 
@@ -159,6 +160,7 @@ class NoteModel {
     required this.isPinned,
     required this.isArchived,
     this.archivedAt,
+    this.reminderAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -194,6 +196,7 @@ class NoteModel {
       isPinned: json['is_pinned'] as bool,
       isArchived: json['is_archived'] as bool,
       archivedAt: json['archived_at'] as String?,
+      reminderAt: json['reminder_at'] as String?,
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
     );

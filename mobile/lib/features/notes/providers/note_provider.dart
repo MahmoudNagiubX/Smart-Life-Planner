@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
+import '../../../core/notifications/notification_scheduler.dart';
 import '../models/note_model.dart';
 import '../services/note_service.dart';
 
@@ -84,6 +85,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
         isArchived: archived,
       );
       state = state.copyWith(notes: notes, isLoading: false);
+      await _syncNoteReminders(notes);
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -100,11 +102,12 @@ class NotesNotifier extends StateNotifier<NotesState> {
     List<ChecklistItemModel>? checklistItems,
     List<NoteStructuredBlockModel>? structuredBlocks,
     List<NoteAttachmentModel>? attachments,
+    String? reminderAt,
     String colorKey = 'default',
   }) async {
     try {
       final service = _ref.read(noteServiceProvider);
-      await service.createNote(
+      final note = await service.createNote(
         content: content,
         title: title,
         noteType: noteType,
@@ -112,8 +115,10 @@ class NotesNotifier extends StateNotifier<NotesState> {
         checklistItems: checklistItems,
         structuredBlocks: structuredBlocks,
         attachments: attachments,
+        reminderAt: reminderAt,
         colorKey: colorKey,
       );
+      await _syncNoteReminder(note);
       await loadNotes(
         search: state.search,
         tag: state.selectedTag,
@@ -135,11 +140,13 @@ class NotesNotifier extends StateNotifier<NotesState> {
     List<ChecklistItemModel>? checklistItems,
     List<NoteStructuredBlockModel>? structuredBlocks,
     List<NoteAttachmentModel>? attachments,
+    String? reminderAt,
+    bool clearReminderAt = false,
     String? colorKey,
   }) async {
     try {
       final service = _ref.read(noteServiceProvider);
-      await service.updateNote(
+      final note = await service.updateNote(
         noteId: noteId,
         title: title,
         content: content,
@@ -148,8 +155,11 @@ class NotesNotifier extends StateNotifier<NotesState> {
         checklistItems: checklistItems,
         structuredBlocks: structuredBlocks,
         attachments: attachments,
+        reminderAt: reminderAt,
+        clearReminderAt: clearReminderAt,
         colorKey: colorKey,
       );
+      await _syncNoteReminder(note);
       await loadNotes(
         search: state.search,
         tag: state.selectedTag,
@@ -194,6 +204,11 @@ class NotesNotifier extends StateNotifier<NotesState> {
     try {
       final service = _ref.read(noteServiceProvider);
       await service.updateNote(noteId: noteId, isArchived: archive);
+      if (archive) {
+        await _ref
+            .read(notificationSchedulerProvider)
+            .cancelNoteReminder(noteId);
+      }
       await loadNotes(
         search: state.search,
         tag: state.selectedTag,
@@ -253,10 +268,40 @@ class NotesNotifier extends StateNotifier<NotesState> {
     try {
       final service = _ref.read(noteServiceProvider);
       await service.deleteNote(noteId);
+      await _ref.read(notificationSchedulerProvider).cancelNoteReminder(noteId);
       state = state.copyWith(
         notes: state.notes.where((n) => n.id != noteId).toList(),
       );
     } catch (_) {}
+  }
+
+  Future<void> _syncNoteReminders(List<NoteModel> notes) async {
+    for (final note in notes) {
+      await _syncNoteReminder(note);
+    }
+  }
+
+  Future<void> _syncNoteReminder(NoteModel note) async {
+    final scheduler = _ref.read(notificationSchedulerProvider);
+    if (note.isArchived || note.reminderAt == null) {
+      await scheduler.cancelNoteReminder(note.id);
+      return;
+    }
+
+    try {
+      final reminderAt = DateTime.parse(note.reminderAt!).toLocal();
+      if (reminderAt.isAfter(DateTime.now())) {
+        await scheduler.rescheduleNoteReminder(
+          noteId: note.id,
+          noteTitle: note.title ?? 'Untitled note',
+          reminderAt: reminderAt,
+        );
+      } else {
+        await scheduler.cancelNoteReminder(note.id);
+      }
+    } catch (_) {
+      await scheduler.cancelNoteReminder(note.id);
+    }
   }
 }
 

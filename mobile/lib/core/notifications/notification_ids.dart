@@ -22,4 +22,8 @@ class NotificationIds {
   // Habits: base 30000
   static int habitReminder(String habitId) =>
       30000 + habitId.hashCode.abs() % 10000;
+
+  // Notes: base 40000
+  static int noteReminder(String noteId) =>
+      40000 + noteId.hashCode.abs() % 10000;
 }
