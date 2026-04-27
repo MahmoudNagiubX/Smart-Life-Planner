@@ -1,0 +1,420 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
+import '../../../core/widgets/app_loading_state.dart';
+import '../models/prayer_model.dart';
+import '../models/ramadan_settings_model.dart';
+import '../providers/prayer_provider.dart';
+import '../providers/ramadan_settings_provider.dart';
+
+class RamadanModeScreen extends ConsumerStatefulWidget {
+  const RamadanModeScreen({super.key});
+
+  @override
+  ConsumerState<RamadanModeScreen> createState() => _RamadanModeScreenState();
+}
+
+class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(ramadanSettingsProvider.notifier).loadSettings();
+      ref.read(prayerProvider.notifier).loadTodayPrayers();
+    });
+  }
+
+  Future<void> _reload() async {
+    await Future.wait([
+      ref.read(ramadanSettingsProvider.notifier).loadSettings(),
+      ref.read(prayerProvider.notifier).loadTodayPrayers(),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ramadanState = ref.watch(ramadanSettingsProvider);
+    final prayerState = ref.watch(prayerProvider);
+    final settings = ramadanState.settings;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Ramadan Mode',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: ramadanState.isLoading && settings == null
+          ? const AppLoadingState(message: 'Loading Ramadan settings...')
+          : ramadanState.error != null && settings == null
+          ? AppErrorState(
+              title: 'Ramadan mode could not load',
+              message: ramadanState.error!,
+              onRetry: _reload,
+            )
+          : RefreshIndicator(
+              onRefresh: _reload,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                children: [
+                  _FastingStatusCard(
+                    settings: settings ?? _fallbackSettings,
+                    prayers: prayerState.data?.prayers ?? const [],
+                  ),
+                  const SizedBox(height: 16),
+                  _RamadanModeToggle(settings: settings ?? _fallbackSettings),
+                  const SizedBox(height: 16),
+                  _SuhoorReminderCard(settings: settings ?? _fallbackSettings),
+                  const SizedBox(height: 16),
+                  _IftarTimeCard(
+                    prayers: prayerState.data?.prayers ?? const [],
+                  ),
+                  const SizedBox(height: 16),
+                  const _RamadanGoalsCard(),
+                  if (ramadanState.isSaving) ...[
+                    const SizedBox(height: 16),
+                    const LinearProgressIndicator(color: AppColors.prayerGold),
+                  ],
+                  if (ramadanState.error != null && settings != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      ramadanState.error!,
+                      style: const TextStyle(color: AppColors.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+    );
+  }
+
+  RamadanSettings get _fallbackSettings {
+    return const RamadanSettings(
+      ramadanModeEnabled: false,
+      suhoorReminderEnabled: true,
+      suhoorReminderMinutesBeforeFajr: 45,
+    );
+  }
+}
+
+class _FastingStatusCard extends StatelessWidget {
+  final RamadanSettings settings;
+  final List<PrayerTime> prayers;
+
+  const _FastingStatusCard({required this.settings, required this.prayers});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = _fastingStatus();
+
+    return _RamadanCard(
+      icon: Icons.nights_stay_outlined,
+      title: 'Fasting Status',
+      accentColor: settings.ramadanModeEnabled
+          ? AppColors.prayerGold
+          : AppColors.textSecondary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            status.title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            status.message,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  _FastingStatus _fastingStatus() {
+    if (!settings.ramadanModeEnabled) {
+      return const _FastingStatus(
+        title: 'Ramadan mode is off',
+        message: 'Enable Ramadan mode to show fasting reminders and goals.',
+      );
+    }
+
+    final fajr = _prayerTime('fajr');
+    final maghrib = _prayerTime('maghrib');
+    final now = DateTime.now();
+
+    if (fajr == null || maghrib == null) {
+      return const _FastingStatus(
+        title: 'Ramadan mode is active',
+        message: 'Prayer times are loading. Iftar will use Maghrib time.',
+      );
+    }
+    if (now.isBefore(fajr)) {
+      return const _FastingStatus(
+        title: 'Before Fajr',
+        message: 'Suhoor window is still open for today.',
+      );
+    }
+    if (now.isBefore(maghrib)) {
+      return const _FastingStatus(
+        title: 'Fasting window active',
+        message: 'Iftar time will be shown from today\'s Maghrib prayer.',
+      );
+    }
+    return const _FastingStatus(
+      title: 'Iftar window',
+      message: 'Maghrib has started for today.',
+    );
+  }
+
+  DateTime? _prayerTime(String name) {
+    for (final prayer in prayers) {
+      if (prayer.prayerName == name && prayer.scheduledAt != null) {
+        return DateTime.tryParse(prayer.scheduledAt!)?.toLocal();
+      }
+    }
+    return null;
+  }
+}
+
+class _FastingStatus {
+  final String title;
+  final String message;
+
+  const _FastingStatus({required this.title, required this.message});
+}
+
+class _RamadanModeToggle extends ConsumerWidget {
+  final RamadanSettings settings;
+
+  const _RamadanModeToggle({required this.settings});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _RamadanCard(
+      icon: Icons.toggle_on_outlined,
+      title: 'Ramadan Mode',
+      accentColor: AppColors.prayerGold,
+      child: SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        value: settings.ramadanModeEnabled,
+        activeThumbColor: AppColors.prayerGold,
+        title: const Text('Enable Ramadan mode'),
+        subtitle: const Text(
+          'Shows fasting status, Suhoor preference, and Iftar from Maghrib.',
+        ),
+        onChanged: (value) => ref
+            .read(ramadanSettingsProvider.notifier)
+            .updateSettings(ramadanModeEnabled: value),
+      ),
+    );
+  }
+}
+
+class _SuhoorReminderCard extends ConsumerWidget {
+  final RamadanSettings settings;
+
+  const _SuhoorReminderCard({required this.settings});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(ramadanSettingsProvider.notifier);
+
+    return _RamadanCard(
+      icon: Icons.alarm_outlined,
+      title: 'Suhoor Reminder',
+      accentColor: AppColors.primary,
+      child: Column(
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: settings.suhoorReminderEnabled,
+            title: const Text('Remind before Fajr'),
+            subtitle: Text(
+              '${settings.suhoorReminderMinutesBeforeFajr} minutes before Fajr',
+            ),
+            onChanged: (value) =>
+                notifier.updateSettings(suhoorReminderEnabled: value),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              IconButton(
+                tooltip: 'Decrease',
+                onPressed: settings.suhoorReminderMinutesBeforeFajr <= 5
+                    ? null
+                    : () => notifier.updateSettings(
+                        suhoorReminderMinutesBeforeFajr:
+                            settings.suhoorReminderMinutesBeforeFajr - 5,
+                      ),
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+              Expanded(
+                child: Slider(
+                  value: settings.suhoorReminderMinutesBeforeFajr
+                      .clamp(5, 120)
+                      .toDouble(),
+                  min: 5,
+                  max: 120,
+                  divisions: 23,
+                  label: '${settings.suhoorReminderMinutesBeforeFajr} minutes',
+                  onChanged: settings.suhoorReminderEnabled
+                      ? (value) => notifier.updateSettings(
+                          suhoorReminderMinutesBeforeFajr: value.round(),
+                        )
+                      : null,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Increase',
+                onPressed: settings.suhoorReminderMinutesBeforeFajr >= 120
+                    ? null
+                    : () => notifier.updateSettings(
+                        suhoorReminderMinutesBeforeFajr:
+                            settings.suhoorReminderMinutesBeforeFajr + 5,
+                      ),
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IftarTimeCard extends StatelessWidget {
+  final List<PrayerTime> prayers;
+
+  const _IftarTimeCard({required this.prayers});
+
+  @override
+  Widget build(BuildContext context) {
+    final maghrib = _maghribTime();
+    return _RamadanCard(
+      icon: Icons.restaurant_outlined,
+      title: 'Iftar Time',
+      accentColor: AppColors.success,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            maghrib == null ? '--:--' : _formatTime(maghrib),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.success,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Iftar uses today\'s Maghrib prayer time.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  DateTime? _maghribTime() {
+    for (final prayer in prayers) {
+      if (prayer.prayerName == 'maghrib' && prayer.scheduledAt != null) {
+        return DateTime.tryParse(prayer.scheduledAt!)?.toLocal();
+      }
+    }
+    return null;
+  }
+
+  String _formatTime(DateTime time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+}
+
+class _RamadanGoalsCard extends StatelessWidget {
+  const _RamadanGoalsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _RamadanCard(
+      icon: Icons.flag_outlined,
+      title: 'Ramadan Goals',
+      accentColor: AppColors.warning,
+      child: Text(
+        'Daily fasting, prayer, Quran, and reflection goals will appear here as Ramadan mode expands.',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: AppColors.textSecondary,
+          height: 1.45,
+        ),
+      ),
+    );
+  }
+}
+
+class _RamadanCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color accentColor;
+  final Widget child;
+
+  const _RamadanCard({
+    required this.icon,
+    required this.title,
+    required this.accentColor,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: accentColor),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: accentColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                child,
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

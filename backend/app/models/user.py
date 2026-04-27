@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -101,6 +101,15 @@ class UserSettings(Base):
     ai_daily_rhythm: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     ai_recommendation_seeded_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    ramadan_mode_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    suhoor_reminder_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+    suhoor_reminder_minutes_before_fajr: Mapped[int] = mapped_column(
+        Integer, default=45, nullable=False
     )
 
     updated_at: Mapped[datetime] = mapped_column(

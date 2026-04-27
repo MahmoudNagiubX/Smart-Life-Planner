@@ -23,6 +23,7 @@ import '../features/analytics/screens/analytics_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/prayer/screens/qibla_screen.dart';
+import '../features/prayer/screens/ramadan_mode_screen.dart';
 import '../features/voice/screens/voice_capture_screen.dart';
 import 'app_routes.dart';
 
@@ -195,12 +196,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.ramadan,
-            builder: (context, state) => const FeaturePlaceholderScreen(
-              title: 'Ramadan Mode',
-              description: 'Fasting reminders and Ramadan goals.',
-              icon: Icons.nights_stay_outlined,
-              accentColor: AppColors.prayerGold,
-            ),
+            builder: (context, state) => const RamadanModeScreen(),
           ),
           GoRoute(
             path: AppRoutes.prayerSettings,

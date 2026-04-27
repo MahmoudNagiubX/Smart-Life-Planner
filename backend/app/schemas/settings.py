@@ -123,6 +123,9 @@ class SettingsResponse(BaseModel):
     ai_goal_tags: list[str]
     ai_daily_rhythm: dict
     ai_recommendation_seeded_at: Optional[datetime]
+    ramadan_mode_enabled: bool
+    suhoor_reminder_enabled: bool
+    suhoor_reminder_minutes_before_fajr: int
 
     updated_at: datetime
 
@@ -147,6 +150,11 @@ class SettingsUpdate(BaseModel):
     microphone_enabled: Optional[bool] = None
     location_enabled: Optional[bool] = None
     onboarding_completed: Optional[bool] = None
+    ramadan_mode_enabled: Optional[bool] = None
+    suhoor_reminder_enabled: Optional[bool] = None
+    suhoor_reminder_minutes_before_fajr: Optional[int] = Field(
+        default=None, ge=0, le=240
+    )
 
     @field_validator("language")
     @classmethod
