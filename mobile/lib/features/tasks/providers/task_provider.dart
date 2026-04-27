@@ -40,7 +40,10 @@ class TasksNotifier extends StateNotifier<TasksState> {
     try {
       final service = _ref.read(taskServiceProvider);
       final tasks = await service.getTasks(status: status);
-      state = state.copyWith(tasks: tasks, isLoading: false);
+      state = state.copyWith(
+        tasks: tasks..sort(_compareManualOrder),
+        isLoading: false,
+      );
       await _syncTaskReminders(tasks);
     } on DioException catch (e) {
       state = state.copyWith(
@@ -129,6 +132,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
     String? category,
     int? estimatedMinutes,
     String? status,
+    int? manualOrder,
     bool clearDueAt = false,
     bool clearReminderAt = false,
   }) async {
@@ -145,6 +149,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
         category: category,
         estimatedMinutes: estimatedMinutes,
         status: status,
+        manualOrder: manualOrder,
         clearDueAt: clearDueAt,
         clearReminderAt: clearReminderAt,
       );
@@ -200,6 +205,29 @@ class TasksNotifier extends StateNotifier<TasksState> {
       return false;
     } catch (_) {
       state = state.copyWith(error: 'Failed to move task');
+      return false;
+    }
+  }
+
+  Future<bool> reorderTasks(List<TaskModel> orderedTasks) async {
+    final orderedIds = orderedTasks.map((task) => task.id).toList();
+    try {
+      final updatedTasks = await _ref
+          .read(taskServiceProvider)
+          .reorderTasks(orderedIds);
+      final updatedById = {for (final task in updatedTasks) task.id: task};
+      state = state.copyWith(
+        tasks: state.tasks.map((task) => updatedById[task.id] ?? task).toList()
+          ..sort(_compareManualOrder),
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to reorder tasks'),
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(error: 'Failed to reorder tasks');
       return false;
     }
   }
@@ -292,7 +320,10 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
       final tasks = await _ref
           .read(taskServiceProvider)
           .getTasksForRange(dateFrom: dateFrom, dateTo: dateTo);
-      state = state.copyWith(tasks: tasks, isLoading: false);
+      state = state.copyWith(
+        tasks: tasks..sort(_compareManualOrder),
+        isLoading: false,
+      );
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -303,6 +334,22 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
         isLoading: false,
         error: 'Failed to load calendar tasks',
       );
+    }
+  }
+
+  Future<bool> reorderTasks(List<TaskModel> orderedTasks) async {
+    try {
+      final updatedTasks = await _ref
+          .read(taskServiceProvider)
+          .reorderTasks(orderedTasks.map((task) => task.id).toList());
+      final updatedById = {for (final task in updatedTasks) task.id: task};
+      state = state.copyWith(
+        tasks: state.tasks.map((task) => updatedById[task.id] ?? task).toList()
+          ..sort(_compareManualOrder),
+      );
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 }
@@ -364,7 +411,11 @@ class ProjectTimelineNotifier extends StateNotifier<ProjectTimelineState> {
         return;
       }
       final tasks = await service.getTasks(projectId: projectId);
-      state = state.copyWith(project: project, tasks: tasks, isLoading: false);
+      state = state.copyWith(
+        project: project,
+        tasks: tasks..sort(_compareManualOrder),
+        isLoading: false,
+      );
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -377,6 +428,18 @@ class ProjectTimelineNotifier extends StateNotifier<ProjectTimelineState> {
       );
     }
   }
+
+  Future<bool> reorderProjectTasks(List<TaskModel> orderedTasks) async {
+    try {
+      final updatedTasks = await _ref
+          .read(taskServiceProvider)
+          .reorderTasks(orderedTasks.map((task) => task.id).toList());
+      state = state.copyWith(tasks: updatedTasks..sort(_compareManualOrder));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 final projectTimelineProvider =
@@ -387,3 +450,9 @@ final projectTimelineProvider =
     >((ref, projectId) {
       return ProjectTimelineNotifier(ref, projectId);
     });
+
+int _compareManualOrder(TaskModel left, TaskModel right) {
+  final orderCompare = left.manualOrder.compareTo(right.manualOrder);
+  if (orderCompare != 0) return orderCompare;
+  return left.createdAt.compareTo(right.createdAt);
+}

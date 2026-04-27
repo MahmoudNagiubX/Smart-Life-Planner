@@ -6,19 +6,36 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_db
 from app.schemas.voice import BulkTaskCreateRequest, BulkTaskCreateResponse
 from app.repositories.task_repository import bulk_create_tasks
-from app.schemas.task import TaskResponse
 from app.api.v1.auth import get_current_user
 from app.schemas.task import (
-    TaskCreate, TaskUpdate, TaskResponse,
-    ProjectCreate, ProjectUpdate, ProjectResponse,
-    SubtaskCreate, SubtaskResponse,
+    ProjectCreate,
+    ProjectResponse,
+    ProjectUpdate,
+    SubtaskCreate,
+    SubtaskResponse,
+    TaskCreate,
+    TaskReorderRequest,
+    TaskResponse,
+    TaskUpdate,
 )
 from app.repositories.task_repository import (
-    get_tasks, get_task_by_id, create_task, update_task,
-    complete_task, reopen_task, soft_delete_task,
+    complete_subtask,
+    complete_task,
+    create_project,
+    create_subtask,
+    create_task,
+    delete_subtask,
+    get_project_by_id,
+    get_projects,
+    get_subtask_by_id,
+    get_task_by_id,
+    get_tasks,
     get_tasks_in_date_range,
-    get_projects, get_project_by_id, create_project, update_project,
-    create_subtask, complete_subtask, delete_subtask, get_subtask_by_id,
+    reopen_task,
+    reorder_tasks,
+    soft_delete_task,
+    update_project,
+    update_task,
 )
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -93,6 +110,21 @@ async def list_tasks_in_range(
         tzinfo=timezone.utc,
     )
     return await get_tasks_in_date_range(db, current_user.id, start_at, end_at)
+
+
+@router.patch("/reorder", response_model=list[TaskResponse])
+async def reorder_existing_tasks(
+    payload: TaskReorderRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    reordered = await reorder_tasks(db, current_user.id, payload.task_ids)
+    if reordered is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="One or more tasks were not found",
+        )
+    return reordered
 
 
 @router.post("", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)

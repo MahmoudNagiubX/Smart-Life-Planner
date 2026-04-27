@@ -59,7 +59,7 @@ async def get_tasks(
         select(Task)
         .where(Task.user_id == user_id, Task.is_deleted == False)
         .options(selectinload(Task.subtasks))
-        .order_by(Task.created_at.desc())
+        .order_by(Task.manual_order.asc(), Task.created_at.desc())
     )
     if status:
         query = query.where(Task.status == status)
@@ -87,7 +87,7 @@ async def get_tasks_in_date_range(
             Task.due_at < end_at,
         )
         .options(selectinload(Task.subtasks))
-        .order_by(Task.due_at.asc())
+        .order_by(Task.due_at.asc(), Task.manual_order.asc())
     )
     return list(result.scalars().all())
 
@@ -130,6 +130,37 @@ async def update_task(db: AsyncSession, task: Task, data: dict) -> Task:
             next_reminder_at=task.reminder_at,
         )
     return await get_task_by_id(db, task.id, task.user_id)
+
+
+async def reorder_tasks(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    task_ids: list[uuid.UUID],
+) -> list[Task] | None:
+    result = await db.execute(
+        select(Task).where(
+            Task.user_id == user_id,
+            Task.is_deleted == False,
+            Task.id.in_(task_ids),
+        )
+    )
+    tasks = list(result.scalars().all())
+    if len(tasks) != len(task_ids):
+        return None
+
+    by_id = {task.id: task for task in tasks}
+    for index, task_id in enumerate(task_ids):
+        by_id[task_id].manual_order = index
+
+    await db.commit()
+
+    refreshed = await db.execute(
+        select(Task)
+        .where(Task.user_id == user_id, Task.id.in_(task_ids))
+        .options(selectinload(Task.subtasks))
+        .order_by(Task.manual_order.asc())
+    )
+    return list(refreshed.scalars().all())
 
 
 async def complete_task(db: AsyncSession, task: Task) -> Task:

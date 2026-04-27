@@ -54,21 +54,44 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
                       icon: Icons.timeline_outlined,
                       title: 'No project tasks',
                       message:
-                          'Tasks linked to this project will appear on a read-only timeline.',
+                          'Tasks linked to this project will appear on a timeline.',
                     )
-                  : ListView(
-                      padding: const EdgeInsets.all(16),
+                  : Column(
                       children: [
-                        _ProjectTimelineHeader(
-                          project: project,
-                          tasks: sortedTasks,
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                          child: _ProjectTimelineHeader(
+                            project: project,
+                            tasks: sortedTasks,
+                          ),
                         ),
                         const SizedBox(height: 16),
-                        ...sortedTasks.asMap().entries.map(
-                          (entry) => _TimelineTaskRow(
-                            task: entry.value,
-                            isFirst: entry.key == 0,
-                            isLast: entry.key == sortedTasks.length - 1,
+                        Expanded(
+                          child: ReorderableListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: sortedTasks.length,
+                            onReorder: (oldIndex, newIndex) {
+                              final reordered = [...sortedTasks];
+                              if (newIndex > oldIndex) newIndex -= 1;
+                              final task = reordered.removeAt(oldIndex);
+                              reordered.insert(newIndex, task);
+                              ref
+                                  .read(
+                                    projectTimelineProvider(
+                                      widget.projectId,
+                                    ).notifier,
+                                  )
+                                  .reorderProjectTasks(reordered);
+                            },
+                            itemBuilder: (context, index) {
+                              final task = sortedTasks[index];
+                              return _TimelineTaskRow(
+                                key: ValueKey(task.id),
+                                task: task,
+                                isFirst: index == 0,
+                                isLast: index == sortedTasks.length - 1,
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -151,6 +174,7 @@ class _TimelineTaskRow extends StatelessWidget {
   final bool isLast;
 
   const _TimelineTaskRow({
+    super.key,
     required this.task,
     required this.isFirst,
     required this.isLast,
@@ -302,6 +326,9 @@ class _TimelineMetricChip extends StatelessWidget {
 }
 
 int _compareTimelineTasks(TaskModel left, TaskModel right) {
+  final manualOrder = left.manualOrder.compareTo(right.manualOrder);
+  if (manualOrder != 0) return manualOrder;
+
   final leftDate = _taskTimelineDate(left);
   final rightDate = _taskTimelineDate(right);
   if (leftDate == null && rightDate == null) {

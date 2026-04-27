@@ -37,6 +37,7 @@ class Task(Base):
     recurrence_rule: Mapped[str | None] = mapped_column(Text, nullable=True)
     estimated_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     category: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    manual_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     ai_parsed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # H-ASAE execution metadata

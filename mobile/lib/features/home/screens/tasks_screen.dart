@@ -1213,7 +1213,7 @@ class _TaskCalendarViewState extends ConsumerState<_TaskCalendarView> {
   }
 }
 
-class _AgendaDaySection extends StatelessWidget {
+class _AgendaDaySection extends ConsumerWidget {
   final DateTime day;
   final List<TaskModel> tasks;
   final List<FocusSession> focusSessions;
@@ -1229,7 +1229,7 @@ class _AgendaDaySection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hasItems =
         tasks.isNotEmpty ||
         focusSessions.isNotEmpty ||
@@ -1254,16 +1254,34 @@ class _AgendaDaySection extends StatelessWidget {
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          ...tasks.map(
-            (task) => _AgendaItem(
-              icon: Icons.task_alt,
-              title: task.title,
-              subtitle: task.dueAt == null
-                  ? task.priority
-                  : '${_timeLabel(task.dueAt!)} - ${task.priority}',
-              color: AppColors.primary,
+          if (tasks.isNotEmpty)
+            ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles: true,
+              itemCount: tasks.length,
+              onReorder: (oldIndex, newIndex) async {
+                final reordered = [...tasks];
+                if (newIndex > oldIndex) newIndex -= 1;
+                final task = reordered.removeAt(oldIndex);
+                reordered.insert(newIndex, task);
+                await ref
+                    .read(taskCalendarProvider.notifier)
+                    .reorderTasks(reordered);
+              },
+              itemBuilder: (context, index) {
+                final task = tasks[index];
+                return _AgendaItem(
+                  key: ValueKey('agenda-task-${task.id}'),
+                  icon: Icons.task_alt,
+                  title: task.title,
+                  subtitle: task.dueAt == null
+                      ? task.priority
+                      : '${_timeLabel(task.dueAt!)} - ${task.priority}',
+                  color: AppColors.primary,
+                );
+              },
             ),
-          ),
           ...focusSessions.map(
             (session) => _AgendaItem(
               icon: Icons.timer_outlined,
@@ -1313,6 +1331,7 @@ class _AgendaItem extends StatelessWidget {
   final Color color;
 
   const _AgendaItem({
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -1427,12 +1446,30 @@ class _TaskList extends ConsumerWidget {
       );
     }
 
+    if (status != 'completed') {
+      return ReorderableListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: tasks.length,
+        onReorder: (oldIndex, newIndex) {
+          final reordered = [...tasks];
+          if (newIndex > oldIndex) newIndex -= 1;
+          final task = reordered.removeAt(oldIndex);
+          reordered.insert(newIndex, task);
+          ref.read(tasksProvider.notifier).reorderTasks(reordered);
+        },
+        itemBuilder: (context, index) {
+          final task = tasks[index];
+          return _TaskCard(key: ValueKey(task.id), task: task);
+        },
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
-        return _TaskCard(task: task);
+        return _TaskCard(key: ValueKey(task.id), task: task);
       },
     );
   }
@@ -1441,7 +1478,7 @@ class _TaskList extends ConsumerWidget {
 class _TaskCard extends ConsumerWidget {
   final TaskModel task;
 
-  const _TaskCard({required this.task});
+  const _TaskCard({super.key, required this.task});
 
   Color _priorityColor(String priority) {
     switch (priority) {

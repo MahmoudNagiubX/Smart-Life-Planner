@@ -63,6 +63,7 @@ class TaskCreate(BaseModel):
     project_id: Optional[uuid.UUID] = None
     category: Optional[str] = None
     estimated_minutes: Optional[int] = None
+    manual_order: int = 0
 
     @field_validator("title")
     @classmethod
@@ -78,6 +79,15 @@ class TaskCreate(BaseModel):
             raise ValueError("Priority must be low, medium, or high")
         return v
 
+    @field_validator("manual_order")
+    @classmethod
+    def manual_order_valid(cls, v: int | None) -> int:
+        if v is None:
+            return 0
+        if v < 0:
+            raise ValueError("manual_order cannot be negative")
+        return v
+
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -89,6 +99,7 @@ class TaskUpdate(BaseModel):
     category: Optional[str] = None
     estimated_minutes: Optional[int] = None
     status: Optional[str] = None
+    manual_order: Optional[int] = None
 
     @field_validator("status")
     @classmethod
@@ -97,6 +108,28 @@ class TaskUpdate(BaseModel):
             return None
         if v not in ("pending", "next", "in_progress", "waiting", "completed"):
             raise ValueError("Unsupported task status")
+        return v
+
+    @field_validator("manual_order")
+    @classmethod
+    def manual_order_valid(cls, v: int | None) -> int | None:
+        if v is not None and v < 0:
+            raise ValueError("manual_order cannot be negative")
+        return v
+
+
+class TaskReorderRequest(BaseModel):
+    task_ids: List[uuid.UUID]
+
+    @field_validator("task_ids")
+    @classmethod
+    def task_ids_valid(cls, v: list[uuid.UUID]) -> list[uuid.UUID]:
+        if not v:
+            raise ValueError("task_ids cannot be empty")
+        if len(v) > 200:
+            raise ValueError("Cannot reorder more than 200 tasks at once")
+        if len(set(v)) != len(v):
+            raise ValueError("task_ids must be unique")
         return v
 
 
@@ -112,6 +145,7 @@ class TaskResponse(BaseModel):
     reminder_at: Optional[datetime]
     category: Optional[str]
     estimated_minutes: Optional[int]
+    manual_order: int
     is_deleted: bool
     completed_at: Optional[datetime]
     created_at: datetime

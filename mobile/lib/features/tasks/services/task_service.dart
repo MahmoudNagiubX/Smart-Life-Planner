@@ -84,6 +84,7 @@ class TaskService {
     String? category,
     int? estimatedMinutes,
     String? status,
+    int? manualOrder,
     bool clearDueAt = false,
     bool clearReminderAt = false,
   }) async {
@@ -105,9 +106,20 @@ class TaskService {
     if (category != null) data['category'] = category;
     if (estimatedMinutes != null) data['estimated_minutes'] = estimatedMinutes;
     if (status != null) data['status'] = status;
+    if (manualOrder != null) data['manual_order'] = manualOrder;
 
     final response = await _apiClient.dio.patch('/tasks/$taskId', data: data);
     return TaskModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<List<TaskModel>> reorderTasks(List<String> taskIds) async {
+    final response = await _apiClient.dio.patch(
+      '/tasks/reorder',
+      data: {'task_ids': taskIds},
+    );
+    return (response.data as List<dynamic>)
+        .map((t) => TaskModel.fromJson(t as Map<String, dynamic>))
+        .toList();
   }
 
   Future<TaskModel> reopenTask(String taskId) async {
