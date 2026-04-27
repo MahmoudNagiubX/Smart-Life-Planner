@@ -413,6 +413,13 @@ class _NoteCard extends ConsumerWidget {
             const SizedBox(height: 10),
             _ReminderChip(reminderAt: note.reminderAt!),
           ],
+          if (note.taskId != null) ...[
+            const SizedBox(height: 10),
+            const Chip(
+              avatar: Icon(Icons.task_alt, size: 15),
+              label: Text('Linked task'),
+            ),
+          ],
           if (note.sourceType == 'voice') ...[
             const SizedBox(height: 10),
             const Chip(

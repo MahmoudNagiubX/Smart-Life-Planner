@@ -19,6 +19,7 @@ async def get_notes(
     search: str | None = None,
     tag: str | None = None,
     is_archived: bool = False,
+    task_id: uuid.UUID | None = None,
 ) -> list[Note]:
     archived_filter = (
         Note.archived_at.is_not(None)
@@ -41,6 +42,8 @@ async def get_notes(
     normalized_tag = normalize_note_tag(tag)
     if normalized_tag:
         query = query.where(Note.tags.contains([normalized_tag]))
+    if task_id:
+        query = query.where(Note.task_id == task_id)
     result = await db.execute(query)
     return list(result.scalars().all())
 

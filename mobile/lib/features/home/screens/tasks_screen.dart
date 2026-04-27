@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
@@ -190,6 +191,11 @@ class _TaskCard extends ConsumerWidget {
                   ),
               ],
             ),
+          ),
+          IconButton(
+            tooltip: 'Task details',
+            icon: const Icon(Icons.chevron_right, size: 22),
+            onPressed: () => context.push('/home/tasks/${task.id}'),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, size: 20),

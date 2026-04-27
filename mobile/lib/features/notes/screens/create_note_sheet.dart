@@ -10,8 +10,9 @@ import '../../voice/screens/voice_note_sheet.dart';
 
 class CreateNoteSheet extends ConsumerStatefulWidget {
   final NoteModel? initialNote;
+  final String? linkedTaskId;
 
-  const CreateNoteSheet({super.key, this.initialNote});
+  const CreateNoteSheet({super.key, this.initialNote, this.linkedTaskId});
 
   @override
   ConsumerState<CreateNoteSheet> createState() => _CreateNoteSheetState();
@@ -286,6 +287,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
           .updateNote(
             noteId: widget.initialNote!.id,
             content: content,
+            taskId: widget.linkedTaskId ?? widget.initialNote!.taskId,
             title: _titleController.text.trim().isEmpty
                 ? null
                 : _titleController.text.trim(),
@@ -303,6 +305,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
           .read(notesProvider.notifier)
           .createNote(
             content: content,
+            taskId: widget.linkedTaskId,
             title: _titleController.text.trim().isEmpty
                 ? null
                 : _titleController.text.trim(),

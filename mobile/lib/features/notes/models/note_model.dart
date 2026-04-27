@@ -132,6 +132,7 @@ class NoteAttachmentModel {
 
 class NoteModel {
   final String id;
+  final String? taskId;
   final String? title;
   final String content;
   final String noteType;
@@ -150,6 +151,7 @@ class NoteModel {
 
   NoteModel({
     required this.id,
+    this.taskId,
     this.title,
     required this.content,
     required this.noteType,
@@ -170,6 +172,7 @@ class NoteModel {
   factory NoteModel.fromJson(Map<String, dynamic> json) {
     return NoteModel(
       id: json['id'] as String,
+      taskId: json['task_id'] as String?,
       title: json['title'] as String?,
       content: json['content'] as String,
       noteType: json['note_type'] as String,

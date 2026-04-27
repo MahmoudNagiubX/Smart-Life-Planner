@@ -10,6 +10,7 @@ class NoteService {
     String? search,
     String? tag,
     bool isArchived = false,
+    String? taskId,
   }) async {
     final queryParameters = <String, dynamic>{'is_archived': isArchived};
     if (search != null && search.isNotEmpty) {
@@ -17,6 +18,9 @@ class NoteService {
     }
     if (tag != null && tag.isNotEmpty) {
       queryParameters['tag'] = tag;
+    }
+    if (taskId != null && taskId.isNotEmpty) {
+      queryParameters['task_id'] = taskId;
     }
 
     final response = await _apiClient.dio.get(
@@ -31,6 +35,7 @@ class NoteService {
   Future<NoteModel> createNote({
     required String content,
     String? title,
+    String? taskId,
     String noteType = 'text',
     List<String>? tags,
     List<ChecklistItemModel>? checklistItems,
@@ -48,6 +53,9 @@ class NoteService {
     };
     if (title != null && title.isNotEmpty) {
       data['title'] = title;
+    }
+    if (taskId != null && taskId.isNotEmpty) {
+      data['task_id'] = taskId;
     }
     if (tags != null) {
       data['tags'] = tags;
@@ -79,6 +87,7 @@ class NoteService {
     required String noteId,
     String? title,
     String? content,
+    String? taskId,
     String? noteType,
     List<String>? tags,
     List<ChecklistItemModel>? checklistItems,
@@ -94,6 +103,7 @@ class NoteService {
     final data = <String, dynamic>{
       'title': ?title,
       'content': ?content,
+      'task_id': ?taskId,
       'note_type': ?noteType,
       'color_key': ?colorKey,
       'source_type': ?sourceType,

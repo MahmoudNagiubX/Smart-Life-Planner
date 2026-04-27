@@ -201,6 +201,7 @@ class NoteAttachmentResponse(BaseModel):
 class NoteCreate(BaseModel):
     title: Optional[str] = None
     content: str
+    task_id: Optional[uuid.UUID] = None
     note_type: Optional[str] = "text"
     tags: Optional[List[str]] = None
     checklist_items: Optional[List[NoteChecklistItem]] = None
@@ -257,6 +258,7 @@ class NoteCreate(BaseModel):
 class NoteUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
+    task_id: Optional[uuid.UUID] = None
     note_type: Optional[str] = None
     tags: Optional[List[str]] = None
     checklist_items: Optional[List[NoteChecklistItem]] = None
@@ -311,6 +313,7 @@ class NoteUpdate(BaseModel):
 class NoteResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
+    task_id: Optional[uuid.UUID]
     title: Optional[str]
     content: str
     note_type: str

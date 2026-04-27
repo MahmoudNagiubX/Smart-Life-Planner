@@ -66,6 +66,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
     String? search,
     String? tag,
     bool? isArchived,
+    String? taskId,
   }) async {
     final archived = isArchived ?? state.showingArchived;
     state = state.copyWith(
@@ -83,6 +84,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
         search: search,
         tag: tag,
         isArchived: archived,
+        taskId: taskId,
       );
       state = state.copyWith(notes: notes, isLoading: false);
       await _syncNoteReminders(notes);
@@ -97,6 +99,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
   Future<void> createNote({
     required String content,
     String? title,
+    String? taskId,
     String noteType = 'text',
     List<String>? tags,
     List<ChecklistItemModel>? checklistItems,
@@ -111,6 +114,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
       final note = await service.createNote(
         content: content,
         title: title,
+        taskId: taskId,
         noteType: noteType,
         tags: tags,
         checklistItems: checklistItems,
@@ -137,6 +141,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
     required String noteId,
     required String content,
     String? title,
+    String? taskId,
     String? noteType,
     List<String>? tags,
     List<ChecklistItemModel>? checklistItems,
@@ -153,6 +158,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
         noteId: noteId,
         title: title,
         content: content,
+        taskId: taskId,
         noteType: noteType,
         tags: tags,
         checklistItems: checklistItems,
@@ -312,3 +318,59 @@ class NotesNotifier extends StateNotifier<NotesState> {
 final notesProvider = StateNotifierProvider<NotesNotifier, NotesState>((ref) {
   return NotesNotifier(ref);
 });
+
+class TaskLinkedNotesState {
+  final List<NoteModel> notes;
+  final bool isLoading;
+  final String? error;
+
+  const TaskLinkedNotesState({
+    this.notes = const [],
+    this.isLoading = false,
+    this.error,
+  });
+
+  TaskLinkedNotesState copyWith({
+    List<NoteModel>? notes,
+    bool? isLoading,
+    String? error,
+  }) {
+    return TaskLinkedNotesState(
+      notes: notes ?? this.notes,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+    );
+  }
+}
+
+class TaskLinkedNotesNotifier extends StateNotifier<TaskLinkedNotesState> {
+  final Ref _ref;
+  final String taskId;
+
+  TaskLinkedNotesNotifier(this._ref, this.taskId)
+    : super(const TaskLinkedNotesState());
+
+  Future<void> loadNotes() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final notes = await _ref
+          .read(noteServiceProvider)
+          .getNotes(taskId: taskId);
+      state = state.copyWith(notes: notes, isLoading: false);
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: friendlyApiError(e, 'Failed to load linked notes'),
+      );
+    }
+  }
+}
+
+final taskLinkedNotesProvider =
+    StateNotifierProvider.family<
+      TaskLinkedNotesNotifier,
+      TaskLinkedNotesState,
+      String
+    >((ref, taskId) {
+      return TaskLinkedNotesNotifier(ref, taskId);
+    });

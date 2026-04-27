@@ -20,6 +20,11 @@ class TaskService {
         .toList();
   }
 
+  Future<TaskModel> getTask(String taskId) async {
+    final response = await _apiClient.dio.get('/tasks/$taskId');
+    return TaskModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<TaskModel> createTask({
     required String title,
     String? description,

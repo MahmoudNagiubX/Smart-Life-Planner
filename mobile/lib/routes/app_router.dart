@@ -18,6 +18,7 @@ import '../features/home/screens/profile_screen.dart';
 import '../features/home/screens/feature_placeholder_screen.dart';
 import '../features/habits/screens/habits_screen.dart';
 import '../features/notes/screens/notes_screen.dart';
+import '../features/tasks/screens/task_details_screen.dart';
 import '../features/ai/screens/daily_plan_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
@@ -130,11 +131,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.taskDetails,
-            builder: (context, state) => const FeaturePlaceholderScreen(
-              title: 'Task Details',
-              description: 'Detailed task view with subtasks and reminders.',
-              icon: Icons.task_alt,
-            ),
+            builder: (context, state) =>
+                TaskDetailsScreen(taskId: state.pathParameters['taskId'] ?? ''),
           ),
           GoRoute(
             path: AppRoutes.projectDetails,

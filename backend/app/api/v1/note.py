@@ -12,6 +12,7 @@ from app.repositories.note_repository import (
     update_note,
     delete_note,
 )
+from app.repositories.task_repository import get_task_by_id
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 
@@ -21,10 +22,17 @@ async def list_notes(
     search: Optional[str] = Query(None),
     tag: Optional[str] = Query(None),
     is_archived: bool = Query(False),
+    task_id: Optional[uuid.UUID] = Query(None),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await get_notes(db, current_user.id, search, tag, is_archived)
+    if task_id:
+        task = await get_task_by_id(db, task_id, current_user.id)
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+            )
+    return await get_notes(db, current_user.id, search, tag, is_archived, task_id)
 
 
 @router.post("", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
@@ -34,6 +42,12 @@ async def create_new_note(
     db: AsyncSession = Depends(get_db),
 ):
     data = payload.model_dump(exclude_none=True)
+    if payload.task_id:
+        task = await get_task_by_id(db, payload.task_id, current_user.id)
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+            )
     return await create_note(db, current_user.id, data)
 
 
@@ -63,6 +77,12 @@ async def update_existing_note(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
         )
+    if payload.task_id:
+        task = await get_task_by_id(db, payload.task_id, current_user.id)
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+            )
     return await update_note(db, note, payload.model_dump(exclude_none=True))
 
 
