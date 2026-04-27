@@ -128,6 +128,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
     DateTime? reminderAt,
     String? category,
     int? estimatedMinutes,
+    String? status,
     bool clearDueAt = false,
     bool clearReminderAt = false,
   }) async {
@@ -143,6 +144,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
         reminderAt: reminderAt?.toUtc().toIso8601String(),
         category: category,
         estimatedMinutes: estimatedMinutes,
+        status: status,
         clearDueAt: clearDueAt,
         clearReminderAt: clearReminderAt,
       );
@@ -164,6 +166,44 @@ class TasksNotifier extends StateNotifier<TasksState> {
     }
   }
 
+  Future<bool> moveTaskToStatus({
+    required TaskModel task,
+    required String status,
+  }) async {
+    try {
+      final service = _ref.read(taskServiceProvider);
+      TaskModel updated;
+
+      if (status == 'completed') {
+        updated = await service.completeTask(task.id);
+        await _ref
+            .read(notificationSchedulerProvider)
+            .cancelTaskReminders(task.id);
+      } else if (task.status == 'completed') {
+        final reopened = await service.reopenTask(task.id);
+        updated = status == 'pending'
+            ? reopened
+            : await service.updateTask(taskId: task.id, status: status);
+      } else {
+        updated = await service.updateTask(taskId: task.id, status: status);
+      }
+
+      await _syncTaskReminder(updated);
+      state = state.copyWith(
+        tasks: state.tasks
+            .map((current) => current.id == task.id ? updated : current)
+            .toList(),
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(error: friendlyApiError(e, 'Failed to move task'));
+      return false;
+    } catch (_) {
+      state = state.copyWith(error: 'Failed to move task');
+      return false;
+    }
+  }
+
   Future<void> _syncTaskReminders(List<TaskModel> tasks) async {
     for (final task in tasks) {
       await _syncTaskReminder(task);
@@ -173,7 +213,9 @@ class TasksNotifier extends StateNotifier<TasksState> {
   Future<void> _syncTaskReminder(TaskModel task) async {
     final scheduler = _ref.read(notificationSchedulerProvider);
 
-    if (task.status != 'pending' || task.isDeleted || task.reminderAt == null) {
+    if (task.status == 'completed' ||
+        task.isDeleted ||
+        task.reminderAt == null) {
       await scheduler.cancelTaskReminder(task.id);
       return;
     }

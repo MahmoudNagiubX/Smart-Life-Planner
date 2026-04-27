@@ -30,7 +30,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tasksProvider.notifier).loadTasks();
       ref.read(focusProvider.notifier).loadAnalytics();
@@ -60,6 +60,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Completed'),
+            Tab(text: 'Kanban'),
             Tab(text: 'Matrix'),
             Tab(text: 'Calendar'),
           ],
@@ -78,7 +79,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
               children: [
                 _TaskList(
                   tasks: state.tasks
-                      .where((t) => t.status == 'pending')
+                      .where((t) => t.status != 'completed' && !t.isDeleted)
                       .toList(),
                   status: 'pending',
                 ),
@@ -88,9 +89,12 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                       .toList(),
                   status: 'completed',
                 ),
+                _KanbanBoardView(
+                  tasks: state.tasks.where((t) => !t.isDeleted).toList(),
+                ),
                 _EisenhowerMatrixView(
                   tasks: state.tasks
-                      .where((t) => t.status == 'pending' && !t.isDeleted)
+                      .where((t) => t.status != 'completed' && !t.isDeleted)
                       .toList(),
                 ),
                 const _TaskCalendarView(),
@@ -107,6 +111,310 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
       ),
     );
   }
+}
+
+class _KanbanBoardView extends ConsumerWidget {
+  final List<TaskModel> tasks;
+
+  const _KanbanBoardView({required this.tasks});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (tasks.isEmpty) {
+      return const AppEmptyState(
+        icon: Icons.view_kanban_outlined,
+        title: 'No tasks for the board',
+        message: 'Create tasks to organize them across project stages.',
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(tasksProvider.notifier).loadTasks(),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.all(16),
+        children: _kanbanColumns
+            .map(
+              (column) => _KanbanColumn(
+                column: column,
+                tasks: tasks
+                    .where(
+                      (task) => _kanbanStatus(task.status) == column.status,
+                    )
+                    .toList(),
+                onMove: (task, status) => ref
+                    .read(tasksProvider.notifier)
+                    .moveTaskToStatus(task: task, status: status),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+}
+
+class _KanbanColumn extends StatelessWidget {
+  final _KanbanColumnData column;
+  final List<TaskModel> tasks;
+  final Future<bool> Function(TaskModel task, String status) onMove;
+
+  const _KanbanColumn({
+    required this.column,
+    required this.tasks,
+    required this.onMove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 280,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: column.color.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(column.icon, color: column.color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  column.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: column.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  tasks.length.toString(),
+                  style: TextStyle(
+                    color: column.color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            column.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: tasks.isEmpty
+                ? Center(
+                    child: Text(
+                      'No tasks',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: tasks.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 10),
+                    itemBuilder: (context, index) => _KanbanTaskCard(
+                      task: tasks[index],
+                      currentStatus: column.status,
+                      onMove: onMove,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KanbanTaskCard extends StatelessWidget {
+  final TaskModel task;
+  final String currentStatus;
+  final Future<bool> Function(TaskModel task, String status) onMove;
+
+  const _KanbanTaskCard({
+    required this.task,
+    required this.currentStatus,
+    required this.onMove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => context.push('/home/tasks/${task.id}'),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border(
+            left: BorderSide(color: _priorityColor(task.priority), width: 3),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    task.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'Move task',
+                  icon: const Icon(Icons.more_vert, size: 18),
+                  onSelected: (status) => onMove(task, status),
+                  itemBuilder: (context) => _kanbanColumns
+                      .where((column) => column.status != currentStatus)
+                      .map(
+                        (column) => PopupMenuItem(
+                          value: column.status,
+                          child: Text('Move to ${column.title}'),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            ),
+            if (task.dueAt != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Due ${task.dueAt!.substring(0, 10)}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _KanbanChip(label: task.priority),
+                if (task.estimatedMinutes != null)
+                  _KanbanChip(label: '${task.estimatedMinutes} min'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _KanbanChip extends StatelessWidget {
+  final String label;
+
+  const _KanbanChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _KanbanColumnData {
+  final String title;
+  final String status;
+  final String description;
+  final Color color;
+  final IconData icon;
+
+  const _KanbanColumnData({
+    required this.title,
+    required this.status,
+    required this.description,
+    required this.color,
+    required this.icon,
+  });
+}
+
+const _kanbanColumns = [
+  _KanbanColumnData(
+    title: 'Inbox',
+    status: 'pending',
+    description: 'Captured tasks ready to organize.',
+    color: AppColors.textSecondary,
+    icon: Icons.inbox_outlined,
+  ),
+  _KanbanColumnData(
+    title: 'Next',
+    status: 'next',
+    description: 'Ready to start soon.',
+    color: AppColors.primary,
+    icon: Icons.arrow_forward_outlined,
+  ),
+  _KanbanColumnData(
+    title: 'In Progress',
+    status: 'in_progress',
+    description: 'Currently being worked on.',
+    color: AppColors.warning,
+    icon: Icons.pending_actions_outlined,
+  ),
+  _KanbanColumnData(
+    title: 'Waiting',
+    status: 'waiting',
+    description: 'Blocked or waiting on someone.',
+    color: AppColors.prayerGold,
+    icon: Icons.hourglass_empty_outlined,
+  ),
+  _KanbanColumnData(
+    title: 'Done',
+    status: 'completed',
+    description: 'Finished tasks.',
+    color: AppColors.success,
+    icon: Icons.check_circle_outline,
+  ),
+];
+
+String _kanbanStatus(String status) {
+  if (status == 'next' || status == 'in_progress' || status == 'waiting') {
+    return status;
+  }
+  if (status == 'completed') return status;
+  return 'pending';
+}
+
+Color _priorityColor(String priority) {
+  return switch (priority) {
+    'high' => AppColors.error,
+    'medium' => AppColors.warning,
+    _ => AppColors.success,
+  };
 }
 
 class _EisenhowerMatrixView extends StatelessWidget {
@@ -796,7 +1104,7 @@ class _TaskCard extends ConsumerWidget {
         children: [
           GestureDetector(
             onTap: () {
-              if (task.status == 'pending') {
+              if (task.status != 'completed') {
                 ref.read(tasksProvider.notifier).completeTask(task.id);
               }
             },

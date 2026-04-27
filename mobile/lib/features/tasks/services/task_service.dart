@@ -78,6 +78,7 @@ class TaskService {
     String? reminderAt,
     String? category,
     int? estimatedMinutes,
+    String? status,
     bool clearDueAt = false,
     bool clearReminderAt = false,
   }) async {
@@ -98,6 +99,7 @@ class TaskService {
     }
     if (category != null) data['category'] = category;
     if (estimatedMinutes != null) data['estimated_minutes'] = estimatedMinutes;
+    if (status != null) data['status'] = status;
 
     final response = await _apiClient.dio.patch('/tasks/$taskId', data: data);
     return TaskModel.fromJson(response.data as Map<String, dynamic>);

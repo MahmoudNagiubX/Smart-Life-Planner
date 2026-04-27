@@ -90,6 +90,15 @@ class TaskUpdate(BaseModel):
     estimated_minutes: Optional[int] = None
     status: Optional[str] = None
 
+    @field_validator("status")
+    @classmethod
+    def status_valid(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if v not in ("pending", "next", "in_progress", "waiting", "completed"):
+            raise ValueError("Unsupported task status")
+        return v
+
 
 class TaskResponse(BaseModel):
     id: uuid.UUID
