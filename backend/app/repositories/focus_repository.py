@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.models.focus import FocusSession
@@ -108,9 +108,77 @@ async def get_focus_analytics(
     )
     week_minutes, week_sessions = week_result.one()
 
+    all_result = await db.execute(
+        select(
+            func.coalesce(func.sum(FocusSession.actual_minutes), 0),
+            func.count(FocusSession.id),
+        ).where(
+            FocusSession.user_id == user_id,
+            FocusSession.status == "completed",
+        )
+    )
+    total_minutes, completed_sessions = all_result.one()
+
+    days_result = await db.execute(
+        select(func.date(FocusSession.started_at))
+        .where(
+            FocusSession.user_id == user_id,
+            FocusSession.status == "completed",
+        )
+        .group_by(func.date(FocusSession.started_at))
+        .order_by(func.date(FocusSession.started_at))
+    )
+    def _to_date(value) -> date:
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        return datetime.fromisoformat(str(value)).date()
+
+    focus_days = sorted({_to_date(row[0]) for row in days_result.all()})
+    focus_day_set = set(focus_days)
+
+    current_streak = 0
+    cursor = now.date()
+    if cursor not in focus_day_set and cursor - timedelta(days=1) in focus_day_set:
+        cursor = cursor - timedelta(days=1)
+    while cursor in focus_day_set:
+        current_streak += 1
+        cursor = cursor - timedelta(days=1)
+
+    longest_streak = 0
+    running_streak = 0
+    previous_day = None
+    for focus_day in focus_days:
+        if previous_day and focus_day == previous_day + timedelta(days=1):
+            running_streak += 1
+        else:
+            running_streak = 1
+        longest_streak = max(longest_streak, running_streak)
+        previous_day = focus_day
+
+    average_session_minutes = (
+        int(total_minutes / completed_sessions) if completed_sessions else 0
+    )
+    if today_sessions:
+        report_summary = (
+            f"Completed {today_sessions} focus session"
+            f"{'s' if today_sessions != 1 else ''} today."
+        )
+    elif current_streak:
+        streak_label = "day" if current_streak == 1 else "days"
+        report_summary = f"Focus streak is active at {current_streak} {streak_label}."
+    else:
+        report_summary = "No completed focus sessions today yet."
+
     return {
         "today_minutes": today_minutes,
         "today_sessions": today_sessions,
         "week_minutes": week_minutes,
         "week_sessions": week_sessions,
+        "completed_sessions": completed_sessions,
+        "current_streak_days": current_streak,
+        "longest_streak_days": longest_streak,
+        "average_session_minutes": average_session_minutes,
+        "report_summary": report_summary,
     }

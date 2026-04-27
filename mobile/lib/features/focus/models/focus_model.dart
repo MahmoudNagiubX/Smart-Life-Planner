@@ -38,12 +38,22 @@ class FocusAnalytics {
   final int todaySessions;
   final int weekMinutes;
   final int weekSessions;
+  final int completedSessions;
+  final int currentStreakDays;
+  final int longestStreakDays;
+  final int averageSessionMinutes;
+  final String reportSummary;
 
   FocusAnalytics({
     required this.todayMinutes,
     required this.todaySessions,
     required this.weekMinutes,
     required this.weekSessions,
+    required this.completedSessions,
+    required this.currentStreakDays,
+    required this.longestStreakDays,
+    required this.averageSessionMinutes,
+    required this.reportSummary,
   });
 
   factory FocusAnalytics.fromJson(Map<String, dynamic> json) {
@@ -52,6 +62,13 @@ class FocusAnalytics {
       todaySessions: json['today_sessions'] as int,
       weekMinutes: json['week_minutes'] as int,
       weekSessions: json['week_sessions'] as int,
+      completedSessions: json['completed_sessions'] as int? ?? 0,
+      currentStreakDays: json['current_streak_days'] as int? ?? 0,
+      longestStreakDays: json['longest_streak_days'] as int? ?? 0,
+      averageSessionMinutes: json['average_session_minutes'] as int? ?? 0,
+      reportSummary:
+          json['report_summary'] as String? ??
+          'No completed focus sessions today yet.',
     );
   }
 }

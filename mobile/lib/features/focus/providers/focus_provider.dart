@@ -18,6 +18,12 @@ class FocusState {
   final bool isLoading;
   final String? error;
   final int remainingSeconds;
+  final int focusMinutes;
+  final int shortBreakMinutes;
+  final int longBreakMinutes;
+  final bool continuousMode;
+  final bool distractionFreeMode;
+  final FocusSession? lastCompletedSession;
 
   const FocusState({
     this.activeSession,
@@ -26,6 +32,12 @@ class FocusState {
     this.isLoading = false,
     this.error,
     this.remainingSeconds = 0,
+    this.focusMinutes = 25,
+    this.shortBreakMinutes = 5,
+    this.longBreakMinutes = 15,
+    this.continuousMode = false,
+    this.distractionFreeMode = false,
+    this.lastCompletedSession,
   });
 
   FocusState copyWith({
@@ -35,6 +47,12 @@ class FocusState {
     bool? isLoading,
     String? error,
     int? remainingSeconds,
+    int? focusMinutes,
+    int? shortBreakMinutes,
+    int? longBreakMinutes,
+    bool? continuousMode,
+    bool? distractionFreeMode,
+    FocusSession? lastCompletedSession,
     bool clearSession = false,
   }) {
     return FocusState(
@@ -44,6 +62,12 @@ class FocusState {
       isLoading: isLoading ?? this.isLoading,
       error: error,
       remainingSeconds: remainingSeconds ?? this.remainingSeconds,
+      focusMinutes: focusMinutes ?? this.focusMinutes,
+      shortBreakMinutes: shortBreakMinutes ?? this.shortBreakMinutes,
+      longBreakMinutes: longBreakMinutes ?? this.longBreakMinutes,
+      continuousMode: continuousMode ?? this.continuousMode,
+      distractionFreeMode: distractionFreeMode ?? this.distractionFreeMode,
+      lastCompletedSession: lastCompletedSession ?? this.lastCompletedSession,
     );
   }
 }
@@ -98,9 +122,47 @@ class FocusNotifier extends StateNotifier<FocusState> {
     } catch (_) {}
   }
 
+  void setFocusMinutes(int minutes) {
+    state = state.copyWith(focusMinutes: minutes.clamp(5, 120));
+  }
+
+  void setShortBreakMinutes(int minutes) {
+    state = state.copyWith(shortBreakMinutes: minutes.clamp(1, 30));
+  }
+
+  void setLongBreakMinutes(int minutes) {
+    state = state.copyWith(longBreakMinutes: minutes.clamp(5, 60));
+  }
+
+  void setContinuousMode(bool value) {
+    state = state.copyWith(continuousMode: value);
+  }
+
+  void setDistractionFreeMode(bool value) {
+    state = state.copyWith(distractionFreeMode: value);
+  }
+
+  Future<void> startFocusSession({String? taskId}) {
+    return startSession(
+      plannedMinutes: state.focusMinutes,
+      sessionType: 'pomodoro',
+      taskId: taskId,
+    );
+  }
+
+  Future<void> startBreakSession({required bool longBreak}) {
+    return startSession(
+      plannedMinutes: longBreak
+          ? state.longBreakMinutes
+          : state.shortBreakMinutes,
+      sessionType: longBreak ? 'long_break' : 'short_break',
+    );
+  }
+
   Future<void> startSession({
     required int plannedMinutes,
     String sessionType = 'pomodoro',
+    String? taskId,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -108,6 +170,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
       final session = await service.startSession(
         plannedMinutes: plannedMinutes,
         sessionType: sessionType,
+        taskId: taskId,
       );
 
       // Schedule completion notification
@@ -146,10 +209,32 @@ class FocusNotifier extends StateNotifier<FocusState> {
 
     try {
       final service = _ref.read(focusServiceProvider);
-      await service.completeSession(session.id);
-      state = state.copyWith(clearSession: true, remainingSeconds: 0);
+      final completed = await service.completeSession(session.id);
+      final shouldContinue = state.continuousMode;
+      state = state.copyWith(
+        clearSession: true,
+        remainingSeconds: 0,
+        lastCompletedSession: completed,
+      );
       await loadAnalytics();
+      if (shouldContinue) {
+        if (_isBreakSession(completed.sessionType)) {
+          await startFocusSession();
+        } else {
+          await startBreakSession(longBreak: false);
+        }
+      }
     } catch (_) {}
+  }
+
+  Future<void> skipBreak() async {
+    final session = state.activeSession;
+    if (session == null || !_isBreakSession(session.sessionType)) return;
+    final shouldContinue = state.continuousMode;
+    await cancelSession();
+    if (shouldContinue) {
+      await startFocusSession();
+    }
   }
 
   Future<void> cancelSession() async {
@@ -180,6 +265,10 @@ class FocusNotifier extends StateNotifier<FocusState> {
         state = state.copyWith(remainingSeconds: state.remainingSeconds - 1);
       }
     });
+  }
+
+  bool _isBreakSession(String sessionType) {
+    return sessionType == 'short_break' || sessionType == 'long_break';
   }
 
   @override
