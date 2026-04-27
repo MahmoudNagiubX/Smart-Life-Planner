@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../providers/qibla_provider.dart';
+import '../services/qibla_direction_service.dart';
 
 class QiblaScreen extends ConsumerStatefulWidget {
   const QiblaScreen({super.key});
@@ -45,13 +46,18 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(24),
                 children: [
-                  const _CompassPlaceholder(),
+                  _CompassPlaceholder(direction: state.referenceDirection),
                   const SizedBox(height: 24),
-                  _DirectionCard(hasLocationAccess: state.hasLocationAccess),
+                  _DirectionCard(
+                    hasLocationAccess: state.hasLocationAccess,
+                    referenceDirection: state.referenceDirection,
+                  ),
                   const SizedBox(height: 16),
                   _PermissionCard(permissionState: state.permissionState),
                   const SizedBox(height: 16),
-                  const _SensorStatusCard(),
+                  _SensorStatusCard(
+                    isReady: state.compassSensorIntegrationReady,
+                  ),
                 ],
               ),
             ),
@@ -60,10 +66,14 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
 }
 
 class _CompassPlaceholder extends StatelessWidget {
-  const _CompassPlaceholder();
+  final QiblaDirection? direction;
+
+  const _CompassPlaceholder({required this.direction});
 
   @override
   Widget build(BuildContext context) {
+    final bearing = direction?.bearingDegrees ?? 0;
+
     return Center(
       child: SizedBox(
         width: 260,
@@ -86,7 +96,7 @@ class _CompassPlaceholder extends StatelessWidget {
             const Positioned(bottom: 18, child: _CompassLabel('S')),
             const Positioned(left: 22, child: _CompassLabel('W')),
             Transform.rotate(
-              angle: -math.pi / 5,
+              angle: bearing * math.pi / 180,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -111,6 +121,17 @@ class _CompassPlaceholder extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
+            if (direction != null)
+              Positioned(
+                bottom: 58,
+                child: Text(
+                  '${direction!.displayDegrees} ${direction!.compassLabel}',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.prayerGold,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -137,8 +158,12 @@ class _CompassLabel extends StatelessWidget {
 
 class _DirectionCard extends StatelessWidget {
   final bool hasLocationAccess;
+  final QiblaDirection? referenceDirection;
 
-  const _DirectionCard({required this.hasLocationAccess});
+  const _DirectionCard({
+    required this.hasLocationAccess,
+    required this.referenceDirection,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -160,11 +185,55 @@ class _DirectionCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             hasLocationAccess
-                ? 'Bearing calculation will use your current city or device location when the calculation service is connected.'
-                : 'You can still use prayer features without location, but Qibla direction cannot be calculated precisely yet.',
+                ? 'The calculation service is ready for device or saved-city coordinates.'
+                : 'You can still use prayer features without location. Qibla can use saved-city coordinates once available.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.textSecondary,
               height: 1.45,
+            ),
+          ),
+          if (referenceDirection != null) ...[
+            const SizedBox(height: 14),
+            _BearingSummary(
+              label: 'Cairo reference',
+              direction: referenceDirection!,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BearingSummary extends StatelessWidget {
+  final String label;
+  final QiblaDirection direction;
+
+  const _BearingSummary({required this.label, required this.direction});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.prayerGold.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.place_outlined,
+            color: AppColors.prayerGold,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '$label: ${direction.displayDegrees} ${direction.compassLabel}',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -289,16 +358,20 @@ class _PermissionCard extends ConsumerWidget {
 }
 
 class _SensorStatusCard extends StatelessWidget {
-  const _SensorStatusCard();
+  final bool isReady;
+
+  const _SensorStatusCard({required this.isReady});
 
   @override
   Widget build(BuildContext context) {
     return _QiblaInfoCard(
       icon: Icons.sensors_outlined,
       title: 'Compass Sensor',
-      accentColor: AppColors.primary,
+      accentColor: isReady ? AppColors.success : AppColors.primary,
       child: Text(
-        'Live compass sensor integration is not active yet. The screen is ready for the bearing and sensor service in the next step.',
+        isReady
+            ? 'Compass sensor integration is available.'
+            : 'Live compass sensor integration is not active yet. Bearing calculation works without sensors and the UI is ready for a sensor stream.',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: AppColors.textSecondary,
           height: 1.45,
