@@ -4,6 +4,7 @@ import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
 import '../models/prayer_model.dart';
+import 'ramadan_settings_provider.dart';
 import '../services/prayer_service.dart';
 
 final prayerServiceProvider = Provider<PrayerService>((ref) {
@@ -40,6 +41,9 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
 
       await _ref.read(notificationSchedulerProvider).cancelAllPrayerReminders();
       await _schedulePrayerReminders(data);
+      await _ref
+          .read(ramadanSettingsProvider.notifier)
+          .syncRemindersForPrayers(data.prayers);
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,

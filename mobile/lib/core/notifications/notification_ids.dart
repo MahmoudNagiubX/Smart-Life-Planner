@@ -15,6 +15,10 @@ class NotificationIds {
     return 20000 + (index >= 0 ? index : 0);
   }
 
+  // Ramadan: base 25000
+  static const ramadanSuhoor = 25001;
+  static const ramadanIftar = 25002;
+
   // Habits: base 30000
   static int habitReminder(String habitId) =>
       30000 + habitId.hashCode.abs() % 10000;

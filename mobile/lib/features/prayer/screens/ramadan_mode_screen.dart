@@ -33,6 +33,24 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
     ]);
   }
 
+  Future<void> _updateRamadanSettings({
+    bool? ramadanModeEnabled,
+    bool? suhoorReminderEnabled,
+    int? suhoorReminderMinutesBeforeFajr,
+  }) async {
+    final notifier = ref.read(ramadanSettingsProvider.notifier);
+    await notifier.updateSettings(
+      ramadanModeEnabled: ramadanModeEnabled,
+      suhoorReminderEnabled: suhoorReminderEnabled,
+      suhoorReminderMinutesBeforeFajr: suhoorReminderMinutesBeforeFajr,
+    );
+
+    final prayers = ref.read(prayerProvider).data?.prayers;
+    if (prayers != null) {
+      await notifier.syncRemindersForPrayers(prayers);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ramadanState = ref.watch(ramadanSettingsProvider);
@@ -65,9 +83,20 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
                     prayers: prayerState.data?.prayers ?? const [],
                   ),
                   const SizedBox(height: 16),
-                  _RamadanModeToggle(settings: settings ?? _fallbackSettings),
+                  _RamadanModeToggle(
+                    settings: settings ?? _fallbackSettings,
+                    onChanged: (value) =>
+                        _updateRamadanSettings(ramadanModeEnabled: value),
+                  ),
                   const SizedBox(height: 16),
-                  _SuhoorReminderCard(settings: settings ?? _fallbackSettings),
+                  _SuhoorReminderCard(
+                    settings: settings ?? _fallbackSettings,
+                    onReminderEnabledChanged: (value) =>
+                        _updateRamadanSettings(suhoorReminderEnabled: value),
+                    onReminderMinutesChanged: (value) => _updateRamadanSettings(
+                      suhoorReminderMinutesBeforeFajr: value,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   _IftarTimeCard(
                     prayers: prayerState.data?.prayers ?? const [],
@@ -192,13 +221,14 @@ class _FastingStatus {
   const _FastingStatus({required this.title, required this.message});
 }
 
-class _RamadanModeToggle extends ConsumerWidget {
+class _RamadanModeToggle extends StatelessWidget {
   final RamadanSettings settings;
+  final ValueChanged<bool> onChanged;
 
-  const _RamadanModeToggle({required this.settings});
+  const _RamadanModeToggle({required this.settings, required this.onChanged});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return _RamadanCard(
       icon: Icons.toggle_on_outlined,
       title: 'Ramadan Mode',
@@ -211,23 +241,25 @@ class _RamadanModeToggle extends ConsumerWidget {
         subtitle: const Text(
           'Shows fasting status, Suhoor preference, and Iftar from Maghrib.',
         ),
-        onChanged: (value) => ref
-            .read(ramadanSettingsProvider.notifier)
-            .updateSettings(ramadanModeEnabled: value),
+        onChanged: onChanged,
       ),
     );
   }
 }
 
-class _SuhoorReminderCard extends ConsumerWidget {
+class _SuhoorReminderCard extends StatelessWidget {
   final RamadanSettings settings;
+  final ValueChanged<bool> onReminderEnabledChanged;
+  final ValueChanged<int> onReminderMinutesChanged;
 
-  const _SuhoorReminderCard({required this.settings});
+  const _SuhoorReminderCard({
+    required this.settings,
+    required this.onReminderEnabledChanged,
+    required this.onReminderMinutesChanged,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(ramadanSettingsProvider.notifier);
-
+  Widget build(BuildContext context) {
     return _RamadanCard(
       icon: Icons.alarm_outlined,
       title: 'Suhoor Reminder',
@@ -241,8 +273,7 @@ class _SuhoorReminderCard extends ConsumerWidget {
             subtitle: Text(
               '${settings.suhoorReminderMinutesBeforeFajr} minutes before Fajr',
             ),
-            onChanged: (value) =>
-                notifier.updateSettings(suhoorReminderEnabled: value),
+            onChanged: onReminderEnabledChanged,
           ),
           const SizedBox(height: 8),
           Row(
@@ -251,9 +282,8 @@ class _SuhoorReminderCard extends ConsumerWidget {
                 tooltip: 'Decrease',
                 onPressed: settings.suhoorReminderMinutesBeforeFajr <= 5
                     ? null
-                    : () => notifier.updateSettings(
-                        suhoorReminderMinutesBeforeFajr:
-                            settings.suhoorReminderMinutesBeforeFajr - 5,
+                    : () => onReminderMinutesChanged(
+                        settings.suhoorReminderMinutesBeforeFajr - 5,
                       ),
                 icon: const Icon(Icons.remove_circle_outline),
               ),
@@ -267,9 +297,7 @@ class _SuhoorReminderCard extends ConsumerWidget {
                   divisions: 23,
                   label: '${settings.suhoorReminderMinutesBeforeFajr} minutes',
                   onChanged: settings.suhoorReminderEnabled
-                      ? (value) => notifier.updateSettings(
-                          suhoorReminderMinutesBeforeFajr: value.round(),
-                        )
+                      ? (value) => onReminderMinutesChanged(value.round())
                       : null,
                 ),
               ),
@@ -277,9 +305,8 @@ class _SuhoorReminderCard extends ConsumerWidget {
                 tooltip: 'Increase',
                 onPressed: settings.suhoorReminderMinutesBeforeFajr >= 120
                     ? null
-                    : () => notifier.updateSettings(
-                        suhoorReminderMinutesBeforeFajr:
-                            settings.suhoorReminderMinutesBeforeFajr + 5,
+                    : () => onReminderMinutesChanged(
+                        settings.suhoorReminderMinutesBeforeFajr + 5,
                       ),
                 icon: const Icon(Icons.add_circle_outline),
               ),

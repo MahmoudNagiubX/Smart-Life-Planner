@@ -74,6 +74,43 @@ class NotificationScheduler {
 
   // ── Tasks ──────────────────────────────────────────────
 
+  // Ramadan
+  Future<void> scheduleRamadanSuhoorReminder({
+    required DateTime fajrAt,
+    required int minutesBeforeFajr,
+  }) async {
+    final fireAt = fajrAt.subtract(Duration(minutes: minutesBeforeFajr));
+    if (fireAt.isBefore(DateTime.now())) return;
+
+    await _service.scheduleNotification(
+      id: NotificationIds.ramadanSuhoor,
+      title: 'Suhoor Reminder',
+      body: 'Fajr is in $minutesBeforeFajr minutes.',
+      scheduledAt: fireAt,
+      payload: 'ramadan:suhoor',
+    );
+  }
+
+  Future<void> scheduleRamadanIftarReminder({
+    required DateTime maghribAt,
+  }) async {
+    if (maghribAt.isBefore(DateTime.now())) return;
+
+    await _service.scheduleNotification(
+      id: NotificationIds.ramadanIftar,
+      title: 'Iftar Time',
+      body: 'Maghrib has started. Iftar time is now.',
+      scheduledAt: maghribAt,
+      payload: 'ramadan:iftar',
+    );
+  }
+
+  Future<void> cancelRamadanReminders() async {
+    await _service.cancelNotification(NotificationIds.ramadanSuhoor);
+    await _service.cancelNotification(NotificationIds.ramadanIftar);
+  }
+
+  // Tasks
   Future<void> scheduleTaskReminder({
     required String taskId,
     required String taskTitle,
