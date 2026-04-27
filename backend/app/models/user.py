@@ -73,6 +73,12 @@ class UserSettings(Base):
     )
     prayer_location_lat: Mapped[float | None] = mapped_column(nullable=True)
     prayer_location_lng: Mapped[float | None] = mapped_column(nullable=True)
+    prayer_reminder_minutes_before: Mapped[int] = mapped_column(
+        Integer, default=10, nullable=False
+    )
+    athan_sound_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     theme: Mapped[str] = mapped_column(String(20), default="dark", nullable=False)
     notifications_enabled: Mapped[bool] = mapped_column(
         Boolean, default=True, nullable=False

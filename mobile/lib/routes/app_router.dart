@@ -22,6 +22,7 @@ import '../features/ai/screens/daily_plan_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
+import '../features/prayer/screens/prayer_settings_screen.dart';
 import '../features/prayer/screens/qibla_screen.dart';
 import '../features/prayer/screens/ramadan_mode_screen.dart';
 import '../features/voice/screens/voice_capture_screen.dart';
@@ -200,12 +201,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.prayerSettings,
-            builder: (context, state) => const FeaturePlaceholderScreen(
-              title: 'Prayer Settings',
-              description: 'Calculation method, location, and reminder timing.',
-              icon: Icons.tune,
-              accentColor: AppColors.prayerGold,
-            ),
+            builder: (context, state) => const PrayerSettingsScreen(),
           ),
           GoRoute(
             path: AppRoutes.profile,

@@ -4,6 +4,7 @@ import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
 import '../models/prayer_model.dart';
+import 'prayer_settings_provider.dart';
 import 'ramadan_settings_provider.dart';
 import '../services/prayer_service.dart';
 
@@ -54,6 +55,12 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
 
   Future<void> _schedulePrayerReminders(DailyPrayers data) async {
     final scheduler = _ref.read(notificationSchedulerProvider);
+    final reminderMinutes =
+        _ref
+            .read(prayerSettingsProvider)
+            .settings
+            ?.prayerReminderMinutesBefore ??
+        10;
     for (final prayer in data.prayers) {
       if (!prayer.completed && prayer.scheduledAt != null) {
         try {
@@ -61,6 +68,7 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
           await scheduler.schedulePrayerReminder(
             prayerName: prayer.prayerName,
             scheduledAt: scheduledAt,
+            minutesBefore: reminderMinutes,
           );
         } catch (_) {}
       } else {

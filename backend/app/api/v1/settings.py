@@ -15,6 +15,8 @@ PRAYER_REMINDER_FIELDS = {
     "prayer_calculation_method",
     "prayer_location_lat",
     "prayer_location_lng",
+    "prayer_reminder_minutes_before",
+    "athan_sound_enabled",
     "timezone",
 }
 

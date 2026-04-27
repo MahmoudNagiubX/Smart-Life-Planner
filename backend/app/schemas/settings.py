@@ -107,6 +107,8 @@ class SettingsResponse(BaseModel):
     prayer_calculation_method: str
     prayer_location_lat: Optional[float]
     prayer_location_lng: Optional[float]
+    prayer_reminder_minutes_before: int
+    athan_sound_enabled: bool
     theme: str
     notifications_enabled: bool
 
@@ -138,6 +140,10 @@ class SettingsUpdate(BaseModel):
     prayer_calculation_method: Optional[str] = None
     prayer_location_lat: Optional[float] = None
     prayer_location_lng: Optional[float] = None
+    prayer_reminder_minutes_before: Optional[int] = Field(
+        default=None, ge=0, le=120
+    )
+    athan_sound_enabled: Optional[bool] = None
     theme: Optional[str] = None
     notifications_enabled: Optional[bool] = None
 
