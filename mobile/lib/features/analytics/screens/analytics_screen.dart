@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_empty_state.dart';
 import '../providers/analytics_provider.dart';
 import '../models/analytics_model.dart';
 
@@ -79,7 +80,14 @@ class _TodayTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final today = state.today;
-    if (today == null) return const Center(child: Text('No data yet'));
+    if (today == null || _hasNoTodayData(today)) {
+      return const AppEmptyState(
+        icon: Icons.insights_outlined,
+        title: 'No analytics data yet',
+        message:
+            'Complete tasks, focus sessions, habits, or prayers to unlock analytics.',
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: () => ProviderScope.containerOf(
@@ -164,6 +172,17 @@ class _TodayTab extends StatelessWidget {
       ),
     );
   }
+
+  bool _hasNoTodayData(TodayAnalytics today) {
+    return today.tasksCompleted == 0 &&
+        today.tasksPending == 0 &&
+        today.focusMinutes == 0 &&
+        today.focusSessions == 0 &&
+        today.habitsCompleted == 0 &&
+        today.totalHabits == 0 &&
+        today.prayersCompleted == 0 &&
+        today.productivityScore == 0;
+  }
 }
 
 // ── Weekly Tab ──────────────────────────────────────────────
@@ -176,7 +195,14 @@ class _WeeklyTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final weekly = state.weekly;
-    if (weekly == null) return const Center(child: Text('No data yet'));
+    if (weekly == null || _hasNoWeeklyData(weekly)) {
+      return const AppEmptyState(
+        icon: Icons.insights_outlined,
+        title: 'No analytics data yet',
+        message:
+            'Complete tasks, focus sessions, habits, or prayers to unlock analytics.',
+      );
+    }
 
     final maxFocus = weekly.dailyBreakdown
         .map((d) => d.focusMinutes)
@@ -323,6 +349,24 @@ class _WeeklyTab extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _hasNoWeeklyData(WeeklyAnalytics weekly) {
+    final hasBreakdownActivity = weekly.dailyBreakdown.any(
+      (day) =>
+          day.tasksCompleted > 0 ||
+          day.focusMinutes > 0 ||
+          day.habitsCompleted > 0 ||
+          day.prayersCompleted > 0,
+    );
+
+    return weekly.totalTasksCompleted == 0 &&
+        weekly.totalFocusMinutes == 0 &&
+        weekly.totalHabitsLogged == 0 &&
+        weekly.totalPrayersCompleted == 0 &&
+        weekly.bestHabitStreak == 0 &&
+        weekly.avgProductivityScore == 0 &&
+        !hasBreakdownActivity;
   }
 }
 

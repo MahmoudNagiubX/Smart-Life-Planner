@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_empty_state.dart';
 import '../../voice/screens/voice_note_sheet.dart';
 import '../providers/note_provider.dart';
 import '../models/note_model.dart';
@@ -77,11 +78,11 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 : state.error != null
                 ? Center(child: Text(state.error!))
                 : state.notes.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No notes yet.\nTap + to create one! 📝',
-                      textAlign: TextAlign.center,
-                    ),
+                ? const AppEmptyState(
+                    icon: Icons.note_add_outlined,
+                    title: 'No notes yet',
+                    message:
+                        'Capture a note, idea, or voice transcript when you are ready.',
                   )
                 : RefreshIndicator(
                     onRefresh: () =>

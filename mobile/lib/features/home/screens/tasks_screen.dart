@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_empty_state.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/screens/create_task_sheet.dart';
@@ -52,22 +53,24 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.error != null
-              ? Center(child: Text(state.error!))
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _TaskList(
-                      tasks: state.tasks
-                          .where((t) => t.status == 'pending')
-                          .toList(),
-                    ),
-                    _TaskList(
-                      tasks: state.tasks
-                          .where((t) => t.status == 'completed')
-                          .toList(),
-                    ),
-                  ],
+          ? Center(child: Text(state.error!))
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _TaskList(
+                  tasks: state.tasks
+                      .where((t) => t.status == 'pending')
+                      .toList(),
+                  status: 'pending',
                 ),
+                _TaskList(
+                  tasks: state.tasks
+                      .where((t) => t.status == 'completed')
+                      .toList(),
+                  status: 'completed',
+                ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showModalBottomSheet(
           context: context,
@@ -83,14 +86,23 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
 
 class _TaskList extends ConsumerWidget {
   final List<TaskModel> tasks;
+  final String status;
 
-  const _TaskList({required this.tasks});
+  const _TaskList({required this.tasks, required this.status});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (tasks.isEmpty) {
-      return const Center(
-        child: Text('No tasks here 🎉'),
+      final isCompletedTab = status == 'completed';
+      return AppEmptyState(
+        icon: isCompletedTab
+            ? Icons.check_circle_outline
+            : Icons.task_alt_outlined,
+        title: isCompletedTab ? 'No completed tasks' : 'No tasks yet',
+        message: isCompletedTab
+            ? 'Completed tasks will appear here after you finish them.'
+            : 'Create your first task to start planning the day.',
+        accentColor: isCompletedTab ? AppColors.success : AppColors.primary,
       );
     }
 
@@ -130,10 +142,7 @@ class _TaskCard extends ConsumerWidget {
         color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
         border: Border(
-          left: BorderSide(
-            color: _priorityColor(task.priority),
-            width: 4,
-          ),
+          left: BorderSide(color: _priorityColor(task.priority), width: 4),
         ),
       ),
       child: Row(

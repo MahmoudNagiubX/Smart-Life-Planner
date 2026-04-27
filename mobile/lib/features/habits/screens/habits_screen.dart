@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_empty_state.dart';
 import '../providers/habit_provider.dart';
 import '../models/habit_model.dart';
 import 'create_habit_sheet.dart';
@@ -35,31 +36,31 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.error != null
-              ? Center(child: Text(state.error!))
-              : state.habits.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No habits yet.\nTap + to build your first habit! 💪',
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () =>
-                          ref.read(habitsProvider.notifier).loadHabits(),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: state.habits.length,
-                        itemBuilder: (context, index) {
-                          final habit = state.habits[index];
-                          final isCompleted =
-                              state.completedTodayIds.contains(habit.id);
-                          return _HabitCard(
-                            habit: habit,
-                            isCompletedToday: isCompleted,
-                          );
-                        },
-                      ),
-                    ),
+          ? Center(child: Text(state.error!))
+          : state.habits.isEmpty
+          ? const AppEmptyState(
+              icon: Icons.local_fire_department_outlined,
+              title: 'No habits yet',
+              message: 'Create a small daily habit to start building momentum.',
+              accentColor: AppColors.warning,
+            )
+          : RefreshIndicator(
+              onRefresh: () => ref.read(habitsProvider.notifier).loadHabits(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: state.habits.length,
+                itemBuilder: (context, index) {
+                  final habit = state.habits[index];
+                  final isCompleted = state.completedTodayIds.contains(
+                    habit.id,
+                  );
+                  return _HabitCard(
+                    habit: habit,
+                    isCompletedToday: isCompleted,
+                  );
+                },
+              ),
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await showModalBottomSheet(
@@ -83,10 +84,7 @@ class _HabitCard extends ConsumerWidget {
   final HabitModel habit;
   final bool isCompletedToday;
 
-  const _HabitCard({
-    required this.habit,
-    required this.isCompletedToday,
-  });
+  const _HabitCard({required this.habit, required this.isCompletedToday});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -95,12 +93,12 @@ class _HabitCard extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isCompletedToday
-            ? AppColors.success.withOpacity(0.1)
+            ? AppColors.success.withValues(alpha: 0.1)
             : Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCompletedToday
-              ? AppColors.success.withOpacity(0.4)
+              ? AppColors.success.withValues(alpha: 0.4)
               : Colors.transparent,
         ),
       ),
@@ -111,7 +109,7 @@ class _HabitCard extends ConsumerWidget {
             onTap: isCompletedToday
                 ? null
                 : () =>
-                    ref.read(habitsProvider.notifier).completeHabit(habit.id),
+                      ref.read(habitsProvider.notifier).completeHabit(habit.id),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: 36,
@@ -153,29 +151,32 @@ class _HabitCard extends ConsumerWidget {
                   Text(
                     habit.description!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                      color: AppColors.textSecondary,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.local_fire_department,
-                        size: 14, color: AppColors.warning),
+                    const Icon(
+                      Icons.local_fire_department,
+                      size: 14,
+                      color: AppColors.warning,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${habit.currentStreak} day streak',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.warning,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       habit.frequencyType,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -194,10 +195,7 @@ class _HabitCard extends ConsumerWidget {
             itemBuilder: (_) => [
               const PopupMenuItem(
                 value: 'delete',
-                child: Text(
-                  'Delete',
-                  style: TextStyle(color: AppColors.error),
-                ),
+                child: Text('Delete', style: TextStyle(color: AppColors.error)),
               ),
             ],
           ),
