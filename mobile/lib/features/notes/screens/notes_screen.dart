@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
@@ -194,13 +195,20 @@ class _NoteCard extends ConsumerWidget {
               ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, size: 18),
-                onSelected: (value) {
+                onSelected: (value) async {
                   if (value == 'pin') {
                     ref
                         .read(notesProvider.notifier)
                         .togglePin(note.id, note.isPinned);
                   } else if (value == 'delete') {
-                    ref.read(notesProvider.notifier).deleteNote(note.id);
+                    final confirmed = await confirmDestructiveAction(
+                      context: context,
+                      title: 'Delete Note',
+                      message:
+                          'Delete "${note.title ?? 'Untitled'}"? This note will be removed.',
+                    );
+                    if (!confirmed) return;
+                    await ref.read(notesProvider.notifier).deleteNote(note.id);
                   }
                 },
                 itemBuilder: (_) => [

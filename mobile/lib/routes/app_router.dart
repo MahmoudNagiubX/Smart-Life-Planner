@@ -138,6 +138,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               title: 'Project Details',
               description: 'Project task lists and progress will appear here.',
               icon: Icons.folder_outlined,
+              destructiveActionLabel: 'Delete Project',
+              destructiveActionTitle: 'Delete Project',
+              destructiveActionMessage:
+                  'Delete this project? Project deletion will require confirmation before any data is removed.',
+              destructiveActionDoneMessage:
+                  'Project deletion is not active on this placeholder screen.',
             ),
           ),
           GoRoute(
@@ -231,6 +237,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               title: 'Journal',
               description: 'Daily reflections and journal entries.',
               icon: Icons.auto_stories_outlined,
+              destructiveActionLabel: 'Delete Journal Entry',
+              destructiveActionTitle: 'Delete Journal Entry',
+              destructiveActionMessage:
+                  'Delete this journal entry? This action will require confirmation before anything is removed.',
+              destructiveActionDoneMessage:
+                  'Journal deletion is not active on this placeholder screen.',
             ),
           ),
           GoRoute(
@@ -239,6 +251,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               title: 'Settings',
               description: 'Account, app preferences, and privacy controls.',
               icon: Icons.settings_outlined,
+              destructiveActionLabel: 'Clear Local Cache',
+              destructiveActionTitle: 'Clear Local Cache',
+              destructiveActionMessage:
+                  'Clear local cache on this device? This may remove downloaded or temporary app data.',
+              destructiveActionDoneMessage:
+                  'Local cache clearing is not active on this placeholder screen.',
             ),
           ),
           GoRoute(

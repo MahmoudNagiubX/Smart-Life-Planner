@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
@@ -192,8 +193,16 @@ class _TaskCard extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, size: 20),
-            onPressed: () =>
-                ref.read(tasksProvider.notifier).deleteTask(task.id),
+            onPressed: () async {
+              final confirmed = await confirmDestructiveAction(
+                context: context,
+                title: 'Delete Task',
+                message:
+                    'Delete "${task.title}"? This task will be removed from your active list.',
+              );
+              if (!confirmed) return;
+              await ref.read(tasksProvider.notifier).deleteTask(task.id);
+            },
           ),
         ],
       ),

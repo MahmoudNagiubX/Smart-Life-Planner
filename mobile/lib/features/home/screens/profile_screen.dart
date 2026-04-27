@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../routes/app_routes.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 
@@ -64,7 +65,9 @@ class ProfileScreen extends ConsumerWidget {
         if (input.isEmpty) return;
 
         final isSocial = input.toUpperCase() == 'DELETE';
-        final success = await ref.read(authProvider.notifier).deleteAccount(
+        final success = await ref
+            .read(authProvider.notifier)
+            .deleteAccount(
               password: isSocial ? null : input,
               confirmation: isSocial ? 'DELETE' : null,
             );
@@ -186,6 +189,13 @@ class ProfileScreen extends ConsumerWidget {
               // Sign out
               ElevatedButton.icon(
                 onPressed: () async {
+                  final confirmed = await confirmDestructiveAction(
+                    context: context,
+                    title: 'Sign Out',
+                    message: 'Sign out of Smart Life Planner on this device?',
+                    confirmLabel: 'Sign Out',
+                  );
+                  if (!confirmed) return;
                   await ref.read(authProvider.notifier).logout();
                 },
                 icon: const Icon(Icons.logout),
@@ -198,7 +208,6 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
 
-
               const SizedBox(height: 24),
               const Divider(),
               const SizedBox(height: 16),
@@ -207,9 +216,9 @@ class ProfileScreen extends ConsumerWidget {
               Text(
                 'Danger Zone',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
@@ -229,7 +238,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 }
-
 
 class _MenuItem extends StatelessWidget {
   final IconData icon;

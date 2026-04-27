@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
@@ -193,9 +194,16 @@ class _HabitCard extends ConsumerWidget {
           // Delete button
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, size: 18),
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'delete') {
-                ref.read(habitsProvider.notifier).deleteHabit(habit.id);
+                final confirmed = await confirmDestructiveAction(
+                  context: context,
+                  title: 'Delete Habit',
+                  message:
+                      'Delete "${habit.title}"? This will remove the habit from your list.',
+                );
+                if (!confirmed) return;
+                await ref.read(habitsProvider.notifier).deleteHabit(habit.id);
               }
             },
             itemBuilder: (_) => [
