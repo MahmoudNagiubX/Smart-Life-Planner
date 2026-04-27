@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, field_validator
 from typing import Optional
 
@@ -38,3 +39,22 @@ class DailyPlanItem(BaseModel):
 class DailyPlanResponse(BaseModel):
     date: str
     plan: list[DailyPlanItem]
+
+class QuickCaptureClassifyRequest(BaseModel):
+    input_text: str
+
+    @field_validator("input_text")
+    @classmethod
+    def text_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("input_text cannot be empty")
+        return v.strip()
+
+class QuickCaptureClassifyResponse(BaseModel):
+    capture_type: str
+    confidence: str
+    title: str
+    content: str
+    checklist_items: list[str] = []
+    reminder_at: Optional[datetime] = None
+    reason: str

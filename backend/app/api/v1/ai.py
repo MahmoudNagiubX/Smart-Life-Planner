@@ -10,6 +10,8 @@ from app.schemas.ai import (
     DailyPlanRequest,
     DailyPlanResponse,
     DailyPlanItem,
+    QuickCaptureClassifyRequest,
+    QuickCaptureClassifyResponse,
 )
 from app.repositories.task_repository import get_tasks
 from app.repositories.prayer_repository import get_prayer_logs_for_date
@@ -19,6 +21,7 @@ from app.services.ai_service import (
     generate_daily_plan,
 )
 from app.services.ai_fallback import parse_task_fallback, parse_task_response
+from app.services.quick_capture_classifier import classify_quick_capture
 from app.core.config import settings
 from app.core.logging import logger
 
@@ -57,6 +60,17 @@ async def parse_task(
             },
         )
         return parse_task_fallback(payload.input_text, "ai_service_failure")
+
+
+@router.post("/classify-capture", response_model=QuickCaptureClassifyResponse)
+async def classify_capture(
+    payload: QuickCaptureClassifyRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return QuickCaptureClassifyResponse(
+        **classify_quick_capture(payload.input_text)
+    )
 
 
 @router.get("/next-action", response_model=NextActionResponse)

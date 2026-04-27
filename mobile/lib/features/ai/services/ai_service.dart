@@ -13,6 +13,14 @@ class AiService {
     return response.data as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> classifyCapture(String inputText) async {
+    final response = await _apiClient.dio.post(
+      '/ai/classify-capture',
+      data: {'input_text': inputText},
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> getNextAction() async {
     final response = await _apiClient.dio.get('/ai/next-action');
     return response.data as Map<String, dynamic>;
