@@ -6,24 +6,38 @@ class NoteService {
 
   NoteService(this._apiClient);
 
-  Future<List<NoteModel>> getNotes({String? search}) async {
+  Future<List<NoteModel>> getNotes({String? search, String? tag}) async {
+    final queryParameters = <String, dynamic>{};
+    if (search != null && search.isNotEmpty) {
+      queryParameters['search'] = search;
+    }
+    if (tag != null && tag.isNotEmpty) {
+      queryParameters['tag'] = tag;
+    }
+
     final response = await _apiClient.dio.get(
       '/notes',
-      queryParameters: search != null ? {'search': search} : null,
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
     return (response.data as List<dynamic>)
         .map((n) => NoteModel.fromJson(n as Map<String, dynamic>))
         .toList();
   }
 
-  Future<NoteModel> createNote({required String content, String? title}) async {
-    final response = await _apiClient.dio.post(
-      '/notes',
-      data: {
-        'content': content,
-        if (title != null && title.isNotEmpty) 'title': title,
-      },
-    );
+  Future<NoteModel> createNote({
+    required String content,
+    String? title,
+    List<String>? tags,
+  }) async {
+    final data = <String, dynamic>{'content': content};
+    if (title != null && title.isNotEmpty) {
+      data['title'] = title;
+    }
+    if (tags != null) {
+      data['tags'] = tags;
+    }
+
+    final response = await _apiClient.dio.post('/notes', data: data);
     return NoteModel.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -31,12 +45,19 @@ class NoteService {
     required String noteId,
     String? title,
     String? content,
+    List<String>? tags,
     bool? isPinned,
   }) async {
-    final response = await _apiClient.dio.patch(
-      '/notes/$noteId',
-      data: {'title': ?title, 'content': ?content, 'is_pinned': ?isPinned},
-    );
+    final data = <String, dynamic>{
+      'title': ?title,
+      'content': ?content,
+      'is_pinned': ?isPinned,
+    };
+    if (tags != null) {
+      data['tags'] = tags;
+    }
+
+    final response = await _apiClient.dio.patch('/notes/$noteId', data: data);
     return NoteModel.fromJson(response.data as Map<String, dynamic>);
   }
 

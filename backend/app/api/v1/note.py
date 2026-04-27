@@ -15,11 +15,12 @@ router = APIRouter(prefix="/notes", tags=["notes"])
 @router.get("", response_model=list[NoteResponse])
 async def list_notes(
     search: Optional[str] = Query(None),
+    tag: Optional[str] = Query(None),
     is_archived: bool = Query(False),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await get_notes(db, current_user.id, search, is_archived)
+    return await get_notes(db, current_user.id, search, tag, is_archived)
 
 
 @router.post("", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
@@ -29,8 +30,6 @@ async def create_new_note(
     db: AsyncSession = Depends(get_db),
 ):
     data = payload.model_dump()
-    if data.get("tags"):
-        data["tags"] = data["tags"]
     return await create_note(db, current_user.id, data)
 
 

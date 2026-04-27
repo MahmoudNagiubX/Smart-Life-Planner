@@ -37,6 +37,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(notesProvider);
+    final selectedTag = state.selectedTag;
 
     return Scaffold(
       appBar: AppBar(
@@ -68,10 +69,57 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               onChanged: (value) {
                 ref
                     .read(notesProvider.notifier)
-                    .loadNotes(search: value.isEmpty ? null : value);
+                    .loadNotes(
+                      search: value.isEmpty ? null : value,
+                      tag: selectedTag,
+                    );
               },
             ),
           ),
+          if (state.availableTags.isNotEmpty || selectedTag != null) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  if (selectedTag != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ActionChip(
+                        avatar: const Icon(Icons.close, size: 16),
+                        label: Text('#$selectedTag'),
+                        onPressed: () => ref
+                            .read(notesProvider.notifier)
+                            .loadNotes(
+                              search: _searchController.text.trim().isEmpty
+                                  ? null
+                                  : _searchController.text.trim(),
+                            ),
+                      ),
+                    ),
+                  ...state.availableTags.map(
+                    (tag) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text('#$tag'),
+                        selected: tag == selectedTag,
+                        onSelected: (_) => ref
+                            .read(notesProvider.notifier)
+                            .loadNotes(
+                              search: _searchController.text.trim().isEmpty
+                                  ? null
+                                  : _searchController.text.trim(),
+                              tag: tag,
+                            ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
 
           // Notes list
@@ -85,15 +133,20 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                     onRetry: () => ref.read(notesProvider.notifier).loadNotes(),
                   )
                 : state.notes.isEmpty
-                ? const AppEmptyState(
+                ? AppEmptyState(
                     icon: Icons.note_add_outlined,
                     title: 'No notes yet',
-                    message:
-                        'Capture a note, idea, or voice transcript when you are ready.',
+                    message: selectedTag == null
+                        ? 'Capture a note, idea, or voice transcript when you are ready.'
+                        : 'No notes found with #$selectedTag.',
                   )
                 : RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(notesProvider.notifier).loadNotes(),
+                    onRefresh: () => ref
+                        .read(notesProvider.notifier)
+                        .loadNotes(
+                          search: state.search,
+                          tag: state.selectedTag,
+                        ),
                     child: ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: state.notes.length,
@@ -200,6 +253,12 @@ class _NoteCard extends ConsumerWidget {
                     ref
                         .read(notesProvider.notifier)
                         .togglePin(note.id, note.isPinned);
+                  } else if (value == 'tags') {
+                    final tags = await _showTagEditor(context, note.tags);
+                    if (tags == null) return;
+                    await ref
+                        .read(notesProvider.notifier)
+                        .updateTags(note.id, tags);
                   } else if (value == 'delete') {
                     final confirmed = await confirmDestructiveAction(
                       context: context,
@@ -216,6 +275,7 @@ class _NoteCard extends ConsumerWidget {
                     value: 'pin',
                     child: Text(note.isPinned ? 'Unpin' : 'Pin'),
                   ),
+                  const PopupMenuItem(value: 'tags', child: Text('Edit tags')),
                   const PopupMenuItem(
                     value: 'delete',
                     child: Text(
@@ -236,6 +296,23 @@ class _NoteCard extends ConsumerWidget {
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
+          if (note.tags.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: note.tags
+                  .map(
+                    (tag) => InkWell(
+                      borderRadius: BorderRadius.circular(999),
+                      onTap: () =>
+                          ref.read(notesProvider.notifier).loadNotes(tag: tag),
+                      child: _TagChip(tag: tag),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
             note.updatedAt.substring(0, 10),
@@ -244,6 +321,78 @@ class _NoteCard extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<List<String>?> _showTagEditor(
+    BuildContext context,
+    List<String> currentTags,
+  ) async {
+    final controller = TextEditingController(text: currentTags.join(', '));
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit tags'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Tags',
+            hintText: 'study, ideas, reflection',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.of(context).pop(_parseTags(controller.text)),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
+  List<String> _parseTags(String value) {
+    final tags = <String>[];
+    final seen = <String>{};
+    for (final raw in value.split(',')) {
+      final tag = raw.trim().toLowerCase().replaceFirst(RegExp(r'^#+'), '');
+      if (tag.isEmpty || seen.contains(tag)) continue;
+      seen.add(tag);
+      tags.add(tag);
+    }
+    return tags;
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  final String tag;
+
+  const _TagChip({required this.tag});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        '#$tag',
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

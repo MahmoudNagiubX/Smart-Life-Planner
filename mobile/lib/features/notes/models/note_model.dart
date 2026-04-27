@@ -27,7 +27,9 @@ class NoteModel {
       title: json['title'] as String?,
       content: json['content'] as String,
       noteType: json['note_type'] as String,
-      tags: (json['tags'] as List<dynamic>?)?.map((t) => t.toString()).toList() ?? [],
+      tags:
+          (json['tags'] as List<dynamic>?)?.map((t) => t.toString()).toList() ??
+          [],
       isPinned: json['is_pinned'] as bool,
       isArchived: json['is_archived'] as bool,
       createdAt: json['created_at'] as String,

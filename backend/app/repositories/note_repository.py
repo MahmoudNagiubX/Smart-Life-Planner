@@ -4,10 +4,18 @@ from sqlalchemy import select, or_
 from app.models.note import Note
 
 
+def normalize_note_tag(tag: str | None) -> str | None:
+    if tag is None:
+        return None
+    clean = tag.strip().lower().lstrip("#")
+    return clean or None
+
+
 async def get_notes(
     db: AsyncSession,
     user_id: uuid.UUID,
     search: str | None = None,
+    tag: str | None = None,
     is_archived: bool = False,
 ) -> list[Note]:
     query = (
@@ -22,6 +30,9 @@ async def get_notes(
                 Note.content.ilike(f"%{search}%"),
             )
         )
+    normalized_tag = normalize_note_tag(tag)
+    if normalized_tag:
+        query = query.where(Note.tags.contains([normalized_tag]))
     result = await db.execute(query)
     return list(result.scalars().all())
 

@@ -14,13 +14,27 @@ class CreateNoteSheet extends ConsumerStatefulWidget {
 class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
+  final _tagsController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _tagsController.dispose();
     super.dispose();
+  }
+
+  List<String> _parseTags() {
+    final tags = <String>[];
+    final seen = <String>{};
+    for (final raw in _tagsController.text.split(',')) {
+      final tag = raw.trim().toLowerCase().replaceFirst(RegExp(r'^#+'), '');
+      if (tag.isEmpty || seen.contains(tag)) continue;
+      seen.add(tag);
+      tags.add(tag);
+    }
+    return tags;
   }
 
   Future<void> _submit() async {
@@ -34,6 +48,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
           title: _titleController.text.trim().isEmpty
               ? null
               : _titleController.text.trim(),
+          tags: _parseTags(),
         );
 
     if (mounted) {
@@ -141,6 +156,15 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
             maxLines: 5,
             minLines: 3,
             decoration: const InputDecoration(labelText: 'Note content'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _tagsController,
+            decoration: const InputDecoration(
+              labelText: 'Tags',
+              hintText: 'study, ideas, reflection',
+              prefixIcon: Icon(Icons.label_outline),
+            ),
           ),
           const SizedBox(height: 20),
           _isLoading
