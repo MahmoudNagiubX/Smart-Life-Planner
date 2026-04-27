@@ -30,7 +30,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tasksProvider.notifier).loadTasks();
       ref.read(focusProvider.notifier).loadAnalytics();
@@ -64,9 +64,11 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Completed'),
+            Tab(text: 'Smart'),
             Tab(text: 'Kanban'),
             Tab(text: 'Matrix'),
             Tab(text: 'Calendar'),
@@ -95,6 +97,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                       .where((t) => t.status == 'completed')
                       .toList(),
                   status: 'completed',
+                ),
+                _SmartListsView(
+                  tasks: state.tasks.where((t) => !t.isDeleted).toList(),
                 ),
                 _KanbanBoardView(
                   tasks: state.tasks.where((t) => !t.isDeleted).toList(),
@@ -216,6 +221,262 @@ class _ProjectTimelinePicker extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SmartListsView extends StatefulWidget {
+  final List<TaskModel> tasks;
+
+  const _SmartListsView({required this.tasks});
+
+  @override
+  State<_SmartListsView> createState() => _SmartListsViewState();
+}
+
+class _SmartListsViewState extends State<_SmartListsView> {
+  String _selectedFilterId = _smartFilters.first.id;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeTasks = widget.tasks
+        .where((task) => task.status != 'completed')
+        .toList();
+    final selectedFilter = _smartFilters.firstWhere(
+      (filter) => filter.id == _selectedFilterId,
+      orElse: () => _smartFilters.first,
+    );
+    final filteredTasks = activeTasks.where(selectedFilter.matches).toList()
+      ..sort(selectedFilter.compare);
+
+    return RefreshIndicator(
+      onRefresh: () async {},
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            'Smart Lists',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Saved filters for the task views you check most often.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _smartFilters.map((filter) {
+              final count = activeTasks.where(filter.matches).length;
+              final selected = filter.id == _selectedFilterId;
+              return ChoiceChip(
+                avatar: Icon(filter.icon, size: 16),
+                label: Text('${filter.title} ($count)'),
+                selected: selected,
+                onSelected: (_) {
+                  setState(() => _selectedFilterId = filter.id);
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: selectedFilter.color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: selectedFilter.color.withValues(alpha: 0.22),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(selectedFilter.icon, color: selectedFilter.color),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        selectedFilter.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        selectedFilter.description,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (filteredTasks.isEmpty)
+            AppEmptyState(
+              icon: selectedFilter.icon,
+              title: 'No matching tasks',
+              message: selectedFilter.emptyMessage,
+              accentColor: selectedFilter.color,
+            )
+          else
+            ...filteredTasks.map((task) => _TaskCard(task: task)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmartFilter {
+  final String id;
+  final String title;
+  final String description;
+  final String emptyMessage;
+  final IconData icon;
+  final Color color;
+  final bool Function(TaskModel task) matches;
+  final int Function(TaskModel left, TaskModel right) compare;
+
+  const _SmartFilter({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.emptyMessage,
+    required this.icon,
+    required this.color,
+    required this.matches,
+    this.compare = _compareByDueDateThenPriority,
+  });
+}
+
+final _smartFilters = [
+  _SmartFilter(
+    id: 'high_priority_week',
+    title: 'High priority this week',
+    description: 'High priority tasks due before the end of this week.',
+    emptyMessage: 'No high priority tasks are due this week.',
+    icon: Icons.flag_outlined,
+    color: AppColors.error,
+    matches: _isHighPriorityThisWeek,
+  ),
+  _SmartFilter(
+    id: 'overdue',
+    title: 'Overdue',
+    description: 'Tasks with due dates in the past.',
+    emptyMessage: 'Nothing is overdue.',
+    icon: Icons.warning_amber_outlined,
+    color: AppColors.warning,
+    matches: _isOverdue,
+  ),
+  _SmartFilter(
+    id: 'waiting_for',
+    title: 'Waiting For',
+    description: 'Tasks currently parked in the Waiting column.',
+    emptyMessage: 'No tasks are waiting right now.',
+    icon: Icons.hourglass_empty_outlined,
+    color: AppColors.prayerGold,
+    matches: (task) => task.status == 'waiting',
+  ),
+  _SmartFilter(
+    id: 'no_due_date',
+    title: 'No due date',
+    description: 'Tasks that still need a date or scheduling decision.',
+    emptyMessage: 'Every active task has a due date.',
+    icon: Icons.event_busy_outlined,
+    color: AppColors.textSecondary,
+    matches: (task) => task.dueAt == null,
+    compare: _compareByPriorityThenTitle,
+  ),
+  _SmartFilter(
+    id: 'deep_work',
+    title: 'Deep work tasks',
+    description: 'Long or focus-heavy tasks that need protected time.',
+    emptyMessage: 'No deep work tasks found.',
+    icon: Icons.psychology_outlined,
+    color: AppColors.primary,
+    matches: _isDeepWorkTask,
+  ),
+  _SmartFilter(
+    id: 'prayer_friendly',
+    title: 'Prayer-friendly tasks',
+    description: 'Short tasks that can fit between prayer anchors.',
+    emptyMessage: 'No short prayer-friendly tasks found.',
+    icon: Icons.mosque_outlined,
+    color: AppColors.prayerGold,
+    matches: _isPrayerFriendlyTask,
+  ),
+];
+
+bool _isHighPriorityThisWeek(TaskModel task) {
+  if (task.priority != 'high' || task.dueAt == null) return false;
+  final dueAt = DateTime.tryParse(task.dueAt!)?.toLocal();
+  if (dueAt == null) return false;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final endOfWeek = today
+      .subtract(Duration(days: today.weekday - 1))
+      .add(const Duration(days: 7));
+  return !dueAt.isBefore(today) && dueAt.isBefore(endOfWeek);
+}
+
+bool _isOverdue(TaskModel task) {
+  if (task.dueAt == null) return false;
+  final dueAt = DateTime.tryParse(task.dueAt!)?.toLocal();
+  if (dueAt == null) return false;
+  return dueAt.isBefore(DateTime.now());
+}
+
+bool _isDeepWorkTask(TaskModel task) {
+  final category = task.category?.toLowerCase() ?? '';
+  final title = task.title.toLowerCase();
+  final estimated = task.estimatedMinutes ?? 0;
+  return estimated >= 45 ||
+      category.contains('deep') ||
+      category.contains('focus') ||
+      category.contains('study') ||
+      title.contains('deep work') ||
+      title.contains('study');
+}
+
+bool _isPrayerFriendlyTask(TaskModel task) {
+  final estimated = task.estimatedMinutes;
+  if (estimated == null) return task.dueAt == null && task.priority != 'high';
+  return estimated > 0 && estimated <= 30;
+}
+
+int _compareByDueDateThenPriority(TaskModel left, TaskModel right) {
+  final leftDue = left.dueAt == null ? null : DateTime.tryParse(left.dueAt!);
+  final rightDue = right.dueAt == null ? null : DateTime.tryParse(right.dueAt!);
+  if (leftDue != null && rightDue != null) {
+    final dueCompare = leftDue.compareTo(rightDue);
+    if (dueCompare != 0) return dueCompare;
+  } else if (leftDue != null) {
+    return -1;
+  } else if (rightDue != null) {
+    return 1;
+  }
+  return _compareByPriorityThenTitle(left, right);
+}
+
+int _compareByPriorityThenTitle(TaskModel left, TaskModel right) {
+  final priorityCompare = _priorityRank(
+    right.priority,
+  ).compareTo(_priorityRank(left.priority));
+  if (priorityCompare != 0) return priorityCompare;
+  return left.title.toLowerCase().compareTo(right.title.toLowerCase());
+}
+
+int _priorityRank(String priority) {
+  return switch (priority) {
+    'high' => 3,
+    'medium' => 2,
+    _ => 1,
+  };
 }
 
 class _KanbanBoardView extends ConsumerWidget {
