@@ -20,6 +20,17 @@ ALLOWED_PRAYER_METHODS = {
     "ISNA",
     "Karachi",
 }
+DEFAULT_DASHBOARD_WIDGETS = [
+    "top_tasks",
+    "next_prayer",
+    "habit_snapshot",
+    "journal_prompt",
+    "ai_plan",
+    "focus_shortcut",
+    "productivity_score",
+    "quran_goal",
+]
+ALLOWED_DASHBOARD_WIDGETS = set(DEFAULT_DASHBOARD_WIDGETS)
 
 
 def _validate_hh_mm(value: str | None, field_name: str) -> str | None:
@@ -47,6 +58,21 @@ def _validate_goal_contract(goals: list[str]) -> list[str]:
         raise ValueError(
             "Unsupported onboarding goals: " + ", ".join(sorted(unsupported))
         )
+    return normalized
+
+
+def validate_dashboard_widgets(widgets: list[str] | None) -> list[str] | None:
+    if widgets is None:
+        return widgets
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for widget in widgets:
+        clean = widget.strip().lower()
+        if clean not in ALLOWED_DASHBOARD_WIDGETS:
+            raise ValueError(f"Unsupported dashboard widget: {widget}")
+        if clean not in seen:
+            seen.add(clean)
+            normalized.append(clean)
     return normalized
 
 
@@ -125,6 +151,7 @@ class SettingsResponse(BaseModel):
     ai_goal_tags: list[str]
     ai_daily_rhythm: dict
     ai_recommendation_seeded_at: Optional[datetime]
+    dashboard_widgets: list[str]
     ramadan_mode_enabled: bool
     suhoor_reminder_enabled: bool
     suhoor_reminder_minutes_before_fajr: int
@@ -156,6 +183,7 @@ class SettingsUpdate(BaseModel):
     microphone_enabled: Optional[bool] = None
     location_enabled: Optional[bool] = None
     onboarding_completed: Optional[bool] = None
+    dashboard_widgets: Optional[list[str]] = None
     ramadan_mode_enabled: Optional[bool] = None
     suhoor_reminder_enabled: Optional[bool] = None
     suhoor_reminder_minutes_before_fajr: Optional[int] = Field(
@@ -192,6 +220,11 @@ class SettingsUpdate(BaseModel):
         if value is not None and value not in ALLOWED_PRAYER_METHODS:
             raise ValueError("Unsupported prayer calculation method")
         return value
+
+    @field_validator("dashboard_widgets")
+    @classmethod
+    def dashboard_widgets_valid(cls, value: list[str] | None) -> list[str] | None:
+        return validate_dashboard_widgets(value)
 
 
 class OnboardingRequest(BaseModel):

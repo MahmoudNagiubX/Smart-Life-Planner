@@ -108,6 +108,9 @@ class UserSettings(Base):
     ai_recommendation_seeded_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    dashboard_widgets: Mapped[list[str]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
     ramadan_mode_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )

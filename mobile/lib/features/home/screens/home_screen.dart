@@ -56,13 +56,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
-                Text(
-                  'Hello, $name!',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Hello, $name!',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Customize dashboard',
+                      onPressed: data == null
+                          ? null
+                          : () => _openDashboardCustomization(data),
+                      icon: const Icon(Icons.tune_outlined),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
                 Text(
                   _greeting(),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -152,111 +163,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     message: dashState.error!,
                     onRetry: _refreshDashboard,
                   )
+                else if (data == null)
+                  _EmptyCard(message: 'Dashboard is empty')
                 else ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.pending_actions,
-                          label: 'Pending',
-                          value: '${data?.pendingCount ?? 0}',
-                          color: AppColors.warning,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.check_circle_outline,
-                          label: 'Done Today',
-                          value: '${data?.completedToday ?? 0}',
-                          color: AppColors.success,
-                        ),
-                      ),
-                    ],
-                  ),
+                  _PersonalizedSetupCard(data: data),
                   const SizedBox(height: 12),
-                  _PrayerProgressCard(
-                    completed: data?.prayerProgress.completed ?? 0,
-                    total: data?.prayerProgress.total ?? 5,
-                    onTap: () => context.go('/home/prayer'),
-                  ),
-                  if (data != null) ...[
-                    const SizedBox(height: 12),
-                    _PersonalizedSetupCard(data: data),
-                    const SizedBox(height: 12),
-                    _NextPrayerCard(
-                      nextPrayer: data.personalization.nextPrayer,
-                      onTap: () => context.go('/home/prayer'),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _HabitSnapshotCard(
-                            activeCount:
-                                data.personalization.habitSnapshot.activeCount,
-                            completedToday: data
-                                .personalization
-                                .habitSnapshot
-                                .completedToday,
-                            highlight:
-                                data.personalization.habitSnapshot.highlight,
-                            onTap: () => context.go('/home/habits'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _FocusShortcutCard(
-                            label: data.personalization.focusShortcut.label,
-                            minutes: data
-                                .personalization
-                                .focusShortcut
-                                .suggestedMinutes,
-                            onTap: () => context.go('/home/focus'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _AiPlanPreviewCard(
-                      title: data.personalization.aiPlanCard.title,
-                      preview: data.personalization.aiPlanCard.preview,
-                      onTap: () => context.go('/home/daily-plan'),
-                    ),
-                    const SizedBox(height: 12),
-                    _JournalPromptCard(
-                      prompt: data.personalization.journalPrompt,
-                      onTap: () => context.go('/home/notes'),
-                    ),
-                  ],
-                  const SizedBox(height: 28),
-
-                  Row(
-                    children: [
-                      Text(
-                        'Upcoming Tasks',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () => context.go('/home/tasks'),
-                        child: const Text('See all'),
-                      ),
+                  ..._dashboardWidgets(data).expand(
+                    (widgetId) => [
+                      _buildDashboardWidget(context, data, widgetId),
+                      const SizedBox(height: 12),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  if (data == null || data.topTasks.isEmpty)
-                    _EmptyCard(message: 'No pending tasks')
-                  else
-                    ...data.topTasks.map(
-                      (task) => _TopTaskTile(
-                        id: task.id,
-                        title: task.title,
-                        priority: task.priority,
-                        dueAt: task.dueAt,
-                      ),
-                    ),
                   const SizedBox(height: 28),
 
                   Text(
@@ -303,6 +220,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
+  }
+
+  List<String> _dashboardWidgets(DashboardData data) {
+    return data.personalization.dailyDashboardWidgets
+        .where(defaultDashboardWidgets.contains)
+        .toList();
+  }
+
+  Future<void> _openDashboardCustomization(DashboardData data) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) =>
+          _DashboardCustomizeSheet(currentWidgets: _dashboardWidgets(data)),
+    );
+  }
+
+  Widget _buildDashboardWidget(
+    BuildContext context,
+    DashboardData data,
+    String widgetId,
+  ) {
+    final personalization = data.personalization;
+    return switch (widgetId) {
+      'top_tasks' => _TopTasksSection(data: data),
+      'next_prayer' => _NextPrayerCard(
+        nextPrayer: personalization.nextPrayer,
+        onTap: () => context.go('/home/prayer'),
+      ),
+      'habit_snapshot' => _HabitSnapshotCard(
+        activeCount: personalization.habitSnapshot.activeCount,
+        completedToday: personalization.habitSnapshot.completedToday,
+        highlight: personalization.habitSnapshot.highlight,
+        onTap: () => context.go('/home/habits'),
+      ),
+      'journal_prompt' => _JournalPromptCard(
+        prompt: personalization.journalPrompt,
+        onTap: () => context.go('/home/notes'),
+      ),
+      'ai_plan' => _AiPlanPreviewCard(
+        title: personalization.aiPlanCard.title,
+        preview: personalization.aiPlanCard.preview,
+        onTap: () => context.go('/home/daily-plan'),
+      ),
+      'focus_shortcut' => _FocusShortcutCard(
+        label: personalization.focusShortcut.label,
+        minutes: personalization.focusShortcut.suggestedMinutes,
+        onTap: () => context.go('/home/focus'),
+      ),
+      'productivity_score' => _ProductivityScoreCard(data: data),
+      'quran_goal' => _QuranGoalDashboardCard(
+        onTap: () => context.push('/home/prayer/quran-goal'),
+      ),
+      _ => const SizedBox.shrink(),
+    };
   }
 }
 
@@ -358,6 +334,242 @@ class _PersonalizedSetupCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TopTasksSection extends StatelessWidget {
+  final DashboardData data;
+
+  const _TopTasksSection({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Text(
+              'Top Tasks',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: () => context.go('/home/tasks'),
+              child: const Text('See all'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (data.topTasks.isEmpty)
+          _EmptyCard(message: 'No pending tasks')
+        else
+          ...data.topTasks.map(
+            (task) => _TopTaskTile(
+              id: task.id,
+              title: task.title,
+              priority: task.priority,
+              dueAt: task.dueAt,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ProductivityScoreCard extends StatelessWidget {
+  final DashboardData data;
+
+  const _ProductivityScoreCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final totalTasks = data.pendingCount + data.completedToday;
+    final taskScore = totalTasks == 0
+        ? 0
+        : ((data.completedToday / totalTasks) * 55).round();
+    final prayerTotal = data.prayerProgress.total <= 0
+        ? 5
+        : data.prayerProgress.total;
+    final prayerScore = ((data.prayerProgress.completed / prayerTotal) * 45)
+        .round();
+    final score = (taskScore + prayerScore).clamp(0, 100);
+
+    return _WideActionCard(
+      icon: Icons.insights_outlined,
+      title: 'Productivity score',
+      subtitle:
+          '$score% today - ${data.completedToday} tasks done, ${data.prayerProgress.completed}/$prayerTotal prayers tracked.',
+      color: AppColors.success,
+      onTap: () => context.go('/home/analytics'),
+    );
+  }
+}
+
+class _QuranGoalDashboardCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _QuranGoalDashboardCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return _WideActionCard(
+      icon: Icons.menu_book_outlined,
+      title: 'Quran goal',
+      subtitle: 'Open your daily Quran target and progress.',
+      color: AppColors.prayerGold,
+      onTap: onTap,
+    );
+  }
+}
+
+class _DashboardCustomizeSheet extends ConsumerStatefulWidget {
+  final List<String> currentWidgets;
+
+  const _DashboardCustomizeSheet({required this.currentWidgets});
+
+  @override
+  ConsumerState<_DashboardCustomizeSheet> createState() =>
+      _DashboardCustomizeSheetState();
+}
+
+class _DashboardCustomizeSheetState
+    extends ConsumerState<_DashboardCustomizeSheet> {
+  late final List<String> _orderedWidgets;
+  late final Set<String> _enabledWidgets;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabledWidgets = widget.currentWidgets.toSet();
+    _orderedWidgets = [
+      ...widget.currentWidgets,
+      ...defaultDashboardWidgets.where(
+        (id) => !widget.currentWidgets.contains(id),
+      ),
+    ];
+  }
+
+  Future<void> _save() async {
+    setState(() => _isSaving = true);
+    final enabled = _orderedWidgets
+        .where((widgetId) => _enabledWidgets.contains(widgetId))
+        .toList();
+    final saved = await ref
+        .read(dashboardProvider.notifier)
+        .updateDashboardWidgets(enabled);
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+    if (saved) {
+      Navigator.pop(context);
+    } else {
+      final error =
+          ref.read(dashboardProvider).error ?? 'Dashboard not updated';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Customize Dashboard',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 420,
+              child: ReorderableListView.builder(
+                itemCount: _orderedWidgets.length,
+                onReorder: (oldIndex, newIndex) {
+                  setState(() {
+                    if (newIndex > oldIndex) newIndex -= 1;
+                    final item = _orderedWidgets.removeAt(oldIndex);
+                    _orderedWidgets.insert(newIndex, item);
+                  });
+                },
+                itemBuilder: (context, index) {
+                  final widgetId = _orderedWidgets[index];
+                  return SwitchListTile(
+                    key: ValueKey(widgetId),
+                    value: _enabledWidgets.contains(widgetId),
+                    secondary: Icon(_dashboardWidgetIcon(widgetId)),
+                    title: Text(_dashboardWidgetLabel(widgetId)),
+                    subtitle: const Text('Drag to reorder'),
+                    onChanged: (enabled) {
+                      setState(() {
+                        if (enabled) {
+                          _enabledWidgets.add(widgetId);
+                        } else {
+                          _enabledWidgets.remove(widgetId);
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            _isSaving
+                ? const CircularProgressIndicator()
+                : ElevatedButton.icon(
+                    onPressed: _save,
+                    icon: const Icon(Icons.save_outlined),
+                    label: const Text('Save'),
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _dashboardWidgetLabel(String widgetId) {
+  return switch (widgetId) {
+    'top_tasks' => 'Top tasks',
+    'next_prayer' => 'Next prayer',
+    'habit_snapshot' => 'Habits',
+    'journal_prompt' => 'Journal prompt',
+    'ai_plan' => 'AI plan',
+    'focus_shortcut' => 'Focus shortcut',
+    'productivity_score' => 'Productivity score',
+    'quran_goal' => 'Quran goal',
+    _ => widgetId,
+  };
+}
+
+IconData _dashboardWidgetIcon(String widgetId) {
+  return switch (widgetId) {
+    'top_tasks' => Icons.task_alt_outlined,
+    'next_prayer' => Icons.mosque_outlined,
+    'habit_snapshot' => Icons.track_changes_outlined,
+    'journal_prompt' => Icons.edit_note_outlined,
+    'ai_plan' => Icons.auto_awesome_outlined,
+    'focus_shortcut' => Icons.timer_outlined,
+    'productivity_score' => Icons.insights_outlined,
+    'quran_goal' => Icons.menu_book_outlined,
+    _ => Icons.dashboard_customize_outlined,
+  };
 }
 
 class _NextPrayerCard extends StatelessWidget {
@@ -592,125 +804,6 @@ class _WideActionCard extends StatelessWidget {
               ),
             ),
             Icon(Icons.chevron_right, color: color),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              Text(label, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PrayerProgressCard extends StatelessWidget {
-  final int completed;
-  final int total;
-  final VoidCallback onTap;
-
-  const _PrayerProgressCard({
-    required this.completed,
-    required this.total,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final safeTotal = total <= 0 ? 5 : total;
-    final progress = (completed / safeTotal).clamp(0.0, 1.0);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.prayerGold.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.prayerGold.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.mosque_outlined, color: AppColors.prayerGold),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Prayers Today',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$completed / $safeTotal completed',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.prayerGold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 6,
-                      backgroundColor: AppColors.prayerGold.withValues(
-                        alpha: 0.18,
-                      ),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.prayerGold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Icon(Icons.chevron_right, color: AppColors.prayerGold),
           ],
         ),
       ),

@@ -6,6 +6,7 @@ from sqlalchemy import case, select, func
 from app.core.dependencies import get_db
 from app.api.v1.auth import get_current_user
 from app.repositories.settings_repository import get_settings_by_user_id
+from app.schemas.settings import DEFAULT_DASHBOARD_WIDGETS, validate_dashboard_widgets
 from app.models.habit import Habit, HabitLog
 from app.models.task import Task
 from app.models.prayer import PrayerLog
@@ -19,6 +20,12 @@ GOAL_LABELS = {
     "fitness": "Fitness",
     "spiritual_growth": "Spiritual Growth",
 }
+
+
+def _dashboard_widgets(raw_widgets: list[str] | None) -> list[str]:
+    if raw_widgets is None:
+        return DEFAULT_DASHBOARD_WIDGETS
+    return validate_dashboard_widgets(raw_widgets) or []
 
 
 def _goal_label(goal: str) -> str:
@@ -179,14 +186,9 @@ async def get_home_dashboard(
             "goal_tags": goals,
             "goal_labels": [_goal_label(goal) for goal in goals],
             "task_environment": _task_environment(goals),
-            "daily_dashboard_widgets": [
-                "top_tasks",
-                "next_prayer",
-                "habit_snapshot",
-                "journal_prompt",
-                "ai_plan",
-                "focus_shortcut",
-            ],
+            "daily_dashboard_widgets": _dashboard_widgets(
+                settings.dashboard_widgets if settings else None
+            ),
             "next_prayer": {
                 "name": next_prayer.prayer_name if next_prayer else None,
                 "scheduled_at": next_prayer.scheduled_at.isoformat()

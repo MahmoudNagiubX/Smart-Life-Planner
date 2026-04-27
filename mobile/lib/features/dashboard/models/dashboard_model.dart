@@ -1,3 +1,14 @@
+const defaultDashboardWidgets = [
+  'top_tasks',
+  'next_prayer',
+  'habit_snapshot',
+  'journal_prompt',
+  'ai_plan',
+  'focus_shortcut',
+  'productivity_score',
+  'quran_goal',
+];
+
 class DashboardTopTask {
   final String id;
   final String title;
@@ -126,12 +137,15 @@ class DashboardPersonalization {
   });
 
   factory DashboardPersonalization.fromJson(Map<String, dynamic> json) {
+    final dashboardWidgets = json.containsKey('daily_dashboard_widgets')
+        ? _readStringList(json['daily_dashboard_widgets'])
+        : defaultDashboardWidgets;
     return DashboardPersonalization(
       goalTags: _readStringList(json['goal_tags']),
       goalLabels: _readStringList(json['goal_labels']),
       taskEnvironment:
           json['task_environment'] as String? ?? 'Balanced daily planning',
-      dailyDashboardWidgets: _readStringList(json['daily_dashboard_widgets']),
+      dailyDashboardWidgets: dashboardWidgets,
       nextPrayer: DashboardNextPrayer.fromJson(
         json['next_prayer'] as Map<String, dynamic>? ?? const {},
       ),

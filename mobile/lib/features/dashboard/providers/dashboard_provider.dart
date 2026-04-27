@@ -52,6 +52,23 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       );
     }
   }
+
+  Future<bool> updateDashboardWidgets(List<String> widgets) async {
+    try {
+      final service = _ref.read(dashboardServiceProvider);
+      await service.updateDashboardWidgets(widgets);
+      await loadDashboard();
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to update dashboard'),
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(error: 'Failed to update dashboard');
+      return false;
+    }
+  }
 }
 
 final dashboardProvider =

@@ -10,4 +10,11 @@ class DashboardService {
     final response = await _apiClient.dio.get('/dashboard/home');
     return DashboardData.fromJson(response.data as Map<String, dynamic>);
   }
+
+  Future<void> updateDashboardWidgets(List<String> widgets) async {
+    await _apiClient.dio.patch(
+      '/settings',
+      data: {'dashboard_widgets': widgets},
+    );
+  }
 }
