@@ -1,5 +1,20 @@
 from fastapi import APIRouter
-from app.api.v1 import auth, settings, tasks, dashboard, note, habit, focus, prayer, ai, voice, analytics, scheduling, hasae
+from app.api.v1 import (
+    ai,
+    analytics,
+    auth,
+    dashboard,
+    focus,
+    habit,
+    hasae,
+    note,
+    prayer,
+    reminder,
+    scheduling,
+    settings,
+    tasks,
+    voice,
+)
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
@@ -15,3 +30,4 @@ router.include_router(voice.router)
 router.include_router(analytics.router)
 router.include_router(scheduling.router)
 router.include_router(hasae.router)
+router.include_router(reminder.router)
