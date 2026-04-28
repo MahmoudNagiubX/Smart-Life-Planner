@@ -3,6 +3,15 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, field_validator
 
+VALID_TASK_STATUSES = {
+    "pending",
+    "next",
+    "in_progress",
+    "waiting",
+    "someday",
+    "completed",
+}
+
 
 class ProjectCreate(BaseModel):
     title: str
@@ -58,6 +67,7 @@ class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
     priority: Optional[str] = "medium"
+    status: Optional[str] = "pending"
     due_at: Optional[datetime] = None
     reminder_at: Optional[datetime] = None
     project_id: Optional[uuid.UUID] = None
@@ -77,6 +87,15 @@ class TaskCreate(BaseModel):
     def priority_valid(cls, v: str) -> str:
         if v not in ("low", "medium", "high"):
             raise ValueError("Priority must be low, medium, or high")
+        return v
+
+    @field_validator("status")
+    @classmethod
+    def create_status_valid(cls, v: str | None) -> str:
+        if v is None:
+            return "pending"
+        if v not in VALID_TASK_STATUSES - {"completed"}:
+            raise ValueError("Unsupported task status")
         return v
 
     @field_validator("manual_order")
@@ -106,7 +125,7 @@ class TaskUpdate(BaseModel):
     def status_valid(cls, v: str | None) -> str | None:
         if v is None:
             return None
-        if v not in ("pending", "next", "in_progress", "waiting", "completed"):
+        if v not in VALID_TASK_STATUSES:
             raise ValueError("Unsupported task status")
         return v
 

@@ -1,6 +1,25 @@
 from app.schemas.ai import ParseTaskResponse
 
 
+def _suggest_gtd_bucket(data: dict) -> str:
+    explicit_bucket = data.get("gtd_bucket")
+    if explicit_bucket in {"inbox", "next", "waiting", "someday", "calendar"}:
+        return explicit_bucket
+
+    title = str(data.get("title") or "").lower()
+    category = str(data.get("category") or "").lower()
+    combined = f"{title} {category}"
+    if data.get("due_at"):
+        return "calendar"
+    if any(word in combined for word in ("waiting", "blocked", "follow up")):
+        return "waiting"
+    if any(word in combined for word in ("someday", "maybe", "idea", "future")):
+        return "someday"
+    if data.get("priority") == "high":
+        return "next"
+    return "inbox"
+
+
 def parse_task_fallback(raw_input: str, reason: str) -> ParseTaskResponse:
     return ParseTaskResponse(
         success=False,
@@ -10,6 +29,7 @@ def parse_task_fallback(raw_input: str, reason: str) -> ParseTaskResponse:
             "due_at": None,
             "estimated_minutes": None,
             "category": None,
+            "gtd_bucket": "inbox",
             "confidence": "low",
         },
         raw_input=raw_input,
@@ -42,6 +62,7 @@ def parse_task_response(raw_input: str, result: dict) -> ParseTaskResponse:
     data.setdefault("due_at", None)
     data.setdefault("estimated_minutes", None)
     data.setdefault("category", None)
+    data["gtd_bucket"] = _suggest_gtd_bucket(data)
 
     requires_confirmation = confidence == "low" or incomplete
     return ParseTaskResponse(

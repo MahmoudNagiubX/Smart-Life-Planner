@@ -31,7 +31,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tasksProvider.notifier).loadTasks();
       ref.read(focusProvider.notifier).loadAnalytics();
@@ -75,6 +75,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
             Tab(text: 'Pending'),
             Tab(text: 'Completed'),
             Tab(text: 'Smart'),
+            Tab(text: 'GTD'),
             Tab(text: 'Kanban'),
             Tab(text: 'Matrix'),
             Tab(text: 'Calendar'),
@@ -105,6 +106,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                   status: 'completed',
                 ),
                 _SmartListsView(
+                  tasks: state.tasks.where((t) => !t.isDeleted).toList(),
+                ),
+                _GtdBucketsView(
                   tasks: state.tasks.where((t) => !t.isDeleted).toList(),
                 ),
                 _KanbanBoardView(
@@ -553,6 +557,264 @@ int _priorityRank(String priority) {
   };
 }
 
+class _GtdBucketsView extends ConsumerStatefulWidget {
+  final List<TaskModel> tasks;
+
+  const _GtdBucketsView({required this.tasks});
+
+  @override
+  ConsumerState<_GtdBucketsView> createState() => _GtdBucketsViewState();
+}
+
+class _GtdBucketsViewState extends ConsumerState<_GtdBucketsView> {
+  String _selectedBucket = _gtdBuckets.first.id;
+
+  @override
+  Widget build(BuildContext context) {
+    final bucket = _gtdBuckets.firstWhere(
+      (item) => item.id == _selectedBucket,
+      orElse: () => _gtdBuckets.first,
+    );
+    final activeTasks = widget.tasks
+        .where((task) => task.status != 'completed' && !task.isDeleted)
+        .toList();
+    final visibleTasks = bucket.filter(activeTasks)..sort(_compareByGtd);
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(tasksProvider.notifier).loadTasks(),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            'GTD Buckets',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Capture, clarify, organize, reflect, and engage from one trusted view.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _gtdBuckets.map((item) {
+              final count = item.filter(activeTasks).length;
+              return ChoiceChip(
+                avatar: Icon(item.icon, size: 16),
+                label: Text('${item.title} ($count)'),
+                selected: item.id == _selectedBucket,
+                onSelected: (_) => setState(() => _selectedBucket = item.id),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          _GtdBucketHeader(bucket: bucket, count: visibleTasks.length),
+          const SizedBox(height: 14),
+          if (bucket.id == 'projects') ...[
+            _ProjectsBucketPanel(tasks: activeTasks),
+            const SizedBox(height: 14),
+          ],
+          if (visibleTasks.isEmpty)
+            AppEmptyState(
+              icon: bucket.icon,
+              title: 'No ${bucket.title.toLowerCase()} tasks',
+              message: bucket.emptyMessage,
+              accentColor: bucket.color,
+            )
+          else
+            ...visibleTasks.map((task) => _TaskCard(task: task)),
+        ],
+      ),
+    );
+  }
+}
+
+class _GtdBucketHeader extends StatelessWidget {
+  final _GtdBucket bucket;
+  final int count;
+
+  const _GtdBucketHeader({required this.bucket, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bucket.color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: bucket.color.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        children: [
+          Icon(bucket.icon, color: bucket.color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  bucket.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  bucket.description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            count.toString(),
+            style: TextStyle(color: bucket.color, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectsBucketPanel extends StatelessWidget {
+  final List<TaskModel> tasks;
+
+  const _ProjectsBucketPanel({required this.tasks});
+
+  @override
+  Widget build(BuildContext context) {
+    final projectTaskCount = tasks
+        .where((task) => task.projectId != null)
+        .map((task) => task.projectId!)
+        .toSet()
+        .length;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.folder_outlined, color: AppColors.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              projectTaskCount == 0
+                  ? 'No active project tasks yet.'
+                  : '$projectTaskCount projects have active tasks.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GtdBucket {
+  final String id;
+  final String title;
+  final String description;
+  final String emptyMessage;
+  final IconData icon;
+  final Color color;
+  final List<TaskModel> Function(List<TaskModel> tasks) filter;
+
+  const _GtdBucket({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.emptyMessage,
+    required this.icon,
+    required this.color,
+    required this.filter,
+  });
+}
+
+final _gtdBuckets = [
+  _GtdBucket(
+    id: 'inbox',
+    title: 'Inbox',
+    description: 'Raw captured tasks waiting for clarification.',
+    emptyMessage: 'Captured tasks that need clarification will appear here.',
+    icon: Icons.inbox_outlined,
+    color: AppColors.textSecondary,
+    filter: (tasks) => tasks
+        .where(
+          (task) =>
+              task.status == 'pending' &&
+              task.projectId == null &&
+              task.dueAt == null,
+        )
+        .toList(),
+  ),
+  _GtdBucket(
+    id: 'next',
+    title: 'Next Actions',
+    description: 'Clear tasks ready to do next.',
+    emptyMessage: 'Move clarified tasks here when they are ready to execute.',
+    icon: Icons.arrow_forward_outlined,
+    color: AppColors.primary,
+    filter: (tasks) => tasks.where((task) => task.status == 'next').toList(),
+  ),
+  _GtdBucket(
+    id: 'projects',
+    title: 'Projects',
+    description: 'Tasks connected to active project outcomes.',
+    emptyMessage: 'Project tasks will appear here after you link them.',
+    icon: Icons.folder_copy_outlined,
+    color: AppColors.success,
+    filter: (tasks) => tasks.where((task) => task.projectId != null).toList(),
+  ),
+  _GtdBucket(
+    id: 'waiting',
+    title: 'Waiting For',
+    description: 'Tasks blocked by another person, decision, or dependency.',
+    emptyMessage: 'Waiting items stay parked here until the blocker clears.',
+    icon: Icons.hourglass_empty_outlined,
+    color: AppColors.prayerGold,
+    filter: (tasks) => tasks.where((task) => task.status == 'waiting').toList(),
+  ),
+  _GtdBucket(
+    id: 'someday',
+    title: 'Someday',
+    description: 'Ideas and future work you are not committing to yet.',
+    emptyMessage: 'Future ideas can rest here without cluttering today.',
+    icon: Icons.lightbulb_outline,
+    color: AppColors.warning,
+    filter: (tasks) => tasks.where((task) => task.status == 'someday').toList(),
+  ),
+  _GtdBucket(
+    id: 'calendar',
+    title: 'Calendar',
+    description: 'Tasks with a specific due date or time.',
+    emptyMessage: 'Date-specific tasks will appear here.',
+    icon: Icons.calendar_month_outlined,
+    color: AppColors.error,
+    filter: (tasks) => tasks.where((task) => task.dueAt != null).toList(),
+  ),
+];
+
+int _compareByGtd(TaskModel left, TaskModel right) {
+  final leftDue = left.dueAt == null ? null : DateTime.tryParse(left.dueAt!);
+  final rightDue = right.dueAt == null ? null : DateTime.tryParse(right.dueAt!);
+  if (leftDue != null && rightDue != null) {
+    final dueCompare = leftDue.compareTo(rightDue);
+    if (dueCompare != 0) return dueCompare;
+  } else if (leftDue != null) {
+    return -1;
+  } else if (rightDue != null) {
+    return 1;
+  }
+  return _compareByPriorityThenTitle(left, right);
+}
+
 class _KanbanBoardView extends ConsumerWidget {
   final List<TaskModel> tasks;
 
@@ -833,6 +1095,13 @@ const _kanbanColumns = [
     icon: Icons.hourglass_empty_outlined,
   ),
   _KanbanColumnData(
+    title: 'Someday',
+    status: 'someday',
+    description: 'Future ideas and maybe-later tasks.',
+    color: AppColors.warning,
+    icon: Icons.lightbulb_outline,
+  ),
+  _KanbanColumnData(
     title: 'Done',
     status: 'completed',
     description: 'Finished tasks.',
@@ -842,7 +1111,10 @@ const _kanbanColumns = [
 ];
 
 String _kanbanStatus(String status) {
-  if (status == 'next' || status == 'in_progress' || status == 'waiting') {
+  if (status == 'next' ||
+      status == 'in_progress' ||
+      status == 'waiting' ||
+      status == 'someday') {
     return status;
   }
   if (status == 'completed') return status;
@@ -1498,6 +1770,17 @@ String _prayerName(String name) {
   };
 }
 
+const _gtdMoveStatuses = ['pending', 'next', 'waiting', 'someday'];
+
+String _gtdStatusLabel(String status) {
+  return switch (status) {
+    'next' => 'Next Actions',
+    'waiting' => 'Waiting For',
+    'someday' => 'Someday',
+    _ => 'Inbox',
+  };
+}
+
 class _TaskList extends ConsumerWidget {
   final List<TaskModel> tasks;
   final String status;
@@ -1621,6 +1904,23 @@ class _TaskCard extends ConsumerWidget {
             icon: const Icon(Icons.chevron_right, size: 22),
             onPressed: () => context.push('/home/tasks/${task.id}'),
           ),
+          if (task.status != 'completed')
+            PopupMenuButton<String>(
+              tooltip: 'Move task',
+              icon: const Icon(Icons.drive_file_move_outlined, size: 20),
+              onSelected: (status) => ref
+                  .read(tasksProvider.notifier)
+                  .moveTaskToStatus(task: task, status: status),
+              itemBuilder: (context) => _gtdMoveStatuses
+                  .where((status) => status != task.status)
+                  .map(
+                    (status) => PopupMenuItem(
+                      value: status,
+                      child: Text('Move to ${_gtdStatusLabel(status)}'),
+                    ),
+                  )
+                  .toList(),
+            ),
           IconButton(
             icon: const Icon(Icons.delete_outline, size: 20),
             onPressed: () async {
