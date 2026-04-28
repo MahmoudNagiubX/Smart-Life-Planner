@@ -152,6 +152,7 @@ class NotificationService {
       'Reschedule',
       showsUserInterface: true,
     ),
+    AndroidNotificationAction(NotificationActions.dismiss, 'Dismiss'),
     AndroidNotificationAction(
       NotificationActions.openTask,
       'Open task',

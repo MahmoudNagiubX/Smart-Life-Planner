@@ -321,6 +321,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       final scheduler = _ref.read(notificationSchedulerProvider);
       for (final reminder in reminders) {
         await scheduler.cancelTaskPresetReminder(reminder.id);
+        await scheduler.cancelPersistentTaskReminderSeries(reminder.id);
       }
     } catch (_) {}
   }
@@ -340,6 +341,23 @@ class TasksNotifier extends StateNotifier<TasksState> {
               .read(reminderPreferencesProvider.notifier)
               .canScheduleLocal('task', scheduledAt: reminderAt)) {
         await scheduler.cancelTaskPresetReminder(reminder.id);
+        await scheduler.cancelPersistentTaskReminderSeries(reminder.id);
+        continue;
+      }
+      if (reminder.isPersistent &&
+          _ref
+              .read(reminderPreferencesProvider)
+              .preferences
+              .types
+              .constantReminders) {
+        await scheduler.schedulePersistentTaskReminderSeries(
+          reminderId: reminder.id,
+          taskId: task.id,
+          taskTitle: task.title,
+          firstReminderAt: reminderAt,
+          intervalMinutes: reminder.persistentIntervalMinutes ?? 30,
+          maxOccurrences: reminder.persistentMaxOccurrences ?? 3,
+        );
         continue;
       }
       await scheduler.scheduleTaskPresetReminder(

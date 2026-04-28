@@ -3,6 +3,7 @@ abstract class NotificationActions {
   static const snooze10 = 'reminder_snooze_10';
   static const snooze60 = 'reminder_snooze_60';
   static const reschedule = 'reminder_reschedule';
+  static const dismiss = 'reminder_dismiss';
   static const openTask = 'task_open';
 }
 

@@ -103,6 +103,7 @@ class ReminderTypes {
   final bool bedtime;
   final bool aiSuggestion;
   final bool location;
+  final bool constantReminders;
 
   const ReminderTypes({
     this.task = true,
@@ -114,6 +115,7 @@ class ReminderTypes {
     this.bedtime = true,
     this.aiSuggestion = true,
     this.location = false,
+    this.constantReminders = true,
   });
 
   factory ReminderTypes.fromJson(Map<String, dynamic> json) {
@@ -127,6 +129,7 @@ class ReminderTypes {
       bedtime: json['bedtime'] as bool? ?? true,
       aiSuggestion: json['ai_suggestion'] as bool? ?? true,
       location: json['location'] as bool? ?? false,
+      constantReminders: json['constant_reminders'] as bool? ?? true,
     );
   }
 
@@ -140,6 +143,7 @@ class ReminderTypes {
     bool? bedtime,
     bool? aiSuggestion,
     bool? location,
+    bool? constantReminders,
   }) {
     return ReminderTypes(
       task: task ?? this.task,
@@ -151,6 +155,7 @@ class ReminderTypes {
       bedtime: bedtime ?? this.bedtime,
       aiSuggestion: aiSuggestion ?? this.aiSuggestion,
       location: location ?? this.location,
+      constantReminders: constantReminders ?? this.constantReminders,
     );
   }
 
@@ -174,6 +179,8 @@ class ReminderTypes {
         return aiSuggestion;
       case 'location':
         return location;
+      case 'constant_reminders':
+        return constantReminders;
       default:
         return true;
     }
@@ -189,6 +196,7 @@ class ReminderTypes {
     'bedtime': bedtime,
     'ai_suggestion': aiSuggestion,
     'location': location,
+    'constant_reminders': constantReminders,
   };
 }
 

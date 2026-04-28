@@ -98,6 +98,7 @@ class ReminderTypes(BaseModel):
     bedtime: bool = True
     ai_suggestion: bool = True
     location: bool = False
+    constant_reminders: bool = True
 
 
 class ReminderQuietHours(BaseModel):

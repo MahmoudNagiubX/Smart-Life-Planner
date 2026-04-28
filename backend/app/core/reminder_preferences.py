@@ -19,6 +19,7 @@ DEFAULT_REMINDER_PREFERENCES: dict[str, Any] = {
         "bedtime": True,
         "ai_suggestion": True,
         "location": False,
+        "constant_reminders": True,
     },
     "quiet_hours": {
         "enabled": False,

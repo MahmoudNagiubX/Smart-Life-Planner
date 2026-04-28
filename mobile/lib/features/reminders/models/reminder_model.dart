@@ -11,9 +11,14 @@ class ReminderModel {
   final String? snoozeUntil;
   final String channel;
   final String priority;
+  final bool isPersistent;
+  final int? persistentIntervalMinutes;
+  final int? persistentMaxOccurrences;
+  final int persistentOccurrencesSent;
   final String createdAt;
   final String updatedAt;
   final String? cancelledAt;
+  final String? dismissedAt;
 
   ReminderModel({
     required this.id,
@@ -28,9 +33,14 @@ class ReminderModel {
     this.snoozeUntil,
     required this.channel,
     required this.priority,
+    this.isPersistent = false,
+    this.persistentIntervalMinutes,
+    this.persistentMaxOccurrences,
+    this.persistentOccurrencesSent = 0,
     required this.createdAt,
     required this.updatedAt,
     this.cancelledAt,
+    this.dismissedAt,
   });
 
   factory ReminderModel.fromJson(Map<String, dynamic> json) => ReminderModel(
@@ -46,9 +56,14 @@ class ReminderModel {
     snoozeUntil: json['snooze_until'] as String?,
     channel: json['channel'] as String,
     priority: json['priority'] as String,
+    isPersistent: json['is_persistent'] as bool? ?? false,
+    persistentIntervalMinutes: json['persistent_interval_minutes'] as int?,
+    persistentMaxOccurrences: json['persistent_max_occurrences'] as int?,
+    persistentOccurrencesSent: json['persistent_occurrences_sent'] as int? ?? 0,
     createdAt: json['created_at'] as String,
     updatedAt: json['updated_at'] as String,
     cancelledAt: json['cancelled_at'] as String?,
+    dismissedAt: json['dismissed_at'] as String?,
   );
 }
 
@@ -61,6 +76,9 @@ class ReminderDraft {
   final String timezone;
   final String channel;
   final String priority;
+  final bool isPersistent;
+  final int? persistentIntervalMinutes;
+  final int? persistentMaxOccurrences;
 
   const ReminderDraft({
     required this.targetType,
@@ -71,6 +89,9 @@ class ReminderDraft {
     this.timezone = 'UTC',
     this.channel = 'local',
     this.priority = 'normal',
+    this.isPersistent = false,
+    this.persistentIntervalMinutes,
+    this.persistentMaxOccurrences,
   });
 
   ReminderDraft copyWith({
@@ -82,6 +103,9 @@ class ReminderDraft {
     String? timezone,
     String? channel,
     String? priority,
+    bool? isPersistent,
+    int? persistentIntervalMinutes,
+    int? persistentMaxOccurrences,
     bool clearScheduledAt = false,
     bool clearRecurrenceRule = false,
   }) {
@@ -96,6 +120,11 @@ class ReminderDraft {
       timezone: timezone ?? this.timezone,
       channel: channel ?? this.channel,
       priority: priority ?? this.priority,
+      isPersistent: isPersistent ?? this.isPersistent,
+      persistentIntervalMinutes:
+          persistentIntervalMinutes ?? this.persistentIntervalMinutes,
+      persistentMaxOccurrences:
+          persistentMaxOccurrences ?? this.persistentMaxOccurrences,
     );
   }
 
@@ -109,6 +138,11 @@ class ReminderDraft {
     'timezone': timezone,
     'channel': channel,
     'priority': priority,
+    'is_persistent': isPersistent,
+    if (persistentIntervalMinutes != null)
+      'persistent_interval_minutes': persistentIntervalMinutes,
+    if (persistentMaxOccurrences != null)
+      'persistent_max_occurrences': persistentMaxOccurrences,
   };
 }
 
@@ -118,6 +152,9 @@ class TaskReminderPresetDraft {
   final String? customRecurrenceRule;
   final String channel;
   final String priority;
+  final bool isPersistent;
+  final int? persistentIntervalMinutes;
+  final int? persistentMaxOccurrences;
 
   const TaskReminderPresetDraft({
     required this.preset,
@@ -125,6 +162,9 @@ class TaskReminderPresetDraft {
     this.customRecurrenceRule,
     this.channel = 'local',
     this.priority = 'normal',
+    this.isPersistent = false,
+    this.persistentIntervalMinutes,
+    this.persistentMaxOccurrences,
   });
 
   Map<String, dynamic> toJson() => {
@@ -135,5 +175,10 @@ class TaskReminderPresetDraft {
       'custom_recurrence_rule': customRecurrenceRule,
     'channel': channel,
     'priority': priority,
+    'is_persistent': isPersistent,
+    if (persistentIntervalMinutes != null)
+      'persistent_interval_minutes': persistentIntervalMinutes,
+    if (persistentMaxOccurrences != null)
+      'persistent_max_occurrences': persistentMaxOccurrences,
   };
 }

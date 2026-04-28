@@ -11,6 +11,9 @@ class NotificationIds {
   static int taskPresetReminder(String reminderId) =>
       50000 + reminderId.hashCode.abs() % 10000;
 
+  static int taskPersistentReminder(String reminderId, int occurrence) =>
+      60000 + reminderId.hashCode.abs() % 8000 + occurrence;
+
   // Prayer: base 20000
   static int prayerReminder(String prayerName) {
     const names = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];

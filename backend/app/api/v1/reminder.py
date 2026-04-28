@@ -12,6 +12,7 @@ from app.repositories.note_repository import get_note_by_id
 from app.repositories.prayer_repository import get_quran_goal
 from app.repositories.reminder_repository import (
     create_reminder,
+    dismiss_reminder,
     get_reminder_by_id,
     get_reminders,
     replace_task_reminder_presets,
@@ -72,6 +73,11 @@ async def create_task_reminder_presets(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Reminder target not found",
+        )
+    if any(item.is_persistent for item in payload.presets) and task.priority != "high":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Persistent reminders are allowed for high-priority tasks only",
         )
     try:
         reminders_data = build_task_reminder_preset_data(
@@ -160,6 +166,21 @@ async def reschedule_existing_reminder(
     return await reschedule_reminder(db, reminder, payload.scheduled_at)
 
 
+@router.post("/{reminder_id}/dismiss", response_model=ReminderResponse)
+async def dismiss_existing_reminder(
+    reminder_id: uuid.UUID,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    reminder = await get_reminder_by_id(db, reminder_id, current_user.id)
+    if not reminder:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reminder not found",
+        )
+    return await dismiss_reminder(db, reminder)
+
+
 async def _validate_target_ownership(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -176,7 +197,13 @@ async def _validate_target_ownership(
 
     target_exists = True
     if payload.target_type == "task":
-        target_exists = await get_task_by_id(db, payload.target_id, user_id) is not None
+        task = await get_task_by_id(db, payload.target_id, user_id)
+        target_exists = task is not None
+        if task is not None and payload.is_persistent and task.priority != "high":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Persistent reminders are allowed for high-priority tasks only",
+            )
     elif payload.target_type == "habit":
         target_exists = await get_habit_by_id(db, payload.target_id, user_id) is not None
     elif payload.target_type == "note":

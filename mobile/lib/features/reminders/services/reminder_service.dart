@@ -55,6 +55,13 @@ class ReminderService {
     return ReminderModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<ReminderModel> dismissReminder(String reminderId) async {
+    final response = await _apiClient.dio.post(
+      '/reminders/$reminderId/dismiss',
+    );
+    return ReminderModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<List<ReminderModel>> saveTaskReminderPresets({
     required String taskId,
     required List<TaskReminderPresetDraft> presets,

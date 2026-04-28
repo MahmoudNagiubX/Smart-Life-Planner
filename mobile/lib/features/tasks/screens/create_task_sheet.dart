@@ -20,6 +20,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
   final Set<String> _selectedReminderPresets = {};
   DateTime? _customReminderAt;
   bool _recurringCustomEnabled = false;
+  bool _constantReminderEnabled = false;
   String _recurringRule = 'FREQ=DAILY';
   bool _isLoading = false;
 
@@ -75,6 +76,8 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
             selectedPresets: _selectedReminderPresets,
             customScheduledAt: _customReminderAt,
             recurringCustomEnabled: _recurringCustomEnabled,
+            constantReminderEnabled: _constantReminderEnabled,
+            taskPriority: _priority,
             recurringRule: _recurringRule,
           ),
         );
@@ -179,6 +182,8 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
               selectedPresets: _selectedReminderPresets,
               customScheduledAt: _customReminderAt,
               recurringCustomEnabled: _recurringCustomEnabled,
+              constantReminderEnabled: _constantReminderEnabled,
+              taskPriority: _priority,
               recurringRule: _recurringRule,
               onPresetsChanged: (value) => setState(
                 () => _selectedReminderPresets
@@ -189,6 +194,8 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
                   setState(() => _customReminderAt = value),
               onRecurringCustomChanged: (value) =>
                   setState(() => _recurringCustomEnabled = value),
+              onConstantReminderChanged: (value) =>
+                  setState(() => _constantReminderEnabled = value),
               onRecurringRuleChanged: (value) =>
                   setState(() => _recurringRule = value),
             ),

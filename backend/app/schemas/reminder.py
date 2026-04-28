@@ -29,7 +29,14 @@ VALID_REMINDER_TYPES = {
     "ai_suggestion",
     "location",
 }
-VALID_REMINDER_STATUSES = {"scheduled", "sent", "snoozed", "cancelled", "failed"}
+VALID_REMINDER_STATUSES = {
+    "scheduled",
+    "sent",
+    "snoozed",
+    "cancelled",
+    "dismissed",
+    "failed",
+}
 VALID_REMINDER_CHANNELS = {"local", "push", "in_app", "email"}
 VALID_REMINDER_PRIORITIES = {"low", "normal", "high", "urgent"}
 
@@ -45,6 +52,9 @@ class ReminderCreate(BaseModel):
     snooze_until: Optional[datetime] = None
     channel: str = "local"
     priority: str = "normal"
+    is_persistent: bool = False
+    persistent_interval_minutes: Optional[int] = None
+    persistent_max_occurrences: Optional[int] = None
 
     @field_validator("target_type")
     @classmethod
@@ -103,10 +113,29 @@ class ReminderCreate(BaseModel):
             raise ValueError("Unsupported reminder priority")
         return normalized
 
+    @field_validator("persistent_interval_minutes")
+    @classmethod
+    def persistent_interval_safe(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and (value < 30 or value > 240):
+            raise ValueError("persistent_interval_minutes must be between 30 and 240")
+        return value
+
+    @field_validator("persistent_max_occurrences")
+    @classmethod
+    def persistent_max_safe(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and (value < 2 or value > 6):
+            raise ValueError("persistent_max_occurrences must be between 2 and 6")
+        return value
+
     @model_validator(mode="after")
     def target_id_required_for_owned_targets(self) -> "ReminderCreate":
         if self.target_type in TARGET_TYPES_REQUIRING_ID and self.target_id is None:
             raise ValueError("target_id is required for this reminder target_type")
+        if self.is_persistent:
+            if self.target_type != "task" or self.priority not in {"high", "urgent"}:
+                raise ValueError("Persistent reminders are allowed for important tasks only")
+            self.persistent_interval_minutes = self.persistent_interval_minutes or 30
+            self.persistent_max_occurrences = self.persistent_max_occurrences or 3
         return self
 
 
@@ -119,8 +148,13 @@ class ReminderUpdate(BaseModel):
     channel: Optional[str] = None
     priority: Optional[str] = None
     cancelled_at: Optional[datetime] = None
+    dismissed_at: Optional[datetime] = None
+    is_persistent: Optional[bool] = None
+    persistent_interval_minutes: Optional[int] = None
+    persistent_max_occurrences: Optional[int] = None
+    persistent_occurrences_sent: Optional[int] = None
 
-    @field_validator("scheduled_at", "snooze_until", "cancelled_at")
+    @field_validator("scheduled_at", "snooze_until", "cancelled_at", "dismissed_at")
     @classmethod
     def update_datetime_must_be_timezone_aware(
         cls, value: Optional[datetime]
@@ -169,6 +203,20 @@ class ReminderUpdate(BaseModel):
             raise ValueError("Unsupported reminder priority")
         return normalized
 
+    @field_validator("persistent_interval_minutes")
+    @classmethod
+    def update_persistent_interval_safe(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and (value < 30 or value > 240):
+            raise ValueError("persistent_interval_minutes must be between 30 and 240")
+        return value
+
+    @field_validator("persistent_max_occurrences")
+    @classmethod
+    def update_persistent_max_safe(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and (value < 2 or value > 6):
+            raise ValueError("persistent_max_occurrences must be between 2 and 6")
+        return value
+
 
 class ReminderSnoozeRequest(BaseModel):
     minutes: int
@@ -205,9 +253,14 @@ class ReminderResponse(BaseModel):
     snooze_until: Optional[datetime]
     channel: str
     priority: str
+    is_persistent: bool
+    persistent_interval_minutes: Optional[int]
+    persistent_max_occurrences: Optional[int]
+    persistent_occurrences_sent: int
     created_at: datetime
     updated_at: datetime
     cancelled_at: Optional[datetime]
+    dismissed_at: Optional[datetime]
 
     model_config = {"from_attributes": True}
 
@@ -218,6 +271,9 @@ class TaskReminderPresetItem(BaseModel):
     custom_recurrence_rule: Optional[str] = None
     channel: str = "local"
     priority: str = "normal"
+    is_persistent: bool = False
+    persistent_interval_minutes: Optional[int] = None
+    persistent_max_occurrences: Optional[int] = None
 
     @field_validator("preset")
     @classmethod
@@ -260,6 +316,20 @@ class TaskReminderPresetItem(BaseModel):
             raise ValueError("Unsupported reminder priority")
         return normalized
 
+    @field_validator("persistent_interval_minutes")
+    @classmethod
+    def preset_persistent_interval_safe(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and (value < 30 or value > 240):
+            raise ValueError("persistent_interval_minutes must be between 30 and 240")
+        return value
+
+    @field_validator("persistent_max_occurrences")
+    @classmethod
+    def preset_persistent_max_safe(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and (value < 2 or value > 6):
+            raise ValueError("persistent_max_occurrences must be between 2 and 6")
+        return value
+
     @model_validator(mode="after")
     def custom_fields_valid(self) -> "TaskReminderPresetItem":
         if self.preset in {"custom", "recurring_custom"} and (
@@ -268,6 +338,11 @@ class TaskReminderPresetItem(BaseModel):
             raise ValueError("custom_scheduled_at is required for this preset")
         if self.preset == "recurring_custom" and not self.custom_recurrence_rule:
             raise ValueError("custom_recurrence_rule is required")
+        if self.is_persistent:
+            if self.priority not in {"high", "urgent"}:
+                raise ValueError("Persistent reminders are allowed for important tasks only")
+            self.persistent_interval_minutes = self.persistent_interval_minutes or 30
+            self.persistent_max_occurrences = self.persistent_max_occurrences or 3
         return self
 
 

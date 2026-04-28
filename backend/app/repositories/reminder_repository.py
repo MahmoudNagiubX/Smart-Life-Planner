@@ -168,6 +168,20 @@ async def reschedule_reminder(
     return reminder
 
 
+async def dismiss_reminder(
+    db: AsyncSession,
+    reminder: Reminder,
+) -> Reminder:
+    now = datetime.now(timezone.utc)
+    reminder.status = "dismissed"
+    reminder.dismissed_at = now
+    reminder.cancelled_at = now
+    reminder.snooze_until = None
+    await db.commit()
+    await db.refresh(reminder)
+    return reminder
+
+
 async def _get_active_task_preset_reminders(
     db: AsyncSession,
     user_id: uuid.UUID,

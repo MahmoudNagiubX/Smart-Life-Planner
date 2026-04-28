@@ -8,10 +8,13 @@ class TaskReminderPresetsTile extends StatelessWidget {
   final Set<String> selectedPresets;
   final DateTime? customScheduledAt;
   final bool recurringCustomEnabled;
+  final bool constantReminderEnabled;
+  final String taskPriority;
   final String recurringRule;
   final ValueChanged<Set<String>> onPresetsChanged;
   final ValueChanged<DateTime?> onCustomScheduledAtChanged;
   final ValueChanged<bool> onRecurringCustomChanged;
+  final ValueChanged<bool> onConstantReminderChanged;
   final ValueChanged<String> onRecurringRuleChanged;
 
   const TaskReminderPresetsTile({
@@ -20,10 +23,13 @@ class TaskReminderPresetsTile extends StatelessWidget {
     required this.selectedPresets,
     required this.customScheduledAt,
     required this.recurringCustomEnabled,
+    required this.constantReminderEnabled,
+    required this.taskPriority,
     required this.recurringRule,
     required this.onPresetsChanged,
     required this.onCustomScheduledAtChanged,
     required this.onRecurringCustomChanged,
+    required this.onConstantReminderChanged,
     required this.onRecurringRuleChanged,
   });
 
@@ -39,12 +45,21 @@ class TaskReminderPresetsTile extends StatelessWidget {
     required Set<String> selectedPresets,
     required DateTime? customScheduledAt,
     required bool recurringCustomEnabled,
+    required bool constantReminderEnabled,
+    required String taskPriority,
     required String recurringRule,
   }) {
+    final useConstant = constantReminderEnabled && taskPriority == 'high';
     final drafts = <TaskReminderPresetDraft>[
       if (dueAt != null)
         ...selectedPresets.map(
-          (preset) => TaskReminderPresetDraft(preset: preset),
+          (preset) => TaskReminderPresetDraft(
+            preset: preset,
+            priority: useConstant ? 'high' : 'normal',
+            isPersistent: useConstant,
+            persistentIntervalMinutes: useConstant ? 30 : null,
+            persistentMaxOccurrences: useConstant ? 3 : null,
+          ),
         ),
     ];
     if (customScheduledAt != null) {
@@ -55,6 +70,10 @@ class TaskReminderPresetsTile extends StatelessWidget {
           customRecurrenceRule: recurringCustomEnabled
               ? _safeRecurringRule(recurringRule)
               : null,
+          priority: useConstant ? 'high' : 'normal',
+          isPersistent: useConstant,
+          persistentIntervalMinutes: useConstant ? 30 : null,
+          persistentMaxOccurrences: useConstant ? 3 : null,
         ),
       );
     }
@@ -87,6 +106,9 @@ class TaskReminderPresetsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasDueAt = dueAt != null;
+    final isImportant = taskPriority == 'high';
+    final hasAnyReminder =
+        selectedPresets.isNotEmpty || customScheduledAt != null;
 
     return Container(
       width: double.infinity,
@@ -178,6 +200,20 @@ class TaskReminderPresetsTile extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: 4),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: constantReminderEnabled && isImportant,
+            title: const Text('Constant reminder'),
+            subtitle: Text(
+              isImportant
+                  ? 'Repeats up to 3 times every 30 minutes until completed or dismissed.'
+                  : 'Available only for high-priority tasks.',
+            ),
+            onChanged: isImportant && hasAnyReminder
+                ? onConstantReminderChanged
+                : null,
+          ),
         ],
       ),
     );

@@ -173,6 +173,40 @@ class NotificationScheduler {
     );
   }
 
+  Future<void> schedulePersistentTaskReminderSeries({
+    required String reminderId,
+    required String taskId,
+    required String taskTitle,
+    required DateTime firstReminderAt,
+    required int intervalMinutes,
+    required int maxOccurrences,
+  }) async {
+    final safeInterval = intervalMinutes.clamp(30, 240);
+    final safeMax = maxOccurrences.clamp(2, 6);
+    for (var index = 0; index < safeMax; index++) {
+      final fireAt = firstReminderAt.add(
+        Duration(minutes: safeInterval * index),
+      );
+      if (fireAt.isBefore(DateTime.now())) continue;
+      await _service.scheduleNotification(
+        id: NotificationIds.taskPersistentReminder(reminderId, index),
+        title: 'Task Reminder',
+        body: taskTitle,
+        scheduledAt: fireAt,
+        payload: 'task:$taskId:reminder:$reminderId',
+        actions: NotificationService.taskReminderActions,
+      );
+    }
+  }
+
+  Future<void> cancelPersistentTaskReminderSeries(String reminderId) async {
+    for (var index = 0; index < 6; index++) {
+      await _service.cancelNotification(
+        NotificationIds.taskPersistentReminder(reminderId, index),
+      );
+    }
+  }
+
   Future<void> scheduleNoteReminder({
     required String noteId,
     required String noteTitle,

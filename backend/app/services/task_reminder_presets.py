@@ -90,6 +90,13 @@ def build_task_reminder_preset_data(
                 "status": "scheduled",
                 "channel": item.channel,
                 "priority": item.priority,
+                "is_persistent": item.is_persistent,
+                "persistent_interval_minutes": (
+                    item.persistent_interval_minutes if item.is_persistent else None
+                ),
+                "persistent_max_occurrences": (
+                    item.persistent_max_occurrences if item.is_persistent else None
+                ),
             }
         )
     return reminders

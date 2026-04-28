@@ -33,6 +33,9 @@ class NotificationActionHandler {
           await _reschedule(payload);
           _openTask(payload.taskId);
           break;
+        case NotificationActions.dismiss:
+          await _dismiss(payload);
+          break;
         case NotificationActions.openTask:
         case '':
           _openTask(payload.taskId);
@@ -98,6 +101,19 @@ class NotificationActionHandler {
           taskTitle: 'Task reminder',
           reminderAt: fireAt,
         );
+  }
+
+  Future<void> _dismiss(TaskNotificationPayload payload) async {
+    if (payload.reminderId == null) return;
+    await ref
+        .read(reminderServiceProvider)
+        .dismissReminder(payload.reminderId!);
+    await ref
+        .read(notificationSchedulerProvider)
+        .cancelPersistentTaskReminderSeries(payload.reminderId!);
+    await ref
+        .read(notificationSchedulerProvider)
+        .cancelTaskPresetReminder(payload.reminderId!);
   }
 
   void _openTask(String taskId) {

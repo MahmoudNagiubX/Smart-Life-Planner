@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,6 +38,18 @@ class Reminder(Base):
     )
     channel: Mapped[str] = mapped_column(String(30), default="local", nullable=False)
     priority: Mapped[str] = mapped_column(String(20), default="normal", nullable=False)
+    is_persistent: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    persistent_interval_minutes: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    persistent_max_occurrences: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    persistent_occurrences_sent: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, nullable=False
     )
@@ -48,5 +60,8 @@ class Reminder(Base):
         nullable=False,
     )
     cancelled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    dismissed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )

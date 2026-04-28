@@ -249,6 +249,16 @@ class _TypeCard extends StatelessWidget {
               preferences.copyWith(types: types.copyWith(bedtime: value)),
             ),
           ),
+          _SwitchRow(
+            title: 'Constant reminders',
+            subtitle: 'Repeat important task reminders with safe limits.',
+            value: types.constantReminders,
+            onChanged: (value) => onChanged(
+              preferences.copyWith(
+                types: types.copyWith(constantReminders: value),
+              ),
+            ),
+          ),
         ],
       ),
     );
