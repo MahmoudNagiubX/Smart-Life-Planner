@@ -35,4 +35,6 @@ abstract class AppRoutes {
   static const rankedTasks = '/home/ranked-tasks';
   static const voiceCapture = '/home/voice-capture';
   static const contextIntelligence = '/home/context-intelligence';
+  static const aiCoach = '/home/ai-coach';
+  static const aiCoachFeature = '/home/ai-coach/:featureId';
 }

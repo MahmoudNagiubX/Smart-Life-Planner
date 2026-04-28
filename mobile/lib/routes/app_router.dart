@@ -21,6 +21,8 @@ import '../features/notes/screens/notes_screen.dart';
 import '../features/tasks/screens/task_details_screen.dart';
 import '../features/tasks/screens/project_timeline_screen.dart';
 import '../features/ai/screens/daily_plan_screen.dart';
+import '../features/ai/screens/ai_life_coach_placeholder_screen.dart';
+import '../features/ai/screens/ai_life_coach_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/context/screens/context_intelligence_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
@@ -110,6 +112,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.dailyPlan,
             builder: (context, state) => const DailyPlanScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.aiCoach,
+            builder: (context, state) => const AiLifeCoachScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.aiCoachFeature,
+            builder: (context, state) => AiLifeCoachPlaceholderScreen(
+              featureId: state.pathParameters['featureId'] ?? '',
+            ),
           ),
           GoRoute(
             path: AppRoutes.tasks,
