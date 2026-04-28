@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.core.reminder_preferences import default_reminder_preferences
 
 
 class AuthProvider(str, enum.Enum):
@@ -82,6 +83,11 @@ class UserSettings(Base):
     theme: Mapped[str] = mapped_column(String(20), default="dark", nullable=False)
     notifications_enabled: Mapped[bool] = mapped_column(
         Boolean, default=True, nullable=False
+    )
+    reminder_preferences: Mapped[dict] = mapped_column(
+        JSON,
+        default=default_reminder_preferences,
+        nullable=False,
     )
     # Onboarding and personalization
     country: Mapped[str | None] = mapped_column(String(100), nullable=True)

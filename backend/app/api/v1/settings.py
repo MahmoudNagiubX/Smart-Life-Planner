@@ -18,6 +18,7 @@ PRAYER_REMINDER_FIELDS = {
     "prayer_reminder_minutes_before",
     "athan_sound_enabled",
     "timezone",
+    "reminder_preferences",
 }
 
 
@@ -48,7 +49,7 @@ async def update_user_settings(
             detail="Settings not found",
         )
 
-    data = payload.model_dump(exclude_none=True)
+    data = payload.model_dump(exclude_none=True, mode="json")
     if AI_SEED_FIELDS.intersection(data):
         data.update(
             build_ai_recommendation_seed(

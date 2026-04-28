@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
+import '../../reminders/providers/reminder_preferences_provider.dart';
 import '../models/note_model.dart';
 import '../services/note_service.dart';
 
@@ -297,9 +298,14 @@ class NotesNotifier extends StateNotifier<NotesState> {
       await scheduler.cancelNoteReminder(note.id);
       return;
     }
-
     try {
       final reminderAt = DateTime.parse(note.reminderAt!).toLocal();
+      if (!await _ref
+          .read(reminderPreferencesProvider.notifier)
+          .canScheduleLocal('note', scheduledAt: reminderAt)) {
+        await scheduler.cancelNoteReminder(note.id);
+        return;
+      }
       if (reminderAt.isAfter(DateTime.now())) {
         await scheduler.rescheduleNoteReminder(
           noteId: note.id,

@@ -3,6 +3,7 @@ from pydantic import Field, field_validator
 from typing import Literal, Optional
 import uuid
 from datetime import datetime
+from app.core.reminder_preferences import default_reminder_preferences
 from app.services.onboarding_defaults import normalize_goal_keys
 
 ALLOWED_ONBOARDING_GOALS = {
@@ -76,6 +77,70 @@ def validate_dashboard_widgets(widgets: list[str] | None) -> list[str] | None:
     return normalized
 
 
+class ReminderChannels(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    local: bool = True
+    push: bool = True
+    in_app: bool = True
+    email: bool = False
+
+
+class ReminderTypes(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task: bool = True
+    habit: bool = True
+    note: bool = True
+    quran_goal: bool = True
+    prayer: bool = True
+    focus_prompt: bool = True
+    bedtime: bool = True
+    ai_suggestion: bool = True
+    location: bool = False
+
+
+class ReminderQuietHours(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    start: str = "22:00"
+    end: str = "07:00"
+
+    @field_validator("start")
+    @classmethod
+    def start_valid(cls, value: str) -> str:
+        checked = _validate_hh_mm(value, "quiet_hours.start")
+        if checked is None:
+            raise ValueError("quiet_hours.start is required")
+        return checked
+
+    @field_validator("end")
+    @classmethod
+    def end_valid(cls, value: str) -> str:
+        checked = _validate_hh_mm(value, "quiet_hours.end")
+        if checked is None:
+            raise ValueError("quiet_hours.end is required")
+        return checked
+
+
+class ReminderTiming(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prayer_minutes_before: int = Field(default=10, ge=0, le=120)
+    bedtime_minutes_before: int = Field(default=30, ge=0, le=240)
+    focus_prompt_minutes_before: int = Field(default=10, ge=0, le=240)
+
+
+class ReminderPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    channels: ReminderChannels = Field(default_factory=ReminderChannels)
+    types: ReminderTypes = Field(default_factory=ReminderTypes)
+    quiet_hours: ReminderQuietHours = Field(default_factory=ReminderQuietHours)
+    timing: ReminderTiming = Field(default_factory=ReminderTiming)
+
+
 class WorkStudyWindow(BaseModel):
     """Structured JSON payload for first-run work or study availability."""
 
@@ -137,6 +202,11 @@ class SettingsResponse(BaseModel):
     athan_sound_enabled: bool
     theme: str
     notifications_enabled: bool
+    reminder_preferences: ReminderPreferences = Field(
+        default_factory=lambda: ReminderPreferences(
+            **default_reminder_preferences()
+        )
+    )
 
     # Onboarding fields
     country: Optional[str]
@@ -173,6 +243,7 @@ class SettingsUpdate(BaseModel):
     athan_sound_enabled: Optional[bool] = None
     theme: Optional[str] = None
     notifications_enabled: Optional[bool] = None
+    reminder_preferences: Optional[ReminderPreferences] = None
 
     country: Optional[str] = None
     city: Optional[str] = None

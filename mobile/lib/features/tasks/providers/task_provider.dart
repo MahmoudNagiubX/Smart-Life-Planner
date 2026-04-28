@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
+import '../../reminders/providers/reminder_preferences_provider.dart';
 import '../models/task_model.dart';
 import '../services/task_service.dart';
 
@@ -249,9 +250,14 @@ class TasksNotifier extends StateNotifier<TasksState> {
       await scheduler.cancelTaskReminder(task.id);
       return;
     }
-
     try {
       final reminderAt = DateTime.parse(task.reminderAt!).toLocal();
+      if (!await _ref
+          .read(reminderPreferencesProvider.notifier)
+          .canScheduleLocal('task', scheduledAt: reminderAt)) {
+        await scheduler.cancelTaskReminder(task.id);
+        return;
+      }
       if (reminderAt.isAfter(DateTime.now())) {
         await scheduler.rescheduleTaskReminder(
           taskId: task.id,

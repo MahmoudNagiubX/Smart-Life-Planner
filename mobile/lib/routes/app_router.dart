@@ -32,6 +32,7 @@ import '../features/prayer/screens/quran_goal_screen.dart';
 import '../features/prayer/screens/qibla_screen.dart';
 import '../features/prayer/screens/ramadan_mode_screen.dart';
 import '../features/prayer/screens/spiritual_upgrades_screen.dart';
+import '../features/reminders/screens/notification_settings_screen.dart';
 import '../features/voice/screens/voice_capture_screen.dart';
 import '../features/voice/screens/voice_future_capabilities_screen.dart';
 import 'app_routes.dart';
@@ -255,11 +256,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.notificationSettings,
-            builder: (context, state) => const FeaturePlaceholderScreen(
-              title: 'Notification Settings',
-              description: 'Reminder channels, quiet hours, and permissions.',
-              icon: Icons.notifications_outlined,
-            ),
+            builder: (context, state) => const NotificationSettingsScreen(),
           ),
           GoRoute(
             path: AppRoutes.languageSettings,
