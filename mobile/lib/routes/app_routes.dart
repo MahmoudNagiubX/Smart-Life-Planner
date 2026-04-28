@@ -21,6 +21,7 @@ abstract class AppRoutes {
   static const quranGoal = '/home/prayer/quran-goal';
   static const qibla = '/home/prayer/qibla';
   static const ramadan = '/home/prayer/ramadan';
+  static const spiritualUpgrades = '/home/prayer/spiritual-upgrades';
   static const prayerSettings = '/home/prayer/settings';
   static const profile = '/home/profile';
   static const changePassword = '/home/change-password';

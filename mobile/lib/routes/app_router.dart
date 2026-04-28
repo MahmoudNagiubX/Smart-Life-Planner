@@ -28,6 +28,7 @@ import '../features/prayer/screens/prayer_settings_screen.dart';
 import '../features/prayer/screens/quran_goal_screen.dart';
 import '../features/prayer/screens/qibla_screen.dart';
 import '../features/prayer/screens/ramadan_mode_screen.dart';
+import '../features/prayer/screens/spiritual_upgrades_screen.dart';
 import '../features/voice/screens/voice_capture_screen.dart';
 import 'app_routes.dart';
 
@@ -185,6 +186,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.ramadan,
             builder: (context, state) => const RamadanModeScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.spiritualUpgrades,
+            builder: (context, state) => const SpiritualUpgradesScreen(),
           ),
           GoRoute(
             path: AppRoutes.prayerSettings,
