@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../reminders/widgets/task_reminder_presets_tile.dart';
 import '../providers/task_provider.dart';
 
 class CreateTaskSheet extends ConsumerStatefulWidget {
@@ -16,7 +17,10 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
   String _priority = 'medium';
   String _bucket = 'pending';
   DateTime? _dueAt;
-  DateTime? _reminderAt;
+  final Set<String> _selectedReminderPresets = {};
+  DateTime? _customReminderAt;
+  bool _recurringCustomEnabled = false;
+  String _recurringRule = 'FREQ=DAILY';
   bool _isLoading = false;
 
   @override
@@ -52,11 +56,6 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
     if (picked != null) setState(() => _dueAt = picked);
   }
 
-  Future<void> _pickReminder() async {
-    final picked = await _pickDateTime(initial: _reminderAt);
-    if (picked != null) setState(() => _reminderAt = picked);
-  }
-
   Future<void> _submit() async {
     if (_titleController.text.trim().isEmpty) return;
     setState(() => _isLoading = true);
@@ -70,8 +69,14 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
               : _descController.text.trim(),
           priority: _priority,
           dueAt: _dueAt,
-          reminderAt: _reminderAt,
           status: _bucket == 'calendar' ? 'pending' : _bucket,
+          reminderPresets: TaskReminderPresetsTile.buildDraftsFrom(
+            dueAt: _dueAt,
+            selectedPresets: _selectedReminderPresets,
+            customScheduledAt: _customReminderAt,
+            recurringCustomEnabled: _recurringCustomEnabled,
+            recurringRule: _recurringRule,
+          ),
         );
 
     if (mounted) {
@@ -169,16 +174,23 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
                   : () => setState(() => _dueAt = null),
             ),
             const SizedBox(height: 12),
-            _DateActionTile(
-              icon: Icons.notifications_outlined,
-              label: _reminderAt == null
-                  ? 'Set reminder (optional)'
-                  : 'Reminder: ${_reminderAt!.toLocal().toString().substring(0, 16)}',
-              active: _reminderAt != null,
-              onTap: _pickReminder,
-              onClear: _reminderAt == null
-                  ? null
-                  : () => setState(() => _reminderAt = null),
+            TaskReminderPresetsTile(
+              dueAt: _dueAt,
+              selectedPresets: _selectedReminderPresets,
+              customScheduledAt: _customReminderAt,
+              recurringCustomEnabled: _recurringCustomEnabled,
+              recurringRule: _recurringRule,
+              onPresetsChanged: (value) => setState(
+                () => _selectedReminderPresets
+                  ..clear()
+                  ..addAll(value),
+              ),
+              onCustomScheduledAtChanged: (value) =>
+                  setState(() => _customReminderAt = value),
+              onRecurringCustomChanged: (value) =>
+                  setState(() => _recurringCustomEnabled = value),
+              onRecurringRuleChanged: (value) =>
+                  setState(() => _recurringRule = value),
             ),
             const SizedBox(height: 24),
             _isLoading

@@ -1,10 +1,18 @@
 import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.reminder import Reminder
+from app.models.task import Task
+from app.services.task_reminder_presets import (
+    TASK_REMINDER_PRESET_OFFSETS,
+    calculate_task_preset_time,
+    is_future_reminder,
+    task_preset_from_recurrence_rule,
+)
 
 
 async def get_reminders(
@@ -55,6 +63,70 @@ async def create_reminder(
     return reminder
 
 
+async def replace_task_reminder_presets(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    task: Task,
+    reminders_data: list[dict],
+) -> list[Reminder]:
+    now = datetime.now(timezone.utc)
+    existing = await _get_active_task_preset_reminders(db, user_id, task.id)
+    for reminder in existing:
+        reminder.status = "cancelled"
+        reminder.cancelled_at = now
+
+    created: list[Reminder] = []
+    for data in reminders_data:
+        if not is_future_reminder(data["scheduled_at"]):
+            continue
+        reminder = Reminder(user_id=user_id, **data)
+        db.add(reminder)
+        created.append(reminder)
+
+    await db.commit()
+    for reminder in created:
+        await db.refresh(reminder)
+    return created
+
+
+async def resync_task_due_preset_reminders(
+    db: AsyncSession,
+    task: Task,
+) -> None:
+    reminders = await _get_active_task_preset_reminders(db, task.user_id, task.id)
+    if not reminders:
+        return
+
+    now = datetime.now(timezone.utc)
+    changed = False
+    for reminder in reminders:
+        preset = task_preset_from_recurrence_rule(reminder.recurrence_rule)
+        if preset not in TASK_REMINDER_PRESET_OFFSETS:
+            continue
+
+        if task.due_at is None:
+            reminder.status = "cancelled"
+            reminder.cancelled_at = now
+            changed = True
+            continue
+
+        next_time = calculate_task_preset_time(
+            preset,
+            due_at=task.due_at,
+        )
+        if is_future_reminder(next_time):
+            reminder.scheduled_at = next_time
+            reminder.cancelled_at = None
+            reminder.status = "scheduled"
+        else:
+            reminder.status = "cancelled"
+            reminder.cancelled_at = now
+        changed = True
+
+    if changed:
+        await db.commit()
+
+
 async def update_reminder(
     db: AsyncSession,
     reminder: Reminder,
@@ -65,3 +137,21 @@ async def update_reminder(
     await db.commit()
     await db.refresh(reminder)
     return reminder
+
+
+async def _get_active_task_preset_reminders(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    task_id: uuid.UUID,
+) -> list[Reminder]:
+    result = await db.execute(
+        select(Reminder).where(
+            Reminder.user_id == user_id,
+            Reminder.target_type == "task",
+            Reminder.target_id == task_id,
+            Reminder.reminder_type == "task_due",
+            Reminder.status != "cancelled",
+            Reminder.recurrence_rule.like("preset:%"),
+        )
+    )
+    return list(result.scalars().all())

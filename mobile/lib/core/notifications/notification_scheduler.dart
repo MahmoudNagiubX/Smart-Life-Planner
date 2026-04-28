@@ -148,6 +148,29 @@ class NotificationScheduler {
     await cancelTaskReminder(taskId);
   }
 
+  Future<void> scheduleTaskPresetReminder({
+    required String reminderId,
+    required String taskId,
+    required String taskTitle,
+    required DateTime reminderAt,
+  }) async {
+    if (reminderAt.isBefore(DateTime.now())) return;
+
+    await _service.scheduleNotification(
+      id: NotificationIds.taskPresetReminder(reminderId),
+      title: 'Task Reminder',
+      body: taskTitle,
+      scheduledAt: reminderAt,
+      payload: 'task:$taskId:reminder:$reminderId',
+    );
+  }
+
+  Future<void> cancelTaskPresetReminder(String reminderId) async {
+    await _service.cancelNotification(
+      NotificationIds.taskPresetReminder(reminderId),
+    );
+  }
+
   Future<void> scheduleNoteReminder({
     required String noteId,
     required String noteTitle,

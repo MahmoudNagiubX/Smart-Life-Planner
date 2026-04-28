@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.models.task import Task, TaskCompletionEvent, TaskProject, TaskSubtask
+from app.repositories.reminder_repository import resync_task_due_preset_reminders
 from app.services.reminder_lifecycle import (
     log_task_reminders_cancelled,
     log_task_reminders_rescheduled,
@@ -147,6 +148,7 @@ async def update_task(db: AsyncSession, task: Task, data: dict) -> Task:
     await db.commit()
     await db.refresh(task)
     if reminder_fields_changed:
+        await resync_task_due_preset_reminders(db, task)
         log_task_reminders_rescheduled(
             user_id=task.user_id,
             task_id=task.id,

@@ -32,4 +32,22 @@ class ReminderService {
     );
     return ReminderModel.fromJson(response.data as Map<String, dynamic>);
   }
+
+  Future<List<ReminderModel>> saveTaskReminderPresets({
+    required String taskId,
+    required List<TaskReminderPresetDraft> presets,
+    String timezone = 'UTC',
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/reminders/task-presets',
+      data: {
+        'task_id': taskId,
+        'timezone': timezone,
+        'presets': presets.map((preset) => preset.toJson()).toList(),
+      },
+    );
+    return (response.data as List<dynamic>)
+        .map((item) => ReminderModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
 }

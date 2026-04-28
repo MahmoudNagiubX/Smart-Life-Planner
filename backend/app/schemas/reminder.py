@@ -1,8 +1,9 @@
-import uuid
 from datetime import datetime
 from typing import Optional
+import uuid
 
 from pydantic import BaseModel, field_validator, model_validator
+from app.services.task_reminder_presets import TASK_REMINDER_PRESETS
 
 
 VALID_TARGET_TYPES = {
@@ -187,3 +188,85 @@ class ReminderResponse(BaseModel):
     cancelled_at: Optional[datetime]
 
     model_config = {"from_attributes": True}
+
+
+class TaskReminderPresetItem(BaseModel):
+    preset: str
+    custom_scheduled_at: Optional[datetime] = None
+    custom_recurrence_rule: Optional[str] = None
+    channel: str = "local"
+    priority: str = "normal"
+
+    @field_validator("preset")
+    @classmethod
+    def preset_valid(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in TASK_REMINDER_PRESETS:
+            raise ValueError("Unsupported task reminder preset")
+        return normalized
+
+    @field_validator("custom_scheduled_at")
+    @classmethod
+    def custom_datetime_must_be_timezone_aware(
+        cls, value: Optional[datetime]
+    ) -> Optional[datetime]:
+        if value is not None and value.tzinfo is None:
+            raise ValueError("custom_scheduled_at must include timezone info")
+        return value
+
+    @field_validator("custom_recurrence_rule")
+    @classmethod
+    def custom_rule_trimmed(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        stripped = value.strip()
+        return stripped or None
+
+    @field_validator("channel")
+    @classmethod
+    def preset_channel_valid(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in VALID_REMINDER_CHANNELS:
+            raise ValueError("Unsupported reminder channel")
+        return normalized
+
+    @field_validator("priority")
+    @classmethod
+    def preset_priority_valid(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in VALID_REMINDER_PRIORITIES:
+            raise ValueError("Unsupported reminder priority")
+        return normalized
+
+    @model_validator(mode="after")
+    def custom_fields_valid(self) -> "TaskReminderPresetItem":
+        if self.preset in {"custom", "recurring_custom"} and (
+            self.custom_scheduled_at is None
+        ):
+            raise ValueError("custom_scheduled_at is required for this preset")
+        if self.preset == "recurring_custom" and not self.custom_recurrence_rule:
+            raise ValueError("custom_recurrence_rule is required")
+        return self
+
+
+class TaskReminderPresetRequest(BaseModel):
+    task_id: uuid.UUID
+    presets: list[TaskReminderPresetItem]
+    timezone: str = "UTC"
+
+    @field_validator("presets")
+    @classmethod
+    def presets_not_empty(
+        cls, value: list[TaskReminderPresetItem]
+    ) -> list[TaskReminderPresetItem]:
+        if not value:
+            raise ValueError("At least one reminder preset is required")
+        return value
+
+    @field_validator("timezone")
+    @classmethod
+    def preset_timezone_valid(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("timezone cannot be empty")
+        return normalized

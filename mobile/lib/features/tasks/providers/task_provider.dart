@@ -3,7 +3,9 @@ import 'package:dio/dio.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
+import '../../reminders/models/reminder_model.dart';
 import '../../reminders/providers/reminder_preferences_provider.dart';
+import '../../reminders/providers/reminder_provider.dart';
 import '../models/task_model.dart';
 import '../services/task_service.dart';
 
@@ -64,6 +66,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
     String? category,
     int? estimatedMinutes,
     String? status,
+    List<TaskReminderPresetDraft> reminderPresets = const [],
   }) async {
     try {
       final service = _ref.read(taskServiceProvider);
@@ -79,7 +82,11 @@ class TasksNotifier extends StateNotifier<TasksState> {
         status: status,
       );
 
-      await _syncTaskReminder(task);
+      if (reminderPresets.isNotEmpty) {
+        await _createAndSyncTaskPresetReminders(task, reminderPresets);
+      } else {
+        await _syncTaskReminder(task);
+      }
 
       await loadTasks();
       return true;
@@ -102,6 +109,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       await _ref
           .read(notificationSchedulerProvider)
           .cancelTaskReminders(taskId);
+      await _cancelTaskPresetReminders(taskId);
 
       state = state.copyWith(
         tasks: state.tasks.map((t) => t.id == taskId ? updated : t).toList(),
@@ -117,6 +125,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       await _ref
           .read(notificationSchedulerProvider)
           .cancelTaskReminders(taskId);
+      await _cancelTaskPresetReminders(taskId);
 
       state = state.copyWith(
         tasks: state.tasks.where((t) => t.id != taskId).toList(),
@@ -158,6 +167,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       );
 
       await _syncTaskReminder(updated);
+      await _syncTaskPresetReminders(updated);
 
       state = state.copyWith(
         tasks: state.tasks.map((t) => t.id == taskId ? updated : t).toList(),
@@ -269,6 +279,75 @@ class TasksNotifier extends StateNotifier<TasksState> {
       }
     } catch (_) {
       await scheduler.cancelTaskReminder(task.id);
+    }
+  }
+
+  Future<void> _createAndSyncTaskPresetReminders(
+    TaskModel task,
+    List<TaskReminderPresetDraft> presets,
+  ) async {
+    final reminders = await _ref
+        .read(reminderServiceProvider)
+        .saveTaskReminderPresets(
+          taskId: task.id,
+          presets: presets,
+          timezone: DateTime.now().timeZoneName,
+        );
+    await _scheduleTaskPresetReminders(task, reminders);
+  }
+
+  Future<void> _syncTaskPresetReminders(TaskModel task) async {
+    try {
+      final reminders = await _ref
+          .read(reminderServiceProvider)
+          .getReminders(
+            targetType: 'task',
+            targetId: task.id,
+            status: 'scheduled',
+          );
+      await _scheduleTaskPresetReminders(task, reminders);
+    } catch (_) {}
+  }
+
+  Future<void> _cancelTaskPresetReminders(String taskId) async {
+    try {
+      final reminders = await _ref
+          .read(reminderServiceProvider)
+          .getReminders(
+            targetType: 'task',
+            targetId: taskId,
+            status: 'scheduled',
+          );
+      final scheduler = _ref.read(notificationSchedulerProvider);
+      for (final reminder in reminders) {
+        await scheduler.cancelTaskPresetReminder(reminder.id);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _scheduleTaskPresetReminders(
+    TaskModel task,
+    List<ReminderModel> reminders,
+  ) async {
+    final scheduler = _ref.read(notificationSchedulerProvider);
+    for (final reminder in reminders) {
+      if (reminder.reminderType != 'task_due' || reminder.channel != 'local') {
+        continue;
+      }
+      final reminderAt = DateTime.tryParse(reminder.scheduledAt)?.toLocal();
+      if (reminderAt == null ||
+          !await _ref
+              .read(reminderPreferencesProvider.notifier)
+              .canScheduleLocal('task', scheduledAt: reminderAt)) {
+        await scheduler.cancelTaskPresetReminder(reminder.id);
+        continue;
+      }
+      await scheduler.scheduleTaskPresetReminder(
+        reminderId: reminder.id,
+        taskId: task.id,
+        taskTitle: task.title,
+        reminderAt: reminderAt,
+      );
     }
   }
 }

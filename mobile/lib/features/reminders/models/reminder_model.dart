@@ -111,3 +111,29 @@ class ReminderDraft {
     'priority': priority,
   };
 }
+
+class TaskReminderPresetDraft {
+  final String preset;
+  final DateTime? customScheduledAt;
+  final String? customRecurrenceRule;
+  final String channel;
+  final String priority;
+
+  const TaskReminderPresetDraft({
+    required this.preset,
+    this.customScheduledAt,
+    this.customRecurrenceRule,
+    this.channel = 'local',
+    this.priority = 'normal',
+  });
+
+  Map<String, dynamic> toJson() => {
+    'preset': preset,
+    if (customScheduledAt != null)
+      'custom_scheduled_at': customScheduledAt!.toUtc().toIso8601String(),
+    if (customRecurrenceRule != null)
+      'custom_recurrence_rule': customRecurrenceRule,
+    'channel': channel,
+    'priority': priority,
+  };
+}

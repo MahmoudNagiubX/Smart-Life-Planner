@@ -14,15 +14,18 @@ from app.repositories.reminder_repository import (
     create_reminder,
     get_reminder_by_id,
     get_reminders,
+    replace_task_reminder_presets,
     update_reminder,
 )
 from app.repositories.task_repository import get_task_by_id
 from app.schemas.reminder import (
     ReminderCreate,
     ReminderResponse,
+    TaskReminderPresetRequest,
     ReminderUpdate,
     TARGET_TYPES_REQUIRING_ID,
 )
+from app.services.task_reminder_presets import build_task_reminder_preset_data
 
 router = APIRouter(prefix="/reminders", tags=["reminders"])
 
@@ -52,6 +55,38 @@ async def create_new_reminder(
 ):
     await _validate_target_ownership(db, current_user.id, payload)
     return await create_reminder(db, current_user.id, payload.model_dump())
+
+
+@router.post("/task-presets", response_model=list[ReminderResponse])
+async def create_task_reminder_presets(
+    payload: TaskReminderPresetRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    task = await get_task_by_id(db, payload.task_id, current_user.id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reminder target not found",
+        )
+    try:
+        reminders_data = build_task_reminder_preset_data(
+            task_id=task.id,
+            due_at=task.due_at,
+            timezone_name=payload.timezone,
+            presets=payload.presets,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    return await replace_task_reminder_presets(
+        db,
+        current_user.id,
+        task,
+        reminders_data,
+    )
 
 
 @router.get("/{reminder_id}", response_model=ReminderResponse)
