@@ -68,9 +68,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 : null,
           ),
         );
+      } else if (authState.status == AuthStatus.authenticated) {
+        _goAfterSuccessfulAuth(authState);
       }
       setState(() => _isLoading = false);
     }
+  }
+
+  void _goAfterSuccessfulAuth(AuthState authState) {
+    final isOnboardingCompleted =
+        authState.user?['onboarding_completed'] == true;
+    context.go(isOnboardingCompleted ? AppRoutes.home : AppRoutes.onboarding);
   }
 
   @override
@@ -193,6 +201,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   backgroundColor: AppColors.error,
                                 ),
                               );
+                            } else {
+                              final authState = ref.read(authProvider);
+                              if (authState.status ==
+                                  AuthStatus.authenticated) {
+                                _goAfterSuccessfulAuth(authState);
+                              }
                             }
                             setState(() => _isLoading = false);
                           }
@@ -228,6 +242,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               backgroundColor: AppColors.error,
                             ),
                           );
+                        } else {
+                          final authState = ref.read(authProvider);
+                          if (authState.status == AuthStatus.authenticated) {
+                            _goAfterSuccessfulAuth(authState);
+                          }
                         }
                         setState(() => _isLoading = false);
                       }

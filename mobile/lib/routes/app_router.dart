@@ -39,11 +39,14 @@ import '../features/voice/screens/voice_future_capabilities_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  final refreshListenable = _AuthRouteRefresh(ref);
+  ref.onDispose(refreshListenable.dispose);
 
   return GoRouter(
-    initialLocation: AppRoutes.welcome,
+    initialLocation: AppRoutes.splash,
+    refreshListenable: refreshListenable,
     redirect: (context, state) {
+      final authState = ref.read(authProvider);
       final isAuthenticated = authState.status == AuthStatus.authenticated;
       final isUnknown = authState.status == AuthStatus.unknown;
       final isAuthRoute =
@@ -54,7 +57,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == AppRoutes.verifyEmail ||
           state.matchedLocation == AppRoutes.forgotPassword;
 
-      if (isUnknown) return null;
+      if (isUnknown) {
+        return state.matchedLocation == AppRoutes.splash
+            ? null
+            : AppRoutes.splash;
+      }
+      if (!isAuthenticated && state.matchedLocation == AppRoutes.splash) {
+        return AppRoutes.welcome;
+      }
       if (!isAuthenticated && !isAuthRoute) return AppRoutes.welcome;
 
       if (isAuthenticated) {
@@ -64,7 +74,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             state.matchedLocation != AppRoutes.onboarding) {
           return AppRoutes.onboarding;
         } else if (isOnboardingCompleted &&
-            (isAuthRoute || state.matchedLocation == AppRoutes.onboarding)) {
+            (isAuthRoute ||
+                state.matchedLocation == AppRoutes.splash ||
+                state.matchedLocation == AppRoutes.onboarding)) {
           return AppRoutes.home;
         }
       }
@@ -298,3 +310,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+class _AuthRouteRefresh extends ChangeNotifier {
+  _AuthRouteRefresh(Ref ref) {
+    ref.listen<AuthState>(authProvider, (previous, next) => notifyListeners());
+  }
+}

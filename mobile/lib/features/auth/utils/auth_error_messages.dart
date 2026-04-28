@@ -30,6 +30,10 @@ String friendlyAuthError(Object error, String fallback) {
           normalized.contains('another google sign-in')) {
         return 'This account uses a different sign-in method.';
       }
+      if (normalized.contains('invalid google token') ||
+          normalized.contains('web oauth client id')) {
+        return 'Google sign-in is configured incorrectly. Check the Web OAuth client ID on Android and the backend GOOGLE_CLIENT_ID.';
+      }
       if (statusCode == 422) {
         return _validationMessage(data) ??
             'Please check the highlighted fields.';

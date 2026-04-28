@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
 import '../utils/auth_error_messages.dart';
@@ -47,17 +49,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _checkAuthStatus() async {
     final tokenStorage = _ref.read(tokenStorageProvider);
-    final hasToken = await tokenStorage.hasToken();
-    if (hasToken) {
-      try {
+    try {
+      final hasToken = await tokenStorage.hasToken();
+      if (hasToken) {
         final authService = _ref.read(authServiceProvider);
         final user = await authService.getMe();
         state = state.copyWith(status: AuthStatus.authenticated, user: user);
-      } catch (_) {
-        await tokenStorage.deleteToken();
+      } else {
         state = state.copyWith(status: AuthStatus.unauthenticated);
       }
-    } else {
+    } catch (_) {
+      await tokenStorage.deleteToken();
       state = state.copyWith(status: AuthStatus.unauthenticated);
     }
   }
@@ -87,7 +89,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       state = const AuthState(status: AuthStatus.unauthenticated);
     } on DioException catch (e) {
-      final message = friendlyAuthError(e, 'Registration failed');
+      final message = _authDioError(e, 'Registration failed');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: message,
@@ -109,7 +111,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         error: null,
       );
     } on DioException catch (e) {
-      final message = friendlyAuthError(e, 'Login failed');
+      await _ref.read(tokenStorageProvider).deleteToken();
+      final message = _authDioError(e, 'Login failed');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: message,
@@ -120,6 +123,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> googleLogin() async {
     try {
       state = state.copyWith(error: null);
+      if (_googleServerClientId.isEmpty) {
+        state = state.copyWith(
+          status: AuthStatus.unauthenticated,
+          error:
+              'Google sign-in is missing GOOGLE_CLIENT_ID. Configure the Web OAuth client ID for Android.',
+        );
+        return;
+      }
+
+      await _googleSignIn.signOut();
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         return;
@@ -150,10 +163,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
         error: null,
       );
     } on DioException catch (e) {
-      final message = friendlyAuthError(e, 'Google sign-in failed');
+      await _ref.read(tokenStorageProvider).deleteToken();
+      final message = _authDioError(e, 'Google sign-in failed');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: message,
+      );
+    } on PlatformException catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        error: _googlePlatformError(e),
       );
     } catch (e) {
       state = state.copyWith(
@@ -215,7 +234,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         error: null,
       );
     } on DioException catch (e) {
-      final message = friendlyAuthError(e, 'Apple sign-in failed');
+      await _ref.read(tokenStorageProvider).deleteToken();
+      final message = _authDioError(e, 'Apple sign-in failed');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: message,
@@ -246,7 +266,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await logout();
       return true;
     } on DioException catch (e) {
-      final message = friendlyAuthError(e, 'Account deletion failed');
+      final message = _authDioError(e, 'Account deletion failed');
       state = state.copyWith(error: message);
       return false;
     } catch (e) {
@@ -262,6 +282,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final tokenStorage = _ref.read(tokenStorageProvider);
     await tokenStorage.deleteToken();
     state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+
+  String _googlePlatformError(PlatformException error) {
+    final code = error.code.toLowerCase();
+    final message = error.message ?? '';
+    if (code.contains('sign_in_failed') ||
+        message.toLowerCase().contains('10:')) {
+      return 'Google sign-in could not start. Check the Android package name, SHA-1/SHA-256 fingerprints, and Web OAuth client ID.';
+    }
+    if (code.contains('network')) {
+      return 'Google sign-in could not reach Google. Check your connection and try again.';
+    }
+    return 'Google sign-in failed: ${error.message ?? error.code}';
+  }
+
+  String _authDioError(DioException error, String fallback) {
+    if (error.response == null &&
+        (error.type == DioExceptionType.connectionTimeout ||
+            error.type == DioExceptionType.receiveTimeout ||
+            error.type == DioExceptionType.sendTimeout ||
+            error.type == DioExceptionType.connectionError)) {
+      return 'Could not reach the backend at ${ApiClient.baseUrl}. On a real Android device, use your computer LAN IP with API_BASE_URL.';
+    }
+    return friendlyAuthError(error, fallback);
   }
 }
 
