@@ -37,4 +37,6 @@ abstract class AppRoutes {
   static const contextIntelligence = '/home/context-intelligence';
   static const aiCoach = '/home/ai-coach';
   static const aiCoachFeature = '/home/ai-coach/:featureId';
+  static const voiceFutureCapability =
+      '/home/voice-capture/future/:capabilityId';
 }

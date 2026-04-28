@@ -33,6 +33,7 @@ import '../features/prayer/screens/qibla_screen.dart';
 import '../features/prayer/screens/ramadan_mode_screen.dart';
 import '../features/prayer/screens/spiritual_upgrades_screen.dart';
 import '../features/voice/screens/voice_capture_screen.dart';
+import '../features/voice/screens/voice_future_capabilities_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -279,6 +280,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.voiceCapture,
             builder: (context, state) => const VoiceCaptureScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.voiceFutureCapability,
+            builder: (context, state) => VoiceFutureCapabilitiesScreen(
+              capabilityId: state.pathParameters['capabilityId'] ?? '',
+            ),
           ),
           GoRoute(
             path: AppRoutes.contextIntelligence,

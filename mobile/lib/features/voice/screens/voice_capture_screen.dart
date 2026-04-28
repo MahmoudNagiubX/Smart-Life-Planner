@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../providers/voice_provider.dart';
 import 'voice_confirmation_screen.dart';
+import 'voice_future_capabilities_screen.dart';
 
 class VoiceCaptureScreen extends ConsumerStatefulWidget {
   const VoiceCaptureScreen({super.key});
@@ -72,6 +74,19 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen>
     await ref.read(voiceProvider.notifier).stopAndProcess();
   }
 
+  Future<void> _showVoiceActionsMenu() async {
+    final capability = await showModalBottomSheet<VoiceFutureCapability>(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => const _VoiceActionsMenu(),
+    );
+    if (capability == null || !mounted) return;
+    context.push('/home/voice-capture/future/${capability.id}');
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(voiceProvider);
@@ -103,6 +118,13 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen>
           '🎙️ Voice Capture',
           style: TextStyle(color: Colors.white),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Voice actions',
+            onPressed: _showVoiceActionsMenu,
+            icon: const Icon(Icons.more_horiz, color: Colors.white),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -329,6 +351,47 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen>
           label: const Text('Enter Manually'),
         ),
       ],
+    );
+  }
+}
+
+class _VoiceActionsMenu extends StatelessWidget {
+  const _VoiceActionsMenu();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+        itemCount: voiceFutureCapabilities.length + 1,
+        separatorBuilder: (context, index) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Voice Actions',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            );
+          }
+          final capability = voiceFutureCapabilities[index - 1];
+          return ListTile(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            tileColor: Theme.of(context).cardTheme.color,
+            leading: Icon(capability.icon, color: AppColors.primary),
+            title: Text(capability.title),
+            subtitle: Text(capability.description),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.pop(context, capability),
+          );
+        },
+      ),
     );
   }
 }
