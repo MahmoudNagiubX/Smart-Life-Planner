@@ -1,13 +1,25 @@
 import uuid
 from datetime import datetime, date
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel, field_validator
+
+
+VALID_HABIT_CATEGORIES = {
+    "study",
+    "reading",
+    "quran",
+    "exercise",
+    "hydration",
+    "sleep",
+    "meditation",
+}
 
 
 class HabitCreate(BaseModel):
     title: str
     description: Optional[str] = None
     frequency_type: Optional[str] = "daily"
+    frequency_config: Optional[dict[str, Any]] = None
     category: Optional[str] = None
 
     @field_validator("title")
@@ -24,12 +36,41 @@ class HabitCreate(BaseModel):
             raise ValueError("frequency_type must be daily, weekly, or custom")
         return v
 
+    @field_validator("category")
+    @classmethod
+    def category_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip().lower()
+        if normalized not in VALID_HABIT_CATEGORIES:
+            raise ValueError("Invalid habit category")
+        return normalized
+
 
 class HabitUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    frequency_type: Optional[str] = None
+    frequency_config: Optional[dict[str, Any]] = None
     category: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator("frequency_type")
+    @classmethod
+    def update_frequency_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ("daily", "weekly", "custom"):
+            raise ValueError("frequency_type must be daily, weekly, or custom")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def update_category_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip().lower()
+        if normalized not in VALID_HABIT_CATEGORIES:
+            raise ValueError("Invalid habit category")
+        return normalized
 
 
 class HabitLogResponse(BaseModel):
@@ -49,6 +90,7 @@ class HabitResponse(BaseModel):
     title: str
     description: Optional[str]
     frequency_type: str
+    frequency_config: Optional[dict[str, Any]]
     category: Optional[str]
     is_active: bool
     current_streak: int

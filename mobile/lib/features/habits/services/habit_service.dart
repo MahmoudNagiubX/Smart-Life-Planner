@@ -17,6 +17,7 @@ class HabitService {
     required String title,
     String? description,
     String frequencyType = 'daily',
+    Map<String, dynamic>? frequencyConfig,
     String? category,
   }) async {
     final data = <String, dynamic>{
@@ -24,6 +25,7 @@ class HabitService {
       'frequency_type': frequencyType,
     };
     if (description != null) data['description'] = description;
+    if (frequencyConfig != null) data['frequency_config'] = frequencyConfig;
     if (category != null) data['category'] = category;
 
     final response = await _apiClient.dio.post('/habits', data: data);

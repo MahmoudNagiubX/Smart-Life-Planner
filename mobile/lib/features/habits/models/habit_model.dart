@@ -3,6 +3,7 @@ class HabitModel {
   final String title;
   final String? description;
   final String frequencyType;
+  final Map<String, dynamic>? frequencyConfig;
   final String? category;
   final bool isActive;
   final int currentStreak;
@@ -14,6 +15,7 @@ class HabitModel {
     required this.title,
     this.description,
     required this.frequencyType,
+    this.frequencyConfig,
     this.category,
     required this.isActive,
     required this.currentStreak,
@@ -27,6 +29,7 @@ class HabitModel {
       title: json['title'] as String,
       description: json['description'] as String?,
       frequencyType: json['frequency_type'] as String,
+      frequencyConfig: json['frequency_config'] as Map<String, dynamic>?,
       category: json['category'] as String?,
       isActive: json['is_active'] as bool,
       currentStreak: json['current_streak'] as int,

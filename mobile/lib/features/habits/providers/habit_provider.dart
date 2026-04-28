@@ -61,6 +61,7 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
     required String title,
     String? description,
     String frequencyType = 'daily',
+    Map<String, dynamic>? frequencyConfig,
     String? category,
   }) async {
     try {
@@ -69,6 +70,7 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
         title: title,
         description: description,
         frequencyType: frequencyType,
+        frequencyConfig: frequencyConfig,
         category: category,
       );
       await loadHabits();

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
-import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
-import '../providers/habit_provider.dart';
 import '../models/habit_model.dart';
+import '../providers/habit_provider.dart';
 import 'create_habit_sheet.dart';
 
 class HabitsScreen extends ConsumerStatefulWidget {
@@ -17,6 +17,8 @@ class HabitsScreen extends ConsumerStatefulWidget {
 }
 
 class _HabitsScreenState extends ConsumerState<HabitsScreen> {
+  String? _selectedCategory;
+
   @override
   void initState() {
     super.initState();
@@ -28,11 +30,23 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(habitsProvider);
+    final categories =
+        state.habits
+            .map((habit) => habit.category)
+            .whereType<String>()
+            .toSet()
+            .toList()
+          ..sort();
+    final visibleHabits = _selectedCategory == null
+        ? state.habits
+        : state.habits
+              .where((habit) => habit.category == _selectedCategory)
+              .toList();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          '💪 Habits',
+          'Habits',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -55,9 +69,18 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
               onRefresh: () => ref.read(habitsProvider.notifier).loadHabits(),
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: state.habits.length,
+                itemCount: visibleHabits.length + 1,
                 itemBuilder: (context, index) {
-                  final habit = state.habits[index];
+                  if (index == 0) {
+                    return _CategoryFilterBar(
+                      categories: categories,
+                      selectedCategory: _selectedCategory,
+                      onSelected: (category) {
+                        setState(() => _selectedCategory = category);
+                      },
+                    );
+                  }
+                  final habit = visibleHabits[index - 1];
                   final isCompleted = state.completedTodayIds.contains(
                     habit.id,
                   );
@@ -87,6 +110,54 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
   }
 }
 
+class _CategoryFilterBar extends StatelessWidget {
+  final List<String> categories;
+  final String? selectedCategory;
+  final ValueChanged<String?> onSelected;
+
+  const _CategoryFilterBar({
+    required this.categories,
+    required this.selectedCategory,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (categories.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: const Text('All'),
+                selected: selectedCategory == null,
+                onSelected: (_) => onSelected(null),
+              ),
+            ),
+            ...categories.map(
+              (category) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(_labelForCategory(category)),
+                  selected: selectedCategory == category,
+                  onSelected: (_) => onSelected(category),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _HabitCard extends ConsumerWidget {
   final HabitModel habit;
   final bool isCompletedToday;
@@ -111,7 +182,6 @@ class _HabitCard extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          // Complete button
           GestureDetector(
             onTap: isCompletedToday
                 ? null
@@ -139,8 +209,6 @@ class _HabitCard extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 16),
-
-          // Habit info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,35 +231,33 @@ class _HabitCard extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                const SizedBox(height: 4),
-                Row(
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.local_fire_department,
-                      size: 14,
+                    _MiniMeta(
+                      icon: Icons.local_fire_department,
+                      label: '${habit.currentStreak} day streak',
                       color: AppColors.warning,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${habit.currentStreak} day streak',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
+                    _MiniMeta(
+                      icon: Icons.repeat,
+                      label: _frequencyLabel(habit),
+                      color: AppColors.textSecondary,
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      habit.frequencyType,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
+                    if (habit.category != null)
+                      _MiniMeta(
+                        icon: _iconForCategory(habit.category!),
+                        label: _labelForCategory(habit.category!),
+                        color: AppColors.primary,
                       ),
-                    ),
                   ],
                 ),
               ],
             ),
           ),
-
-          // Delete button
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, size: 18),
             onSelected: (value) async {
@@ -216,5 +282,80 @@ class _HabitCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _MiniMeta extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _MiniMeta({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+        ),
+      ],
+    );
+  }
+}
+
+String _frequencyLabel(HabitModel habit) {
+  if (habit.frequencyType == 'custom') {
+    final interval = habit.frequencyConfig?['interval_days'];
+    if (interval is int && interval > 1) {
+      return 'Every $interval days';
+    }
+    return 'Custom';
+  }
+  return habit.frequencyType;
+}
+
+String _labelForCategory(String category) {
+  switch (category) {
+    case 'quran':
+      return 'Quran';
+    default:
+      return category
+          .split('_')
+          .map(
+            (word) => word.isEmpty
+                ? word
+                : '${word[0].toUpperCase()}${word.substring(1)}',
+          )
+          .join(' ');
+  }
+}
+
+IconData _iconForCategory(String category) {
+  switch (category) {
+    case 'study':
+      return Icons.school;
+    case 'reading':
+      return Icons.menu_book;
+    case 'quran':
+      return Icons.auto_stories;
+    case 'exercise':
+      return Icons.fitness_center;
+    case 'hydration':
+      return Icons.water_drop;
+    case 'sleep':
+      return Icons.bedtime;
+    case 'meditation':
+      return Icons.self_improvement;
+    default:
+      return Icons.category;
   }
 }
