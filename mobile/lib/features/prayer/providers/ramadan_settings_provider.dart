@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
+import '../../reminders/providers/reminder_preferences_provider.dart';
+import '../../reminders/providers/reminder_provider.dart';
 import '../models/prayer_model.dart';
 import '../models/ramadan_settings_model.dart';
 import '../services/ramadan_settings_service.dart';
@@ -75,6 +77,7 @@ class RamadanSettingsNotifier extends StateNotifier<RamadanSettingsState> {
       state = state.copyWith(settings: settings, isSaving: false);
       if (!settings.ramadanModeEnabled) {
         await _ref.read(notificationSchedulerProvider).cancelRamadanReminders();
+        await _dismissRamadanReminders();
       }
     } on DioException catch (e) {
       state = state.copyWith(
@@ -90,19 +93,56 @@ class RamadanSettingsNotifier extends StateNotifier<RamadanSettingsState> {
       final scheduler = _ref.read(notificationSchedulerProvider);
 
       await scheduler.cancelRamadanReminders();
-      if (!settings.ramadanModeEnabled) return;
+      if (!settings.ramadanModeEnabled) {
+        await _dismissRamadanReminders();
+        return;
+      }
 
       final fajr = _prayerTime(prayers, 'fajr');
       final maghrib = _prayerTime(prayers, 'maghrib');
+      final canScheduleLocal = await _ref
+          .read(reminderPreferencesProvider.notifier)
+          .canScheduleLocal('prayer');
 
       if (settings.suhoorReminderEnabled && fajr != null) {
-        await scheduler.scheduleRamadanSuhoorReminder(
-          fajrAt: fajr,
-          minutesBeforeFajr: settings.suhoorReminderMinutesBeforeFajr,
+        final fireAt = fajr.subtract(
+          Duration(minutes: settings.suhoorReminderMinutesBeforeFajr),
         );
+        final reminder = await _ref
+            .read(reminderServiceProvider)
+            .syncTargetReminder(
+              targetType: 'ramadan',
+              reminderType: 'ramadan',
+              scheduledAt: fireAt,
+              recurrenceRule: _ramadanRule('suhoor', fajr),
+              timezone: DateTime.now().timeZoneName,
+            );
+        if (canScheduleLocal) {
+          await scheduler.scheduleRamadanSuhoorReminder(
+            fajrAt: fajr,
+            minutesBeforeFajr: settings.suhoorReminderMinutesBeforeFajr,
+            reminderId: reminder?.id,
+          );
+        }
+      } else {
+        await _dismissRamadanReminder('suhoor', fajr ?? DateTime.now());
       }
       if (maghrib != null) {
-        await scheduler.scheduleRamadanIftarReminder(maghribAt: maghrib);
+        final reminder = await _ref
+            .read(reminderServiceProvider)
+            .syncTargetReminder(
+              targetType: 'ramadan',
+              reminderType: 'ramadan',
+              scheduledAt: maghrib,
+              recurrenceRule: _ramadanRule('iftar', maghrib),
+              timezone: DateTime.now().timeZoneName,
+            );
+        if (canScheduleLocal) {
+          await scheduler.scheduleRamadanIftarReminder(
+            maghribAt: maghrib,
+            reminderId: reminder?.id,
+          );
+        }
       }
     } on DioException catch (e) {
       state = state.copyWith(
@@ -128,9 +168,35 @@ class RamadanSettingsNotifier extends StateNotifier<RamadanSettingsState> {
     }
     return null;
   }
+
+  Future<void> _dismissRamadanReminders() async {
+    await _ref
+        .read(reminderServiceProvider)
+        .dismissTargetReminders(
+          targetType: 'ramadan',
+          reminderType: 'ramadan',
+          anyRecurrence: true,
+        );
+  }
+
+  Future<void> _dismissRamadanReminder(String type, DateTime date) async {
+    await _ref
+        .read(reminderServiceProvider)
+        .dismissTargetReminders(
+          targetType: 'ramadan',
+          reminderType: 'ramadan',
+          recurrenceRule: _ramadanRule(type, date),
+        );
+  }
 }
 
 final ramadanSettingsProvider =
     StateNotifierProvider<RamadanSettingsNotifier, RamadanSettingsState>((ref) {
       return RamadanSettingsNotifier(ref);
     });
+
+String _ramadanRule(String type, DateTime date) {
+  final day =
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  return 'ramadan:$type:$day';
+}

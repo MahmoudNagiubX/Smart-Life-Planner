@@ -4,6 +4,7 @@ import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
 import '../../reminders/providers/reminder_preferences_provider.dart';
+import '../../reminders/providers/reminder_provider.dart';
 import '../models/note_model.dart';
 import '../services/note_service.dart';
 
@@ -219,6 +220,14 @@ class NotesNotifier extends StateNotifier<NotesState> {
         await _ref
             .read(notificationSchedulerProvider)
             .cancelNoteReminder(noteId);
+        await _ref
+            .read(reminderServiceProvider)
+            .dismissTargetReminders(
+              targetType: 'note',
+              targetId: noteId,
+              reminderType: 'note',
+              recurrenceRule: _noteReminderRule,
+            );
       }
       await loadNotes(
         search: state.search,
@@ -280,6 +289,14 @@ class NotesNotifier extends StateNotifier<NotesState> {
       final service = _ref.read(noteServiceProvider);
       await service.deleteNote(noteId);
       await _ref.read(notificationSchedulerProvider).cancelNoteReminder(noteId);
+      await _ref
+          .read(reminderServiceProvider)
+          .dismissTargetReminders(
+            targetType: 'note',
+            targetId: noteId,
+            reminderType: 'note',
+            recurrenceRule: _noteReminderRule,
+          );
       state = state.copyWith(
         notes: state.notes.where((n) => n.id != noteId).toList(),
       );
@@ -296,24 +313,52 @@ class NotesNotifier extends StateNotifier<NotesState> {
     final scheduler = _ref.read(notificationSchedulerProvider);
     if (note.isArchived || note.reminderAt == null) {
       await scheduler.cancelNoteReminder(note.id);
+      await _ref
+          .read(reminderServiceProvider)
+          .dismissTargetReminders(
+            targetType: 'note',
+            targetId: note.id,
+            reminderType: 'note',
+            recurrenceRule: _noteReminderRule,
+          );
       return;
     }
     try {
       final reminderAt = DateTime.parse(note.reminderAt!).toLocal();
-      if (!await _ref
-          .read(reminderPreferencesProvider.notifier)
-          .canScheduleLocal('note', scheduledAt: reminderAt)) {
-        await scheduler.cancelNoteReminder(note.id);
-        return;
-      }
       if (reminderAt.isAfter(DateTime.now())) {
+        final reminder = await _ref
+            .read(reminderServiceProvider)
+            .syncTargetReminder(
+              targetType: 'note',
+              targetId: note.id,
+              reminderType: 'note',
+              scheduledAt: reminderAt,
+              recurrenceRule: _noteReminderRule,
+              timezone: DateTime.now().timeZoneName,
+            );
+        if (reminder == null ||
+            !await _ref
+                .read(reminderPreferencesProvider.notifier)
+                .canScheduleLocal('note', scheduledAt: reminderAt)) {
+          await scheduler.cancelNoteReminder(note.id);
+          return;
+        }
         await scheduler.rescheduleNoteReminder(
           noteId: note.id,
           noteTitle: note.title ?? 'Untitled note',
           reminderAt: reminderAt,
+          reminderId: reminder.id,
         );
       } else {
         await scheduler.cancelNoteReminder(note.id);
+        await _ref
+            .read(reminderServiceProvider)
+            .dismissTargetReminders(
+              targetType: 'note',
+              targetId: note.id,
+              reminderType: 'note',
+              recurrenceRule: _noteReminderRule,
+            );
       }
     } catch (_) {
       await scheduler.cancelNoteReminder(note.id);
@@ -324,6 +369,8 @@ class NotesNotifier extends StateNotifier<NotesState> {
 final notesProvider = StateNotifierProvider<NotesNotifier, NotesState>((ref) {
   return NotesNotifier(ref);
 });
+
+const _noteReminderRule = 'source=note_reminder_at';
 
 class TaskLinkedNotesState {
   final List<NoteModel> notes;

@@ -197,6 +197,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
         await _ref
             .read(notificationSchedulerProvider)
             .cancelTaskReminders(task.id);
+        await _cancelTaskPresetReminders(task.id);
       } else if (task.status == 'completed') {
         final reopened = await service.reopenTask(task.id);
         updated = status == 'pending'
@@ -258,13 +259,33 @@ class TasksNotifier extends StateNotifier<TasksState> {
         task.isDeleted ||
         task.reminderAt == null) {
       await scheduler.cancelTaskReminder(task.id);
+      await _ref
+          .read(reminderServiceProvider)
+          .dismissTargetReminders(
+            targetType: 'task',
+            targetId: task.id,
+            reminderType: 'task_due',
+            recurrenceRule: _taskSingleReminderRule,
+          );
       return;
     }
     try {
       final reminderAt = DateTime.parse(task.reminderAt!).toLocal();
-      if (!await _ref
-          .read(reminderPreferencesProvider.notifier)
-          .canScheduleLocal('task', scheduledAt: reminderAt)) {
+      final reminder = await _ref
+          .read(reminderServiceProvider)
+          .syncTargetReminder(
+            targetType: 'task',
+            targetId: task.id,
+            reminderType: 'task_due',
+            scheduledAt: reminderAt,
+            recurrenceRule: _taskSingleReminderRule,
+            timezone: DateTime.now().timeZoneName,
+            priority: task.priority == 'high' ? 'high' : 'normal',
+          );
+      if (reminder == null ||
+          !await _ref
+              .read(reminderPreferencesProvider.notifier)
+              .canScheduleLocal('task', scheduledAt: reminderAt)) {
         await scheduler.cancelTaskReminder(task.id);
         return;
       }
@@ -273,9 +294,18 @@ class TasksNotifier extends StateNotifier<TasksState> {
           taskId: task.id,
           taskTitle: task.title,
           reminderAt: reminderAt,
+          reminderId: reminder.id,
         );
       } else {
         await scheduler.cancelTaskReminder(task.id);
+        await _ref
+            .read(reminderServiceProvider)
+            .dismissTargetReminders(
+              targetType: 'task',
+              targetId: task.id,
+              reminderType: 'task_due',
+              recurrenceRule: _taskSingleReminderRule,
+            );
       }
     } catch (_) {
       await scheduler.cancelTaskReminder(task.id);
@@ -313,11 +343,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
     try {
       final reminders = await _ref
           .read(reminderServiceProvider)
-          .getReminders(
-            targetType: 'task',
-            targetId: taskId,
-            status: 'scheduled',
-          );
+          .getReminders(targetType: 'task', targetId: taskId);
       final scheduler = _ref.read(notificationSchedulerProvider);
       for (final reminder in reminders) {
         await scheduler.cancelTaskPresetReminder(reminder.id);
@@ -561,3 +587,5 @@ int _compareManualOrder(TaskModel left, TaskModel right) {
   if (orderCompare != 0) return orderCompare;
   return left.createdAt.compareTo(right.createdAt);
 }
+
+const _taskSingleReminderRule = 'source=task_reminder_at';

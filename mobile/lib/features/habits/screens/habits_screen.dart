@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_empty_state.dart';
@@ -30,6 +31,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(habitsProvider);
+    final l10n = AppLocalizations.of(context)!;
     final categories =
         state.habits
             .map((habit) => habit.category)
@@ -45,9 +47,9 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Habits',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.habits,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: state.isLoading
@@ -253,6 +255,12 @@ class _HabitCard extends ConsumerWidget {
                         label: _labelForCategory(habit.category!),
                         color: AppColors.primary,
                       ),
+                    if (habit.reminderTime != null)
+                      _MiniMeta(
+                        icon: Icons.notifications_active_outlined,
+                        label: _displayReminderTime(habit.reminderTime!),
+                        color: AppColors.success,
+                      ),
                   ],
                 ),
               ],
@@ -261,6 +269,31 @@ class _HabitCard extends ConsumerWidget {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, size: 18),
             onSelected: (value) async {
+              if (value == 'set_reminder') {
+                final picked = await showTimePicker(
+                  context: context,
+                  initialTime:
+                      _timeOfDayFromString(habit.reminderTime) ??
+                      const TimeOfDay(hour: 8, minute: 0),
+                );
+                if (picked == null) return;
+                await ref
+                    .read(habitsProvider.notifier)
+                    .updateHabitReminder(
+                      habitId: habit.id,
+                      reminderTime: _formatReminderTime(picked),
+                    );
+                return;
+              }
+              if (value == 'clear_reminder') {
+                await ref
+                    .read(habitsProvider.notifier)
+                    .updateHabitReminder(
+                      habitId: habit.id,
+                      clearReminderTime: true,
+                    );
+                return;
+              }
               if (value == 'delete') {
                 final confirmed = await confirmDestructiveAction(
                   context: context,
@@ -273,6 +306,15 @@ class _HabitCard extends ConsumerWidget {
               }
             },
             itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'set_reminder',
+                child: Text('Set reminder'),
+              ),
+              if (habit.reminderTime != null)
+                const PopupMenuItem(
+                  value: 'clear_reminder',
+                  child: Text('Clear reminder'),
+                ),
               const PopupMenuItem(
                 value: 'delete',
                 child: Text('Delete', style: TextStyle(color: AppColors.error)),
@@ -358,4 +400,26 @@ IconData _iconForCategory(String category) {
     default:
       return Icons.category;
   }
+}
+
+TimeOfDay? _timeOfDayFromString(String? value) {
+  if (value == null) return null;
+  final parts = value.split(':');
+  if (parts.length < 2) return null;
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) return null;
+  return TimeOfDay(hour: hour, minute: minute);
+}
+
+String _formatReminderTime(TimeOfDay time) {
+  final hour = time.hour.toString().padLeft(2, '0');
+  final minute = time.minute.toString().padLeft(2, '0');
+  return '$hour:$minute:00';
+}
+
+String _displayReminderTime(String value) {
+  final parts = value.split(':');
+  if (parts.length < 2) return value;
+  return '${parts[0]}:${parts[1]}';
 }

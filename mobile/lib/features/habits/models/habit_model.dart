@@ -5,6 +5,7 @@ class HabitModel {
   final String frequencyType;
   final Map<String, dynamic>? frequencyConfig;
   final String? category;
+  final String? reminderTime;
   final bool isActive;
   final int currentStreak;
   final int longestStreak;
@@ -17,6 +18,7 @@ class HabitModel {
     required this.frequencyType,
     this.frequencyConfig,
     this.category,
+    this.reminderTime,
     required this.isActive,
     required this.currentStreak,
     required this.longestStreak,
@@ -31,6 +33,7 @@ class HabitModel {
       frequencyType: json['frequency_type'] as String,
       frequencyConfig: json['frequency_config'] as Map<String, dynamic>?,
       category: json['category'] as String?,
+      reminderTime: json['reminder_time'] as String?,
       isActive: json['is_active'] as bool,
       currentStreak: json['current_streak'] as int,
       longestStreak: json['longest_streak'] as int,

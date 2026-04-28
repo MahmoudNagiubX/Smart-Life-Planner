@@ -29,6 +29,8 @@ class _CreateHabitSheetState extends ConsumerState<CreateHabitSheet> {
   final _descController = TextEditingController();
   String _frequency = 'daily';
   String _category = 'study';
+  bool _reminderEnabled = false;
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 8, minute: 0);
   bool _isLoading = false;
 
   static const _templates = [
@@ -107,6 +109,7 @@ class _CreateHabitSheetState extends ConsumerState<CreateHabitSheet> {
           frequencyType: _frequency,
           frequencyConfig: _frequency == 'custom' ? {'interval_days': 2} : null,
           category: _category,
+          reminderTime: _reminderEnabled ? _formatTime(_reminderTime) : null,
         );
 
     if (mounted) {
@@ -217,6 +220,33 @@ class _CreateHabitSheetState extends ConsumerState<CreateHabitSheet> {
               ],
               onChanged: (v) => setState(() => _frequency = v!),
             ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _reminderEnabled,
+              onChanged: (value) => setState(() => _reminderEnabled = value),
+              title: const Text('Daily reminder'),
+              subtitle: Text(
+                _reminderEnabled
+                    ? 'Remind me at ${_reminderTime.format(context)}'
+                    : 'No habit reminder',
+              ),
+              secondary: const Icon(Icons.notifications_active_outlined),
+            ),
+            if (_reminderEnabled)
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: _reminderTime,
+                  );
+                  if (picked != null) {
+                    setState(() => _reminderTime = picked);
+                  }
+                },
+                icon: const Icon(Icons.schedule_outlined),
+                label: Text(_reminderTime.format(context)),
+              ),
             const SizedBox(height: 24),
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -292,4 +322,10 @@ String _labelForCategory(String category) {
           )
           .join(' ');
   }
+}
+
+String _formatTime(TimeOfDay time) {
+  final hour = time.hour.toString().padLeft(2, '0');
+  final minute = time.minute.toString().padLeft(2, '0');
+  return '$hour:$minute:00';
 }

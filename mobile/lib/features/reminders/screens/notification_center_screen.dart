@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
@@ -40,22 +41,23 @@ class _NotificationCenterScreenState
       _NotificationInboxTab.missed => state.missed,
       _NotificationInboxTab.cleared => state.cleared,
     };
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Notification Center',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.notificationCenter,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
             onPressed: () =>
                 ref.read(notificationCenterProvider.notifier).load(),
             icon: const Icon(Icons.refresh),
           ),
           IconButton(
-            tooltip: 'Clear old',
+            tooltip: l10n.clearOld,
             onPressed: state.clearableOld.isEmpty || state.isClearing
                 ? null
                 : () =>
@@ -83,20 +85,20 @@ class _NotificationCenterScreenState
                   _InboxSummary(state: state),
                   const SizedBox(height: 16),
                   SegmentedButton<_NotificationInboxTab>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: _NotificationInboxTab.recent,
-                        label: Text('Recent'),
+                        label: Text(l10n.recent),
                         icon: Icon(Icons.notifications_outlined),
                       ),
                       ButtonSegment(
                         value: _NotificationInboxTab.missed,
-                        label: Text('Missed'),
+                        label: Text(l10n.missed),
                         icon: Icon(Icons.notification_important_outlined),
                       ),
                       ButtonSegment(
                         value: _NotificationInboxTab.cleared,
-                        label: Text('Cleared'),
+                        label: Text(l10n.cleared),
                         icon: Icon(Icons.done_all_outlined),
                       ),
                     ],
@@ -145,6 +147,7 @@ class _NotificationCenterScreenState
     } else if (reminder.targetType == 'habit') {
       context.push(AppRoutes.habits);
     } else if (reminder.targetType == 'prayer' ||
+        reminder.targetType == 'ramadan' ||
         reminder.targetType == 'quran_goal') {
       context.push(AppRoutes.prayer);
     }
@@ -158,6 +161,7 @@ class _InboxSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -168,17 +172,17 @@ class _InboxSummary extends StatelessWidget {
       child: Row(
         children: [
           _SummaryMetric(
-            label: 'Recent',
+            label: l10n.recent,
             value: state.recent.length,
             color: AppColors.primary,
           ),
           _SummaryMetric(
-            label: 'Missed',
+            label: l10n.missed,
             value: state.missed.length,
             color: AppColors.warning,
           ),
           _SummaryMetric(
-            label: 'Cleared',
+            label: l10n.cleared,
             value: state.cleared.length,
             color: AppColors.success,
           ),
@@ -239,6 +243,7 @@ class _ReminderInboxTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _statusColor(reminder);
     final cleared = _isCleared(reminder);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -291,7 +296,7 @@ class _ReminderInboxTile extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onOpenTarget,
                   icon: const Icon(Icons.open_in_new_outlined, size: 18),
-                  label: const Text('Open'),
+                  label: Text(l10n.open),
                 ),
               ),
               const SizedBox(width: 10),
@@ -299,7 +304,7 @@ class _ReminderInboxTile extends StatelessWidget {
                 child: TextButton.icon(
                   onPressed: cleared ? null : onClear,
                   icon: const Icon(Icons.done_all_outlined, size: 18),
-                  label: const Text('Clear'),
+                  label: Text(l10n.clear),
                 ),
               ),
             ],
@@ -377,6 +382,7 @@ String _subtitle(ReminderModel reminder) {
 String _targetLabel(String targetType) {
   return switch (targetType) {
     'quran_goal' => 'Quran goal',
+    'ramadan' => 'Ramadan',
     'ai_suggestion' => 'AI suggestion',
     _ =>
       targetType.isEmpty
@@ -421,6 +427,7 @@ IconData _targetIcon(String targetType) {
     'note' => Icons.sticky_note_2_outlined,
     'habit' => Icons.track_changes_outlined,
     'prayer' => Icons.mosque_outlined,
+    'ramadan' => Icons.nights_stay_outlined,
     'quran_goal' => Icons.menu_book_outlined,
     'focus' => Icons.timer_outlined,
     _ => Icons.notifications_outlined,

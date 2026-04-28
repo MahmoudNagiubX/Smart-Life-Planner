@@ -45,10 +45,12 @@ async def create_habit(
 async def update_habit(
     db: AsyncSession, habit: Habit, data: dict
 ) -> Habit:
+    had_reminder = habit.reminder_time is not None
     for key, value in data.items():
         setattr(habit, key, value)
     cancelled_reminder = (
-        data.get("is_active") is False and habit.reminder_time is not None
+        (data.get("is_active") is False and had_reminder)
+        or ("reminder_time" in data and data.get("reminder_time") is None and had_reminder)
     )
     if cancelled_reminder:
         habit.reminder_time = None

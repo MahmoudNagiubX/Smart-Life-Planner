@@ -1,13 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'notification_service.dart';
+
 import 'notification_ids.dart';
+import 'notification_service.dart';
 
 class NotificationScheduler {
   final NotificationService _service;
 
   NotificationScheduler(this._service);
-
-  // ── Focus ──────────────────────────────────────────────
 
   Future<void> scheduleFocusComplete({
     required String sessionId,
@@ -28,7 +27,7 @@ class NotificationScheduler {
   }) async {
     await _service.scheduleNotification(
       id: NotificationIds.focusComplete(sessionId),
-      title: '🎯 Focus Session Complete!',
+      title: 'Focus Session Complete',
       body: 'Great work! You focused for $plannedMinutes minutes.',
       scheduledAt: fireAt,
       payload: 'focus',
@@ -39,12 +38,11 @@ class NotificationScheduler {
     await _service.cancelNotification(NotificationIds.focusComplete(sessionId));
   }
 
-  // ── Prayer ─────────────────────────────────────────────
-
   Future<void> schedulePrayerReminder({
     required String prayerName,
     required DateTime scheduledAt,
     int minutesBefore = 10,
+    String? reminderId,
   }) async {
     final fireAt = scheduledAt.subtract(Duration(minutes: minutesBefore));
     if (fireAt.isBefore(DateTime.now())) return;
@@ -52,10 +50,12 @@ class NotificationScheduler {
     final displayName = _prayerDisplayName(prayerName);
     await _service.scheduleNotification(
       id: NotificationIds.prayerReminder(prayerName),
-      title: '🕌 $displayName Prayer',
+      title: '$displayName Prayer',
       body: '$displayName is in $minutesBefore minutes.',
       scheduledAt: fireAt,
-      payload: 'prayer',
+      payload: reminderId == null
+          ? 'prayer:$prayerName'
+          : 'prayer:$prayerName:reminder:$reminderId',
     );
   }
 
@@ -72,12 +72,10 @@ class NotificationScheduler {
     }
   }
 
-  // ── Tasks ──────────────────────────────────────────────
-
-  // Ramadan
   Future<void> scheduleRamadanSuhoorReminder({
     required DateTime fajrAt,
     required int minutesBeforeFajr,
+    String? reminderId,
   }) async {
     final fireAt = fajrAt.subtract(Duration(minutes: minutesBeforeFajr));
     if (fireAt.isBefore(DateTime.now())) return;
@@ -87,12 +85,15 @@ class NotificationScheduler {
       title: 'Suhoor Reminder',
       body: 'Fajr is in $minutesBeforeFajr minutes.',
       scheduledAt: fireAt,
-      payload: 'ramadan:suhoor',
+      payload: reminderId == null
+          ? 'ramadan:suhoor'
+          : 'ramadan:suhoor:reminder:$reminderId',
     );
   }
 
   Future<void> scheduleRamadanIftarReminder({
     required DateTime maghribAt,
+    String? reminderId,
   }) async {
     if (maghribAt.isBefore(DateTime.now())) return;
 
@@ -101,7 +102,9 @@ class NotificationScheduler {
       title: 'Iftar Time',
       body: 'Maghrib has started. Iftar time is now.',
       scheduledAt: maghribAt,
-      payload: 'ramadan:iftar',
+      payload: reminderId == null
+          ? 'ramadan:iftar'
+          : 'ramadan:iftar:reminder:$reminderId',
     );
   }
 
@@ -110,20 +113,22 @@ class NotificationScheduler {
     await _service.cancelNotification(NotificationIds.ramadanIftar);
   }
 
-  // Tasks
   Future<void> scheduleTaskReminder({
     required String taskId,
     required String taskTitle,
     required DateTime reminderAt,
+    String? reminderId,
   }) async {
     if (reminderAt.isBefore(DateTime.now())) return;
 
     await _service.scheduleNotification(
       id: NotificationIds.taskReminder(taskId),
-      title: '✅ Task Reminder',
+      title: 'Task Reminder',
       body: taskTitle,
       scheduledAt: reminderAt,
-      payload: 'task:$taskId',
+      payload: reminderId == null
+          ? 'task:$taskId'
+          : 'task:$taskId:reminder:$reminderId',
       actions: NotificationService.taskReminderActions,
     );
   }
@@ -132,12 +137,14 @@ class NotificationScheduler {
     required String taskId,
     required String taskTitle,
     required DateTime reminderAt,
+    String? reminderId,
   }) async {
     await cancelTaskReminder(taskId);
     await scheduleTaskReminder(
       taskId: taskId,
       taskTitle: taskTitle,
       reminderAt: reminderAt,
+      reminderId: reminderId,
     );
   }
 
@@ -211,6 +218,7 @@ class NotificationScheduler {
     required String noteId,
     required String noteTitle,
     required DateTime reminderAt,
+    String? reminderId,
   }) async {
     if (reminderAt.isBefore(DateTime.now())) return;
 
@@ -219,7 +227,9 @@ class NotificationScheduler {
       title: 'Note Reminder',
       body: noteTitle,
       scheduledAt: reminderAt,
-      payload: 'note:$noteId',
+      payload: reminderId == null
+          ? 'note:$noteId'
+          : 'note:$noteId:reminder:$reminderId',
     );
   }
 
@@ -227,12 +237,14 @@ class NotificationScheduler {
     required String noteId,
     required String noteTitle,
     required DateTime reminderAt,
+    String? reminderId,
   }) async {
     await cancelNoteReminder(noteId);
     await scheduleNoteReminder(
       noteId: noteId,
       noteTitle: noteTitle,
       reminderAt: reminderAt,
+      reminderId: reminderId,
     );
   }
 
@@ -240,7 +252,24 @@ class NotificationScheduler {
     await _service.cancelNotification(NotificationIds.noteReminder(noteId));
   }
 
-  // ── Habits ─────────────────────────────────────────────
+  Future<void> scheduleHabitReminder({
+    required String habitId,
+    required String habitTitle,
+    required DateTime reminderAt,
+    String? reminderId,
+  }) async {
+    if (reminderAt.isBefore(DateTime.now())) return;
+
+    await _service.scheduleNotification(
+      id: NotificationIds.habitReminder(habitId),
+      title: 'Habit Reminder',
+      body: "Don't forget: $habitTitle",
+      scheduledAt: reminderAt,
+      payload: reminderId == null
+          ? 'habit:$habitId'
+          : 'habit:$habitId:reminder:$reminderId',
+    );
+  }
 
   Future<void> showHabitReminder({
     required String habitId,
@@ -248,7 +277,7 @@ class NotificationScheduler {
   }) async {
     await _service.showNotification(
       id: NotificationIds.habitReminder(habitId),
-      title: '💪 Habit Reminder',
+      title: 'Habit Reminder',
       body: "Don't forget: $habitTitle",
       payload: 'habit:$habitId',
     );

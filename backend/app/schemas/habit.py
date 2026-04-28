@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, time
 from typing import Any, Optional
 from pydantic import BaseModel, field_validator
 
@@ -21,6 +21,7 @@ class HabitCreate(BaseModel):
     frequency_type: Optional[str] = "daily"
     frequency_config: Optional[dict[str, Any]] = None
     category: Optional[str] = None
+    reminder_time: Optional[time] = None
 
     @field_validator("title")
     @classmethod
@@ -53,6 +54,7 @@ class HabitUpdate(BaseModel):
     frequency_type: Optional[str] = None
     frequency_config: Optional[dict[str, Any]] = None
     category: Optional[str] = None
+    reminder_time: Optional[time] = None
     is_active: Optional[bool] = None
 
     @field_validator("frequency_type")
@@ -92,6 +94,7 @@ class HabitResponse(BaseModel):
     frequency_type: str
     frequency_config: Optional[dict[str, Any]]
     category: Optional[str]
+    reminder_time: Optional[time]
     is_active: bool
     current_streak: int
     longest_streak: int

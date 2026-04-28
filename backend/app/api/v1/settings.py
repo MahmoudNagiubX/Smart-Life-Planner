@@ -22,6 +22,9 @@ PRAYER_REMINDER_FIELDS = {
     "prayer_location_lng",
     "prayer_reminder_minutes_before",
     "athan_sound_enabled",
+    "ramadan_mode_enabled",
+    "suhoor_reminder_enabled",
+    "suhoor_reminder_minutes_before_fajr",
     "timezone",
     "reminder_preferences",
 }
@@ -68,7 +71,7 @@ async def update_user_settings(
         await invalidate_target_types(
             db,
             user_id=current_user.id,
-            target_types={"prayer"},
+            target_types={"prayer", "ramadan"},
             reason="prayer_settings_changed",
         )
         log_prayer_reminders_invalidated(

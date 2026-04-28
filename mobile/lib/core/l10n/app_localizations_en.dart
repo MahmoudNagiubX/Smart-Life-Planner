@@ -39,14 +39,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tasks => 'Tasks';
 
   @override
+  String get notes => 'Notes';
+
+  @override
+  String get habits => 'Habits';
+
+  @override
   String get focus => 'Focus';
 
   @override
   String get prayer => 'Prayer';
 
   @override
+  String get ramadan => 'Ramadan';
+
+  @override
+  String get qibla => 'Qibla';
+
+  @override
+  String get settings => 'Settings';
+
+  @override
+  String get notificationCenter => 'Notification Center';
+
+  @override
   String get profile => 'Profile';
 
   @override
   String get comingSoon => 'Coming soon';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get clearOld => 'Clear old';
+
+  @override
+  String get recent => 'Recent';
+
+  @override
+  String get missed => 'Missed';
+
+  @override
+  String get cleared => 'Cleared';
+
+  @override
+  String get open => 'Open';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get allowLocation => 'Allow Location';
+
+  @override
+  String get openSettings => 'Open Settings';
 }

@@ -151,6 +151,10 @@ async def update_reminder(
 ) -> Reminder:
     for key, value in data.items():
         setattr(reminder, key, value)
+    if data.get("status") == "scheduled":
+        reminder.snooze_until = None
+        reminder.cancelled_at = None
+        reminder.dismissed_at = None
     await db.commit()
     await db.refresh(reminder)
     return reminder

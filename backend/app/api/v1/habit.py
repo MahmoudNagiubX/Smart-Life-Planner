@@ -53,7 +53,7 @@ async def update_existing_habit(
     habit = await get_habit_by_id(db, habit_id, current_user.id)
     if not habit:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Habit not found")
-    return await update_habit(db, habit, payload.model_dump(exclude_none=True))
+    return await update_habit(db, habit, payload.model_dump(exclude_unset=True))
 
 
 @router.delete("/{habit_id}", status_code=status.HTTP_204_NO_CONTENT)

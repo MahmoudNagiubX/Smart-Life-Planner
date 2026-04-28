@@ -19,6 +19,7 @@ class HabitService {
     String frequencyType = 'daily',
     Map<String, dynamic>? frequencyConfig,
     String? category,
+    String? reminderTime,
   }) async {
     final data = <String, dynamic>{
       'title': title,
@@ -27,8 +28,35 @@ class HabitService {
     if (description != null) data['description'] = description;
     if (frequencyConfig != null) data['frequency_config'] = frequencyConfig;
     if (category != null) data['category'] = category;
+    if (reminderTime != null) data['reminder_time'] = reminderTime;
 
     final response = await _apiClient.dio.post('/habits', data: data);
+    return HabitModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<HabitModel> updateHabit({
+    required String habitId,
+    String? title,
+    String? description,
+    String? frequencyType,
+    Map<String, dynamic>? frequencyConfig,
+    String? category,
+    String? reminderTime,
+    bool clearReminderTime = false,
+    bool? isActive,
+  }) async {
+    final data = <String, dynamic>{};
+    if (title != null) data['title'] = title;
+    if (description != null) data['description'] = description;
+    if (frequencyType != null) data['frequency_type'] = frequencyType;
+    if (frequencyConfig != null) data['frequency_config'] = frequencyConfig;
+    if (category != null) data['category'] = category;
+    if (reminderTime != null || clearReminderTime) {
+      data['reminder_time'] = clearReminderTime ? null : reminderTime;
+    }
+    if (isActive != null) data['is_active'] = isActive;
+
+    final response = await _apiClient.dio.patch('/habits/$habitId', data: data);
     return HabitModel.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -42,11 +70,7 @@ class HabitService {
   }
 
   Future<HabitModel> archiveHabit(String habitId) async {
-    final response = await _apiClient.dio.patch(
-      '/habits/$habitId',
-      data: {'is_active': false},
-    );
-    return HabitModel.fromJson(response.data as Map<String, dynamic>);
+    return updateHabit(habitId: habitId, isActive: false);
   }
 
   Future<void> deleteHabit(String habitId) async {

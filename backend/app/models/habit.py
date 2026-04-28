@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, time
 from sqlalchemy import String, Boolean, Integer, Text, DateTime, Date, ForeignKey, Time, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -16,7 +16,7 @@ class Habit(Base):
     frequency_type: Mapped[str] = mapped_column(String(30), nullable=False, default="daily")
     frequency_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     category: Mapped[str | None] = mapped_column(String(80), nullable=True)
-    reminder_time: Mapped[datetime | None] = mapped_column(Time, nullable=True)
+    reminder_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     current_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

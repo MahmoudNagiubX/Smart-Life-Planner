@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../providers/qibla_provider.dart';
@@ -27,12 +28,13 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(qiblaProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Qibla',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.qibla,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body:
@@ -41,7 +43,7 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
           ? const AppLoadingState(message: 'Checking location permission...')
           : RefreshIndicator(
               onRefresh: () =>
-                  ref.read(qiblaProvider.notifier).checkLocationPermission(),
+                  ref.read(qiblaProvider.notifier).refreshDirection(),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(24),
@@ -49,8 +51,10 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
                   _CompassPlaceholder(direction: state.referenceDirection),
                   const SizedBox(height: 24),
                   _DirectionCard(
-                    hasLocationAccess: state.hasLocationAccess,
-                    referenceDirection: state.referenceDirection,
+                    direction: state.referenceDirection,
+                    sourceLabel: state.sourceLabel,
+                    guidanceMessage: state.guidanceMessage,
+                    usesDeviceLocation: state.usesDeviceLocation,
                   ),
                   const SizedBox(height: 16),
                   _PermissionCard(permissionState: state.permissionState),
@@ -157,12 +161,16 @@ class _CompassLabel extends StatelessWidget {
 }
 
 class _DirectionCard extends StatelessWidget {
-  final bool hasLocationAccess;
-  final QiblaDirection? referenceDirection;
+  final QiblaDirection? direction;
+  final String sourceLabel;
+  final String guidanceMessage;
+  final bool usesDeviceLocation;
 
   const _DirectionCard({
-    required this.hasLocationAccess,
-    required this.referenceDirection,
+    required this.direction,
+    required this.sourceLabel,
+    required this.guidanceMessage,
+    required this.usesDeviceLocation,
   });
 
   @override
@@ -175,29 +183,35 @@ class _DirectionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            hasLocationAccess
-                ? 'Location permission is enabled.'
-                : 'Location permission is needed for precise Qibla direction.',
+            direction == null
+                ? 'Location is required'
+                : usesDeviceLocation
+                ? 'Using live device location'
+                : 'Using saved prayer location',
             style: Theme.of(
               context,
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           Text(
-            hasLocationAccess
-                ? 'The calculation service is ready for device or saved-city coordinates.'
-                : 'You can still use prayer features without location. Qibla can use saved-city coordinates once available.',
+            guidanceMessage,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.textSecondary,
               height: 1.45,
             ),
           ),
-          if (referenceDirection != null) ...[
+          if (direction != null) ...[
             const SizedBox(height: 14),
-            _BearingSummary(
-              label: 'Cairo reference',
-              direction: referenceDirection!,
-            ),
+            _BearingSummary(label: sourceLabel, direction: direction!),
+            if (!usesDeviceLocation) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Compass arrow is a bearing estimate from saved coordinates.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
+              ),
+            ],
           ],
         ],
       ),
@@ -250,6 +264,7 @@ class _PermissionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(qiblaProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
 
     return _QiblaInfoCard(
       icon: _permissionIcon,
@@ -289,8 +304,8 @@ class _PermissionCard extends ConsumerWidget {
               label: Text(
                 permissionState ==
                         QiblaLocationPermissionState.permanentlyDenied
-                    ? 'Open Settings'
-                    : 'Allow Location',
+                    ? l10n.openSettings
+                    : l10n.allowLocation,
               ),
             ),
           ],
@@ -344,13 +359,13 @@ class _PermissionCard extends ConsumerWidget {
   String get _permissionMessage {
     switch (permissionState) {
       case QiblaLocationPermissionState.granted:
-        return 'Qibla can use location-aware direction once the bearing service is connected.';
+        return 'Qibla will use device coordinates when location service is available.';
       case QiblaLocationPermissionState.permanentlyDenied:
         return 'Open app settings to allow location for Qibla direction.';
       case QiblaLocationPermissionState.restricted:
         return 'This device or profile is restricting location access.';
       case QiblaLocationPermissionState.denied:
-        return 'Allow location to prepare accurate Qibla direction from your current place.';
+        return 'Allow location for current-place bearing, or save coordinates in Prayer Settings.';
       case QiblaLocationPermissionState.unknown:
         return 'Pull to refresh or allow location to check the current permission state.';
     }
@@ -371,7 +386,7 @@ class _SensorStatusCard extends StatelessWidget {
       child: Text(
         isReady
             ? 'Compass sensor integration is available.'
-            : 'Live compass sensor integration is not active yet. Bearing calculation works without sensors and the UI is ready for a sensor stream.',
+            : 'Bearing calculation is active. Live sensor rotation is still a placeholder, so the arrow shows calculated bearing only.',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: AppColors.textSecondary,
           height: 1.45,

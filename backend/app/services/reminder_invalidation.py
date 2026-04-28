@@ -14,7 +14,7 @@ PREFERENCE_TARGET_TYPES = {
     "habit": {"habit"},
     "note": {"note"},
     "quran_goal": {"quran_goal"},
-    "prayer": {"prayer"},
+    "prayer": {"prayer", "ramadan"},
     "focus_prompt": {"focus"},
     "bedtime": {"bedtime"},
     "ai_suggestion": {"ai_suggestion"},
