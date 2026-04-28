@@ -32,6 +32,7 @@ import '../features/prayer/screens/quran_goal_screen.dart';
 import '../features/prayer/screens/qibla_screen.dart';
 import '../features/prayer/screens/ramadan_mode_screen.dart';
 import '../features/prayer/screens/spiritual_upgrades_screen.dart';
+import '../features/reminders/screens/notification_center_screen.dart';
 import '../features/reminders/screens/notification_settings_screen.dart';
 import '../features/voice/screens/voice_capture_screen.dart';
 import '../features/voice/screens/voice_future_capabilities_screen.dart';
@@ -253,6 +254,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               destructiveActionDoneMessage:
                   'Local cache clearing is not active on this placeholder screen.',
             ),
+          ),
+          GoRoute(
+            path: AppRoutes.notificationCenter,
+            builder: (context, state) => const NotificationCenterScreen(),
           ),
           GoRoute(
             path: AppRoutes.notificationSettings,

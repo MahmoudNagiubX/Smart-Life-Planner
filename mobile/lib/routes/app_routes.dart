@@ -29,6 +29,7 @@ abstract class AppRoutes {
   static const notes = '/home/notes';
   static const journal = '/home/journal';
   static const settings = '/home/settings';
+  static const notificationCenter = '/home/notifications';
   static const notificationSettings = '/home/settings/notifications';
   static const languageSettings = '/home/settings/language';
   static const analytics = '/home/analytics';

@@ -192,6 +192,13 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               _MenuItem(
+                icon: Icons.notifications_active_outlined,
+                label: 'Notification Center',
+                color: AppColors.primary,
+                onTap: () => context.push(AppRoutes.notificationCenter),
+              ),
+              const SizedBox(height: 10),
+              _MenuItem(
                 icon: Icons.notifications_outlined,
                 label: 'Notification Settings',
                 color: AppColors.warning,
