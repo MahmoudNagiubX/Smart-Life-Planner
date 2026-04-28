@@ -22,6 +22,7 @@ import '../features/tasks/screens/task_details_screen.dart';
 import '../features/tasks/screens/project_timeline_screen.dart';
 import '../features/ai/screens/daily_plan_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
+import '../features/context/screens/context_intelligence_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/prayer/screens/prayer_settings_screen.dart';
@@ -266,6 +267,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.voiceCapture,
             builder: (context, state) => const VoiceCaptureScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.contextIntelligence,
+            builder: (context, state) => const ContextIntelligenceScreen(),
           ),
         ],
       ),
