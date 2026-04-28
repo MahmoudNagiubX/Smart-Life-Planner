@@ -15,12 +15,16 @@ from app.repositories.reminder_repository import (
     get_reminder_by_id,
     get_reminders,
     replace_task_reminder_presets,
+    reschedule_reminder,
+    snooze_reminder,
     update_reminder,
 )
 from app.repositories.task_repository import get_task_by_id
 from app.schemas.reminder import (
     ReminderCreate,
+    ReminderRescheduleRequest,
     ReminderResponse,
+    ReminderSnoozeRequest,
     TaskReminderPresetRequest,
     ReminderUpdate,
     TARGET_TYPES_REQUIRING_ID,
@@ -122,6 +126,38 @@ async def update_existing_reminder(
         reminder,
         payload.model_dump(exclude_unset=True),
     )
+
+
+@router.post("/{reminder_id}/snooze", response_model=ReminderResponse)
+async def snooze_existing_reminder(
+    reminder_id: uuid.UUID,
+    payload: ReminderSnoozeRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    reminder = await get_reminder_by_id(db, reminder_id, current_user.id)
+    if not reminder:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reminder not found",
+        )
+    return await snooze_reminder(db, reminder, payload.minutes)
+
+
+@router.post("/{reminder_id}/reschedule", response_model=ReminderResponse)
+async def reschedule_existing_reminder(
+    reminder_id: uuid.UUID,
+    payload: ReminderRescheduleRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    reminder = await get_reminder_by_id(db, reminder_id, current_user.id)
+    if not reminder:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reminder not found",
+        )
+    return await reschedule_reminder(db, reminder, payload.scheduled_at)
 
 
 async def _validate_target_ownership(

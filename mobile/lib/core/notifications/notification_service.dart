@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
+import 'notification_actions.dart';
 
 class NotificationService {
   static const _channelId = 'smart_life_planner_channel';
@@ -16,18 +17,18 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+  void Function(NotificationResponse response)? _responseHandler;
 
   Future<void> initialize() async {
     if (_initialized) return;
 
     tz.initializeTimeZones();
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const initSettings = InitializationSettings(
-      android: androidSettings,
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
     );
+
+    const initSettings = InitializationSettings(android: androidSettings);
 
     await _plugin.initialize(
       initSettings,
@@ -51,7 +52,13 @@ class NotificationService {
   }
 
   void _onNotificationTap(NotificationResponse response) {
-    // Deep linking will be wired in a later step
+    _responseHandler?.call(response);
+  }
+
+  void setResponseHandler(
+    void Function(NotificationResponse response) handler,
+  ) {
+    _responseHandler = handler;
   }
 
   Future<void> requestPermissions() async {
@@ -72,13 +79,14 @@ class NotificationService {
     required String body,
     required DateTime scheduledAt,
     String? payload,
+    List<AndroidNotificationAction> actions = const [],
   }) async {
     await _plugin.zonedSchedule(
       id,
       title,
       body,
       tz.TZDateTime.from(scheduledAt, tz.local),
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           _channelName,
@@ -86,6 +94,7 @@ class NotificationService {
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
+          actions: actions,
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -129,4 +138,24 @@ class NotificationService {
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
   }
+
+  static const taskReminderActions = <AndroidNotificationAction>[
+    AndroidNotificationAction(
+      NotificationActions.markTaskDone,
+      'Mark done',
+      showsUserInterface: true,
+    ),
+    AndroidNotificationAction(NotificationActions.snooze10, 'Snooze 10m'),
+    AndroidNotificationAction(NotificationActions.snooze60, 'Snooze 1h'),
+    AndroidNotificationAction(
+      NotificationActions.reschedule,
+      'Reschedule',
+      showsUserInterface: true,
+    ),
+    AndroidNotificationAction(
+      NotificationActions.openTask,
+      'Open task',
+      showsUserInterface: true,
+    ),
+  ];
 }

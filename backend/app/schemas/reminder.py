@@ -170,6 +170,28 @@ class ReminderUpdate(BaseModel):
         return normalized
 
 
+class ReminderSnoozeRequest(BaseModel):
+    minutes: int
+
+    @field_validator("minutes")
+    @classmethod
+    def minutes_valid(cls, value: int) -> int:
+        if value not in {10, 60}:
+            raise ValueError("Snooze minutes must be 10 or 60")
+        return value
+
+
+class ReminderRescheduleRequest(BaseModel):
+    scheduled_at: datetime
+
+    @field_validator("scheduled_at")
+    @classmethod
+    def reschedule_datetime_must_be_timezone_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("scheduled_at must include timezone info")
+        return value
+
+
 class ReminderResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID

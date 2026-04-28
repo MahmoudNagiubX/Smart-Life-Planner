@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -134,6 +134,35 @@ async def update_reminder(
 ) -> Reminder:
     for key, value in data.items():
         setattr(reminder, key, value)
+    await db.commit()
+    await db.refresh(reminder)
+    return reminder
+
+
+async def snooze_reminder(
+    db: AsyncSession,
+    reminder: Reminder,
+    minutes: int,
+) -> Reminder:
+    snooze_until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+    reminder.scheduled_at = snooze_until
+    reminder.snooze_until = snooze_until
+    reminder.status = "snoozed"
+    reminder.cancelled_at = None
+    await db.commit()
+    await db.refresh(reminder)
+    return reminder
+
+
+async def reschedule_reminder(
+    db: AsyncSession,
+    reminder: Reminder,
+    scheduled_at: datetime,
+) -> Reminder:
+    reminder.scheduled_at = scheduled_at
+    reminder.snooze_until = None
+    reminder.status = "scheduled"
+    reminder.cancelled_at = None
     await db.commit()
     await db.refresh(reminder)
     return reminder

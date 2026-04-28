@@ -124,6 +124,7 @@ class NotificationScheduler {
       body: taskTitle,
       scheduledAt: reminderAt,
       payload: 'task:$taskId',
+      actions: NotificationService.taskReminderActions,
     );
   }
 
@@ -162,6 +163,7 @@ class NotificationScheduler {
       body: taskTitle,
       scheduledAt: reminderAt,
       payload: 'task:$taskId:reminder:$reminderId',
+      actions: NotificationService.taskReminderActions,
     );
   }
 

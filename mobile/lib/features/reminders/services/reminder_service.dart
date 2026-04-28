@@ -33,6 +33,28 @@ class ReminderService {
     return ReminderModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<ReminderModel> snoozeReminder({
+    required String reminderId,
+    required int minutes,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/reminders/$reminderId/snooze',
+      data: {'minutes': minutes},
+    );
+    return ReminderModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ReminderModel> rescheduleReminder({
+    required String reminderId,
+    required DateTime scheduledAt,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/reminders/$reminderId/reschedule',
+      data: {'scheduled_at': scheduledAt.toUtc().toIso8601String()},
+    );
+    return ReminderModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<List<ReminderModel>> saveTaskReminderPresets({
     required String taskId,
     required List<TaskReminderPresetDraft> presets,
