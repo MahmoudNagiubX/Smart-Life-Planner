@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.habit import Habit, HabitLog
+from app.services.reminder_invalidation import invalidate_target_reminders
 from app.services.reminder_lifecycle import log_habit_reminders_cancelled
 
 
@@ -54,6 +55,13 @@ async def update_habit(
     await db.commit()
     await db.refresh(habit)
     if cancelled_reminder:
+        await invalidate_target_reminders(
+            db,
+            user_id=habit.user_id,
+            target_type="habit",
+            target_id=habit.id,
+            reason="habit_paused",
+        )
         log_habit_reminders_cancelled(
             user_id=habit.user_id,
             habit_id=habit.id,
@@ -68,6 +76,13 @@ async def soft_delete_habit(db: AsyncSession, habit: Habit) -> None:
     if cancelled_reminder:
         habit.reminder_time = None
     await db.commit()
+    await invalidate_target_reminders(
+        db,
+        user_id=habit.user_id,
+        target_type="habit",
+        target_id=habit.id,
+        reason="habit_deleted",
+    )
     if cancelled_reminder:
         log_habit_reminders_cancelled(
             user_id=habit.user_id,

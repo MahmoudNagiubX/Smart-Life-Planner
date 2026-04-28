@@ -5,7 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.models.task import Task, TaskCompletionEvent, TaskProject, TaskSubtask
-from app.repositories.reminder_repository import resync_task_due_preset_reminders
+from app.repositories.reminder_repository import (
+    invalidate_task_reminders,
+    resync_task_due_preset_reminders,
+)
 from app.services.reminder_lifecycle import (
     log_task_reminders_cancelled,
     log_task_reminders_rescheduled,
@@ -147,6 +150,13 @@ async def update_task(db: AsyncSession, task: Task, data: dict) -> Task:
     )
     await db.commit()
     await db.refresh(task)
+    if previous_status != "completed" and task.status == "completed":
+        await invalidate_task_reminders(
+            db,
+            user_id=task.user_id,
+            task_id=task.id,
+            reason="task_completed",
+        )
     if reminder_fields_changed:
         await resync_task_due_preset_reminders(db, task)
         log_task_reminders_rescheduled(
@@ -210,6 +220,12 @@ async def complete_task(db: AsyncSession, task: Task) -> Task:
     )
     await db.commit()
     await db.refresh(task)
+    await invalidate_task_reminders(
+        db,
+        user_id=task.user_id,
+        task_id=task.id,
+        reason="task_completed",
+    )
     if cancelled_reminder:
         log_task_reminders_cancelled(
             user_id=task.user_id,
@@ -279,6 +295,12 @@ async def soft_delete_task(db: AsyncSession, task: Task) -> None:
     if cancelled_reminder:
         task.reminder_at = None
     await db.commit()
+    await invalidate_task_reminders(
+        db,
+        user_id=task.user_id,
+        task_id=task.id,
+        reason="task_deleted",
+    )
     if cancelled_reminder:
         log_task_reminders_cancelled(
             user_id=task.user_id,

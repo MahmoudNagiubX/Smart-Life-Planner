@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
 from app.models.note import Note, NoteAttachment
+from app.services.reminder_invalidation import invalidate_target_reminders
 
 
 def normalize_note_tag(tag: str | None) -> str | None:
@@ -84,6 +85,13 @@ async def update_note(db: AsyncSession, note: Note, data: dict) -> Note:
         data["archived_at"] = datetime.now(timezone.utc) if is_archived else None
         if is_archived:
             data["reminder_at"] = None
+            await invalidate_target_reminders(
+                db,
+                user_id=note.user_id,
+                target_type="note",
+                target_id=note.id,
+                reason="note_archived",
+            )
 
     for key, value in data.items():
         setattr(note, key, value)
@@ -102,5 +110,12 @@ async def update_note(db: AsyncSession, note: Note, data: dict) -> Note:
 
 
 async def delete_note(db: AsyncSession, note: Note) -> None:
+    await invalidate_target_reminders(
+        db,
+        user_id=note.user_id,
+        target_type="note",
+        target_id=note.id,
+        reason="note_deleted",
+    )
     await db.delete(note)
     await db.commit()

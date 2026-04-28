@@ -6,6 +6,11 @@ from app.repositories.settings_repository import get_settings_by_user_id, update
 from app.schemas.settings import SettingsResponse, SettingsUpdate, OnboardingRequest
 from app.services.ai_recommendation_seed import build_ai_recommendation_seed
 from app.services.onboarding_defaults import create_default_habits_for_goals
+from app.services.reminder_invalidation import (
+    disabled_preference_target_types,
+    invalidate_target_types,
+    update_active_reminder_timezone,
+)
 from app.services.reminder_lifecycle import log_prayer_reminders_invalidated
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -60,9 +65,32 @@ async def update_user_settings(
             )
         )
     if PRAYER_REMINDER_FIELDS.intersection(data):
+        await invalidate_target_types(
+            db,
+            user_id=current_user.id,
+            target_types={"prayer"},
+            reason="prayer_settings_changed",
+        )
         log_prayer_reminders_invalidated(
             user_id=current_user.id,
             reason="settings_changed",
+        )
+    if "timezone" in data:
+        await update_active_reminder_timezone(
+            db,
+            user_id=current_user.id,
+            timezone_name=data["timezone"],
+        )
+    disabled_targets = disabled_preference_target_types(
+        data.get("reminder_preferences"),
+        notifications_enabled=data.get("notifications_enabled"),
+    )
+    if disabled_targets:
+        await invalidate_target_types(
+            db,
+            user_id=current_user.id,
+            target_types=disabled_targets,
+            reason="reminder_preference_disabled",
         )
 
     updated = await update_settings(

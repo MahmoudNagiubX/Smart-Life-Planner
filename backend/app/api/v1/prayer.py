@@ -20,6 +20,7 @@ from app.repositories.prayer_repository import (
     mark_prayer_incomplete,
     get_prayer_history,
     get_quran_goal,
+    delete_quran_goal,
     get_quran_progress_for_date,
     get_quran_progress_range,
     upsert_quran_goal,
@@ -139,6 +140,14 @@ async def upsert_user_quran_goal(
 ):
     await upsert_quran_goal(db, current_user.id, payload.daily_page_target)
     return await _build_quran_goal_summary(db, current_user.id)
+
+
+@router.delete("/quran-goal", status_code=status.HTTP_204_NO_CONTENT)
+async def disable_user_quran_goal(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await delete_quran_goal(db, current_user.id)
 
 
 @router.put("/quran-progress/today", response_model=QuranGoalSummaryResponse)

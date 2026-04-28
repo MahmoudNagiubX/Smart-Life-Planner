@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.reminder import Reminder
 from app.models.task import Task
+from app.services.reminder_invalidation import invalidate_target_reminders
 from app.services.task_reminder_presets import (
     TASK_REMINDER_PRESET_OFFSETS,
     calculate_task_preset_time,
@@ -125,6 +126,22 @@ async def resync_task_due_preset_reminders(
 
     if changed:
         await db.commit()
+
+
+async def invalidate_task_reminders(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    task_id: uuid.UUID,
+    reason: str,
+) -> int:
+    return await invalidate_target_reminders(
+        db,
+        user_id=user_id,
+        target_type="task",
+        target_id=task_id,
+        reason=reason,
+    )
 
 
 async def update_reminder(

@@ -262,6 +262,10 @@ class NotificationScheduler {
     await cancelHabitReminder(habitId);
   }
 
+  Future<void> cancelAllLocalNotifications() async {
+    await _service.cancelAll();
+  }
+
   String _prayerDisplayName(String name) {
     const names = {
       'fajr': 'Fajr',

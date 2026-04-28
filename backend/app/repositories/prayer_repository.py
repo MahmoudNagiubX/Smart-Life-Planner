@@ -3,6 +3,7 @@ from datetime import datetime, date, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.prayer import PrayerLog, QuranGoal, QuranProgress
+from app.services.reminder_invalidation import invalidate_target_reminders
 
 
 async def get_prayer_logs_for_date(
@@ -123,6 +124,25 @@ async def upsert_quran_goal(
     await db.commit()
     await db.refresh(goal)
     return goal
+
+
+async def delete_quran_goal(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+) -> bool:
+    goal = await get_quran_goal(db, user_id)
+    if not goal:
+        return False
+    await invalidate_target_reminders(
+        db,
+        user_id=user_id,
+        target_type="quran_goal",
+        target_id=goal.id,
+        reason="quran_goal_disabled",
+    )
+    await db.delete(goal)
+    await db.commit()
+    return True
 
 
 async def get_quran_progress_for_date(

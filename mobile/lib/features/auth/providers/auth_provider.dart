@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../../core/network/providers.dart';
+import '../../../core/notifications/notification_scheduler.dart';
 import '../utils/auth_error_messages.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
@@ -255,6 +256,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    await _ref
+        .read(notificationSchedulerProvider)
+        .cancelAllLocalNotifications();
     final tokenStorage = _ref.read(tokenStorageProvider);
     await tokenStorage.deleteToken();
     state = const AuthState(status: AuthStatus.unauthenticated);

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
+import '../../../core/notifications/notification_scheduler.dart';
 import '../models/reminder_preferences_model.dart';
 import '../services/reminder_preferences_service.dart';
 
@@ -115,6 +116,8 @@ class ReminderPreferencesNotifier
     bool? notificationsEnabled,
     ReminderPreferences? preferences,
   }) async {
+    final previousNotificationsEnabled = state.notificationsEnabled;
+    final previousPreferences = state.preferences;
     state = state.copyWith(isSaving: true, error: null);
     try {
       final result = await _ref
@@ -129,6 +132,16 @@ class ReminderPreferencesNotifier
         isSaving: false,
         hasLoaded: true,
       );
+      if (_shouldCancelLocalNotifications(
+        previousNotificationsEnabled,
+        previousPreferences,
+        result.notificationsEnabled,
+        result.preferences,
+      )) {
+        await _ref
+            .read(notificationSchedulerProvider)
+            .cancelAllLocalNotifications();
+      }
     } on DioException catch (e) {
       state = state.copyWith(
         isSaving: false,
@@ -141,6 +154,25 @@ class ReminderPreferencesNotifier
       );
     }
   }
+}
+
+bool _shouldCancelLocalNotifications(
+  bool previousNotificationsEnabled,
+  ReminderPreferences previous,
+  bool nextNotificationsEnabled,
+  ReminderPreferences next,
+) {
+  if (previousNotificationsEnabled && !nextNotificationsEnabled) return true;
+  if (previous.channels.local && !next.channels.local) return true;
+  if (previous.types.task && !next.types.task) return true;
+  if (previous.types.note && !next.types.note) return true;
+  if (previous.types.habit && !next.types.habit) return true;
+  if (previous.types.prayer && !next.types.prayer) return true;
+  if (previous.types.quranGoal && !next.types.quranGoal) return true;
+  if (previous.types.constantReminders && !next.types.constantReminders) {
+    return true;
+  }
+  return false;
 }
 
 bool _quietHoursApplies(String reminderType) {
