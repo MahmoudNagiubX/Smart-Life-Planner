@@ -80,6 +80,9 @@ class UserSettings(Base):
     athan_sound_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    prayer_notification_sound: Mapped[str] = mapped_column(
+        String(20), default="default", nullable=False
+    )
     theme: Mapped[str] = mapped_column(String(20), default="dark", nullable=False)
     notifications_enabled: Mapped[bool] = mapped_column(
         Boolean, default=True, nullable=False

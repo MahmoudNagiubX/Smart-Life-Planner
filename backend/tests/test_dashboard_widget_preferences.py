@@ -92,3 +92,15 @@ def test_settings_update_accepts_real_ramadan_mode_settings():
 def test_settings_update_rejects_invalid_suhoor_offset():
     with pytest.raises(ValidationError):
         SettingsUpdate(suhoor_reminder_minutes_before_fajr=241)
+
+
+@pytest.mark.parametrize("sound_key", ["default", "silent", "athan"])
+def test_settings_update_accepts_prayer_notification_sound(sound_key):
+    payload = SettingsUpdate(prayer_notification_sound=sound_key)
+
+    assert payload.prayer_notification_sound == sound_key
+
+
+def test_settings_update_rejects_unknown_prayer_notification_sound():
+    with pytest.raises(ValidationError):
+        SettingsUpdate(prayer_notification_sound="loud")

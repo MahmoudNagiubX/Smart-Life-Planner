@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../prayer/models/prayer_notification_sound.dart';
+
 class AppSettingsModel {
   final String language;
   final String theme;
@@ -10,6 +12,7 @@ class AppSettingsModel {
   final String prayerCalculationMethod;
   final int prayerReminderMinutesBefore;
   final bool athanSoundEnabled;
+  final String prayerNotificationSound;
   final String? wakeTime;
   final String? sleepTime;
   final bool microphoneEnabled;
@@ -26,6 +29,7 @@ class AppSettingsModel {
     required this.prayerCalculationMethod,
     required this.prayerReminderMinutesBefore,
     required this.athanSoundEnabled,
+    required this.prayerNotificationSound,
     required this.wakeTime,
     required this.sleepTime,
     required this.microphoneEnabled,
@@ -46,6 +50,10 @@ class AppSettingsModel {
       prayerReminderMinutesBefore:
           json['prayer_reminder_minutes_before'] as int? ?? 10,
       athanSoundEnabled: json['athan_sound_enabled'] as bool? ?? false,
+      prayerNotificationSound: PrayerNotificationSound.normalize(
+        json['prayer_notification_sound'] as String?,
+        legacyAthanEnabled: json['athan_sound_enabled'] as bool?,
+      ),
       wakeTime: json['wake_time'] as String?,
       sleepTime: json['sleep_time'] as String?,
       microphoneEnabled: json['microphone_enabled'] as bool? ?? false,
@@ -77,7 +85,8 @@ class AppSettingsModel {
       notificationsEnabled ? 'Enabled' : 'Disabled';
 
   String get prayerSummary =>
-      '$prayerCalculationMethod, $prayerReminderMinutesBefore min before';
+      '$prayerCalculationMethod, $prayerReminderMinutesBefore min before, '
+      '${PrayerNotificationSound.label(prayerNotificationSound)}';
 
   String get focusSummary {
     final timing = reminderPreferences['timing'];

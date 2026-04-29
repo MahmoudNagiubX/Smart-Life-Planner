@@ -8,6 +8,11 @@ class NotificationService {
   static const _channelId = 'smart_life_planner_channel';
   static const _channelName = 'Smart Life Planner';
   static const _channelDescription = 'Reminders and alerts';
+  static const _silentChannelId = 'smart_life_planner_silent_channel';
+  static const _silentChannelName = 'Smart Life Planner Silent';
+  static const _athanChannelId = 'smart_life_planner_athan_channel';
+  static const _athanChannelName = 'Smart Life Planner Athan';
+  static const _athanSound = RawResourceAndroidNotificationSound('athan_soft');
 
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -39,6 +44,14 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
+    await _createAndroidChannels(android);
+
+    _initialized = true;
+  }
+
+  Future<void> _createAndroidChannels(
+    AndroidFlutterLocalNotificationsPlugin? android,
+  ) async {
     await android?.createNotificationChannel(
       const AndroidNotificationChannel(
         _channelId,
@@ -47,8 +60,25 @@ class NotificationService {
         importance: Importance.high,
       ),
     );
-
-    _initialized = true;
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _silentChannelId,
+        _silentChannelName,
+        description: 'Silent reminders and alerts',
+        importance: Importance.high,
+        playSound: false,
+      ),
+    );
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _athanChannelId,
+        _athanChannelName,
+        description: 'Prayer reminders with the bundled Athan sound',
+        importance: Importance.high,
+        playSound: true,
+        sound: _athanSound,
+      ),
+    );
   }
 
   void _onNotificationTap(NotificationResponse response) {
@@ -80,6 +110,7 @@ class NotificationService {
     required DateTime scheduledAt,
     String? payload,
     List<AndroidNotificationAction> actions = const [],
+    String notificationSoundKey = 'default',
   }) async {
     await _plugin.zonedSchedule(
       id,
@@ -87,13 +118,8 @@ class NotificationService {
       body,
       tz.TZDateTime.from(scheduledAt, tz.local),
       NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channelId,
-          _channelName,
-          channelDescription: _channelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+        android: _androidDetails(
+          notificationSoundKey: notificationSoundKey,
           actions: actions,
         ),
       ),
@@ -110,23 +136,65 @@ class NotificationService {
     required String title,
     required String body,
     String? payload,
+    String notificationSoundKey = 'default',
   }) async {
     await _plugin.show(
       id,
       title,
       body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channelId,
-          _channelName,
-          channelDescription: _channelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-        ),
+      NotificationDetails(
+        android: _androidDetails(notificationSoundKey: notificationSoundKey),
       ),
       payload: payload,
     );
+  }
+
+  Future<void> showPrayerSoundPreview({required String soundKey}) async {
+    await showNotification(
+      id: 91406,
+      title: 'Prayer Sound Preview',
+      body: soundKey == 'silent'
+          ? 'This preview should appear without sound where supported.'
+          : 'This preview uses your selected prayer reminder sound.',
+      payload: 'prayer:sound-preview',
+      notificationSoundKey: soundKey,
+    );
+  }
+
+  AndroidNotificationDetails _androidDetails({
+    String notificationSoundKey = 'default',
+    List<AndroidNotificationAction> actions = const [],
+  }) {
+    final soundKey = _normalizedSoundKey(notificationSoundKey);
+    final channelId = switch (soundKey) {
+      'silent' => _silentChannelId,
+      'athan' => _athanChannelId,
+      _ => _channelId,
+    };
+    final channelName = switch (soundKey) {
+      'silent' => _silentChannelName,
+      'athan' => _athanChannelName,
+      _ => _channelName,
+    };
+
+    return AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: _channelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+      playSound: soundKey != 'silent',
+      sound: soundKey == 'athan' ? _athanSound : null,
+      actions: actions,
+    );
+  }
+
+  String _normalizedSoundKey(String value) {
+    return switch (value) {
+      'silent' || 'athan' => value,
+      _ => 'default',
+    };
   }
 
   // Cancel a specific notification

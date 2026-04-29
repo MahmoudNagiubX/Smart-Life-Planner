@@ -64,6 +64,7 @@ class PrayerSettingsNotifier extends StateNotifier<PrayerSettingsState> {
     String? city,
     int? prayerReminderMinutesBefore,
     bool? athanSoundEnabled,
+    String? prayerNotificationSound,
     bool? ramadanModeEnabled,
   }) async {
     state = state.copyWith(isSaving: true, error: null);
@@ -76,6 +77,7 @@ class PrayerSettingsNotifier extends StateNotifier<PrayerSettingsState> {
         city: city,
         prayerReminderMinutesBefore: prayerReminderMinutesBefore,
         athanSoundEnabled: athanSoundEnabled,
+        prayerNotificationSound: prayerNotificationSound,
         ramadanModeEnabled: ramadanModeEnabled,
       );
       state = state.copyWith(settings: settings, isSaving: false);

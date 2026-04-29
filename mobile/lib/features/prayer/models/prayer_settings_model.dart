@@ -1,3 +1,5 @@
+import 'prayer_notification_sound.dart';
+
 class PrayerSettings {
   final String prayerCalculationMethod;
   final double? prayerLocationLat;
@@ -5,6 +7,7 @@ class PrayerSettings {
   final String? city;
   final int prayerReminderMinutesBefore;
   final bool athanSoundEnabled;
+  final String prayerNotificationSound;
   final bool ramadanModeEnabled;
 
   const PrayerSettings({
@@ -14,10 +17,16 @@ class PrayerSettings {
     required this.city,
     required this.prayerReminderMinutesBefore,
     required this.athanSoundEnabled,
+    required this.prayerNotificationSound,
     required this.ramadanModeEnabled,
   });
 
   factory PrayerSettings.fromJson(Map<String, dynamic> json) {
+    final athanSoundEnabled = json['athan_sound_enabled'] as bool? ?? false;
+    final prayerNotificationSound = PrayerNotificationSound.normalize(
+      json['prayer_notification_sound'] as String?,
+      legacyAthanEnabled: athanSoundEnabled,
+    );
     return PrayerSettings(
       prayerCalculationMethod:
           json['prayer_calculation_method'] as String? ?? 'MWL',
@@ -26,7 +35,9 @@ class PrayerSettings {
       city: json['city'] as String?,
       prayerReminderMinutesBefore:
           json['prayer_reminder_minutes_before'] as int? ?? 10,
-      athanSoundEnabled: json['athan_sound_enabled'] as bool? ?? false,
+      athanSoundEnabled:
+          prayerNotificationSound == PrayerNotificationSound.athan,
+      prayerNotificationSound: prayerNotificationSound,
       ramadanModeEnabled: json['ramadan_mode_enabled'] as bool? ?? false,
     );
   }

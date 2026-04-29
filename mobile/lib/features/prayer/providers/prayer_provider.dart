@@ -6,6 +6,7 @@ import '../../../core/notifications/notification_scheduler.dart';
 import '../../reminders/providers/reminder_preferences_provider.dart';
 import '../../reminders/providers/reminder_provider.dart';
 import '../models/prayer_model.dart';
+import 'prayer_settings_provider.dart';
 import 'ramadan_settings_provider.dart';
 import '../services/prayer_service.dart';
 
@@ -67,6 +68,7 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
         .preferences
         .timing
         .prayerMinutesBefore;
+    final notificationSoundKey = await _currentPrayerNotificationSound();
     for (final prayer in data.prayers) {
       if (!prayer.completed && prayer.scheduledAt != null) {
         try {
@@ -91,6 +93,7 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
             scheduledAt: scheduledAt,
             minutesBefore: reminderMinutes,
             reminderId: reminder?.id,
+            notificationSoundKey: notificationSoundKey,
           );
         } catch (_) {}
       } else {
@@ -110,6 +113,19 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
   Future<void> refreshPrayerRemindersAfterSettingsChange() async {
     await _ref.read(notificationSchedulerProvider).cancelAllPrayerReminders();
     await loadTodayPrayers();
+  }
+
+  Future<String> _currentPrayerNotificationSound() async {
+    try {
+      final existing = _ref.read(prayerSettingsProvider).settings;
+      if (existing != null) return existing.prayerNotificationSound;
+      final settings = await _ref
+          .read(prayerSettingsServiceProvider)
+          .getSettings();
+      return settings.prayerNotificationSound;
+    } catch (_) {
+      return 'default';
+    }
   }
 
   Future<void> togglePrayer(String prayerName, bool currentlyCompleted) async {

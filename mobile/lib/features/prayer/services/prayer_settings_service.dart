@@ -18,6 +18,7 @@ class PrayerSettingsService {
     String? city,
     int? prayerReminderMinutesBefore,
     bool? athanSoundEnabled,
+    String? prayerNotificationSound,
     bool? ramadanModeEnabled,
   }) async {
     final data = <String, dynamic>{};
@@ -38,6 +39,9 @@ class PrayerSettingsService {
     }
     if (athanSoundEnabled != null) {
       data['athan_sound_enabled'] = athanSoundEnabled;
+    }
+    if (prayerNotificationSound != null) {
+      data['prayer_notification_sound'] = prayerNotificationSound;
     }
     if (ramadanModeEnabled != null) {
       data['ramadan_mode_enabled'] = ramadanModeEnabled;

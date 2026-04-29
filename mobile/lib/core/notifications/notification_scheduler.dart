@@ -43,6 +43,7 @@ class NotificationScheduler {
     required DateTime scheduledAt,
     int minutesBefore = 10,
     String? reminderId,
+    String notificationSoundKey = 'default',
   }) async {
     final fireAt = scheduledAt.subtract(Duration(minutes: minutesBefore));
     if (fireAt.isBefore(DateTime.now())) return;
@@ -56,6 +57,7 @@ class NotificationScheduler {
       payload: reminderId == null
           ? 'prayer:$prayerName'
           : 'prayer:$prayerName:reminder:$reminderId',
+      notificationSoundKey: notificationSoundKey,
     );
   }
 

@@ -21,6 +21,7 @@ ALLOWED_PRAYER_METHODS = {
     "ISNA",
     "Karachi",
 }
+ALLOWED_PRAYER_NOTIFICATION_SOUNDS = {"default", "silent", "athan"}
 DEFAULT_DASHBOARD_WIDGETS = [
     "top_tasks",
     "next_prayer",
@@ -214,6 +215,7 @@ class SettingsResponse(BaseModel):
     prayer_location_lng: Optional[float]
     prayer_reminder_minutes_before: int
     athan_sound_enabled: bool
+    prayer_notification_sound: str
     theme: str
     notifications_enabled: bool
     reminder_preferences: ReminderPreferences = Field(
@@ -258,6 +260,7 @@ class SettingsUpdate(BaseModel):
         default=None, ge=0, le=120
     )
     athan_sound_enabled: Optional[bool] = None
+    prayer_notification_sound: Optional[str] = None
     theme: Optional[str] = None
     notifications_enabled: Optional[bool] = None
     reminder_preferences: Optional[ReminderPreferences] = None
@@ -310,6 +313,13 @@ class SettingsUpdate(BaseModel):
     def prayer_method_supported(cls, value: str | None) -> str | None:
         if value is not None and value not in ALLOWED_PRAYER_METHODS:
             raise ValueError("Unsupported prayer calculation method")
+        return value
+
+    @field_validator("prayer_notification_sound")
+    @classmethod
+    def prayer_notification_sound_supported(cls, value: str | None) -> str | None:
+        if value is not None and value not in ALLOWED_PRAYER_NOTIFICATION_SOUNDS:
+            raise ValueError("Unsupported prayer notification sound")
         return value
 
     @field_validator("prayer_location_lat")

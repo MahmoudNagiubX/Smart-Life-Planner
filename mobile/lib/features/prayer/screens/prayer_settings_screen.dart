@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:just_audio/just_audio.dart';
 
+import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
+import '../models/prayer_notification_sound.dart';
 import '../models/prayer_settings_model.dart';
 import '../providers/prayer_provider.dart';
 import '../providers/prayer_settings_provider.dart';
@@ -21,6 +24,7 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
   final _cityController = TextEditingController();
   final _latitudeController = TextEditingController();
   final _longitudeController = TextEditingController();
+  final _soundPreviewPlayer = AudioPlayer();
   String? _syncedSettingsKey;
 
   static const _methods = <String, String>{
@@ -44,6 +48,7 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
     _cityController.dispose();
     _latitudeController.dispose();
     _longitudeController.dispose();
+    _soundPreviewPlayer.dispose();
     super.dispose();
   }
 
@@ -68,6 +73,7 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
     String? city,
     int? prayerReminderMinutesBefore,
     bool? athanSoundEnabled,
+    String? prayerNotificationSound,
     bool? ramadanModeEnabled,
   }) async {
     await ref
@@ -79,6 +85,7 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
           city: city,
           prayerReminderMinutesBefore: prayerReminderMinutesBefore,
           athanSoundEnabled: athanSoundEnabled,
+          prayerNotificationSound: prayerNotificationSound,
           ramadanModeEnabled: ramadanModeEnabled,
         );
     await ref.read(ramadanSettingsProvider.notifier).loadSettings();
@@ -113,6 +120,42 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
       prayerLocationLat: lat,
       prayerLocationLng: lng,
     );
+  }
+
+  Future<void> _previewPrayerSound(String soundKey) async {
+    try {
+      final normalized = PrayerNotificationSound.normalize(soundKey);
+      if (normalized == PrayerNotificationSound.athan) {
+        await _soundPreviewPlayer.stop();
+        await _soundPreviewPlayer.setAsset(
+          PrayerNotificationSound.athanAssetPath,
+        );
+        await _soundPreviewPlayer.play();
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Playing Athan preview.')));
+        return;
+      }
+
+      await NotificationService().initialize();
+      await NotificationService().showPrayerSoundPreview(soundKey: normalized);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            normalized == PrayerNotificationSound.silent
+                ? 'Silent preview sent if notifications are allowed.'
+                : 'Default sound preview sent if notifications are allowed.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not preview prayer sound.')),
+      );
+    }
   }
 
   @override
@@ -168,10 +211,11 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
                         _saveAndRefresh(prayerReminderMinutesBefore: value),
                   ),
                   const SizedBox(height: 16),
-                  _AthanSoundCard(
+                  _PrayerSoundCard(
                     settings: settings ?? _fallbackSettings,
                     onChanged: (value) =>
-                        _saveAndRefresh(athanSoundEnabled: value),
+                        _saveAndRefresh(prayerNotificationSound: value),
+                    onPreview: _previewPrayerSound,
                   ),
                   const SizedBox(height: 16),
                   _RamadanToggleCard(
@@ -205,6 +249,7 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
       city: null,
       prayerReminderMinutesBefore: 10,
       athanSoundEnabled: false,
+      prayerNotificationSound: PrayerNotificationSound.defaultSound,
       ramadanModeEnabled: false,
     );
   }
@@ -349,26 +394,65 @@ class _ReminderTimingCard extends StatelessWidget {
   }
 }
 
-class _AthanSoundCard extends StatelessWidget {
+class _PrayerSoundCard extends StatelessWidget {
   final PrayerSettings settings;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onPreview;
 
-  const _AthanSoundCard({required this.settings, required this.onChanged});
+  const _PrayerSoundCard({
+    required this.settings,
+    required this.onChanged,
+    required this.onPreview,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final selectedSound = PrayerNotificationSound.normalize(
+      settings.prayerNotificationSound,
+      legacyAthanEnabled: settings.athanSoundEnabled,
+    );
+
     return _PrayerSettingsCard(
       icon: Icons.volume_up_outlined,
-      title: 'Athan Sound',
+      title: 'Prayer Sound',
       accentColor: AppColors.success,
-      child: SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        value: settings.athanSoundEnabled,
-        title: const Text('Athan sound placeholder'),
-        subtitle: const Text(
-          'Saves your preference now. Sound selection will be added later.',
-        ),
-        onChanged: onChanged,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DropdownButtonFormField<String>(
+            initialValue: selectedSound,
+            decoration: const InputDecoration(
+              labelText: 'Prayer reminder sound',
+            ),
+            items: PrayerNotificationSound.values
+                .map(
+                  (soundKey) => DropdownMenuItem(
+                    value: soundKey,
+                    child: Text(PrayerNotificationSound.label(soundKey)),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) {
+              if (value != null) onChanged(value);
+            },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            PrayerNotificationSound.description(selectedSound),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: OutlinedButton.icon(
+              onPressed: () => onPreview(selectedSound),
+              icon: const Icon(Icons.play_arrow_outlined),
+              label: const Text('Preview'),
+            ),
+          ),
+        ],
       ),
     );
   }

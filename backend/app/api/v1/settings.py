@@ -22,6 +22,7 @@ PRAYER_REMINDER_FIELDS = {
     "prayer_location_lng",
     "prayer_reminder_minutes_before",
     "athan_sound_enabled",
+    "prayer_notification_sound",
     "ramadan_mode_enabled",
     "suhoor_reminder_enabled",
     "suhoor_reminder_minutes_before_fajr",
@@ -61,6 +62,13 @@ async def update_user_settings(
         )
 
     data = payload.model_dump(exclude_none=True, mode="json")
+    if "prayer_notification_sound" in data:
+        data["athan_sound_enabled"] = data["prayer_notification_sound"] == "athan"
+    elif "athan_sound_enabled" in data:
+        data["prayer_notification_sound"] = (
+            "athan" if data["athan_sound_enabled"] else "default"
+        )
+
     if AI_SEED_FIELDS.intersection(data):
         data.update(
             build_ai_recommendation_seed(
