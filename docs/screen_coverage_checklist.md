@@ -82,7 +82,7 @@ Current implementation is a single onboarding flow screen. Step 13.2/13.3 should
 | --- | --- | --- | --- |
 | Settings | `/home/settings` | Exists | Real editable settings screen wired to `/settings`. |
 | Notification Settings | `/home/settings/notifications` | Exists | Placeholder route exists and is reachable from Profile. |
-| Analytics | `/home/analytics` | Exists | `AnalyticsScreen` routed inside shell. |
+| Analytics | `/home/analytics` | Exists | Real basic analytics cards wired to `/analytics/today`, `/analytics/weekly`, and `/analytics/insights`. |
 | Language and Localization | `/home/settings/language` | Exists | Real language preference screen wired to `/settings` and app locale. |
 
 ## Capture And Voice Screens
@@ -105,7 +105,7 @@ Current implementation is a single onboarding flow screen. Step 13.2/13.3 should
 | No journal entries | Empty state | Exists | Journal placeholder uses shared empty-state UI. |
 | No focus sessions | Empty state | Exists | Focus History placeholder uses shared empty-state UI. |
 | No prayer history | Empty state | Exists | Prayer History placeholder uses shared empty-state UI. |
-| No analytics data | Empty state | Partial | Confirm current analytics empty state. |
+| No analytics data | Empty state | Exists | Analytics shows a reusable empty state when no user-owned activity exists. |
 | Reusable loading widget | Loading state | Exists | `AppLoadingState` is shared across routed screens. |
 | Reusable error widget | Error state | Exists | `AppErrorState` supports friendly retry states. |
 | Destructive confirmations | Dialog coverage | Exists | Shared destructive confirmation dialog is wired into implemented and placeholder flows. |

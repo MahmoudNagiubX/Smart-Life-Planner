@@ -75,6 +75,7 @@ class WeeklyAnalytics {
   final int totalFocusMinutes;
   final int totalHabitsLogged;
   final int totalPrayersCompleted;
+  final int totalNotesCreated;
   final int bestHabitStreak;
   final int avgProductivityScore;
   final List<DailyBreakdown> dailyBreakdown;
@@ -86,6 +87,7 @@ class WeeklyAnalytics {
     required this.totalFocusMinutes,
     required this.totalHabitsLogged,
     required this.totalPrayersCompleted,
+    required this.totalNotesCreated,
     required this.bestHabitStreak,
     required this.avgProductivityScore,
     required this.dailyBreakdown,
@@ -99,6 +101,7 @@ class WeeklyAnalytics {
       totalFocusMinutes: json['total_focus_minutes'] as int,
       totalHabitsLogged: json['total_habits_logged'] as int,
       totalPrayersCompleted: json['total_prayers_completed'] as int,
+      totalNotesCreated: json['total_notes_created'] as int? ?? 0,
       bestHabitStreak: json['best_habit_streak'] as int,
       avgProductivityScore: json['avg_productivity_score'] as int,
       dailyBreakdown: (json['daily_breakdown'] as List<dynamic>)

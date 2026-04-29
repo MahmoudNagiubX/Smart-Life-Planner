@@ -1,14 +1,17 @@
 import uuid
-from datetime import datetime, timezone, timedelta, date
+from datetime import date, datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
-from app.core.dependencies import get_db
+
 from app.api.v1.auth import get_current_user
-from app.models.task import Task
+from app.core.dependencies import get_db
 from app.models.focus import FocusSession
 from app.models.habit import Habit, HabitLog
+from app.models.note import Note
 from app.models.prayer import PrayerLog
+from app.models.task import Task
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -30,7 +33,6 @@ async def get_today_analytics(
     user_id: uuid.UUID = current_user.id
     today = _today_utc()
 
-    # Tasks completed today
     tasks_result = await db.execute(
         select(func.count(Task.id)).where(
             Task.user_id == user_id,
@@ -41,7 +43,6 @@ async def get_today_analytics(
     )
     tasks_completed = tasks_result.scalar() or 0
 
-    # Tasks pending
     pending_result = await db.execute(
         select(func.count(Task.id)).where(
             Task.user_id == user_id,
@@ -51,7 +52,6 @@ async def get_today_analytics(
     )
     tasks_pending = pending_result.scalar() or 0
 
-    # Focus minutes today
     focus_result = await db.execute(
         select(func.coalesce(func.sum(FocusSession.actual_minutes), 0)).where(
             FocusSession.user_id == user_id,
@@ -61,7 +61,6 @@ async def get_today_analytics(
     )
     focus_minutes = focus_result.scalar() or 0
 
-    # Focus sessions today
     focus_sessions_result = await db.execute(
         select(func.count(FocusSession.id)).where(
             FocusSession.user_id == user_id,
@@ -71,7 +70,6 @@ async def get_today_analytics(
     )
     focus_sessions = focus_sessions_result.scalar() or 0
 
-    # Habits completed today
     habits_result = await db.execute(
         select(func.count(HabitLog.id)).where(
             HabitLog.user_id == user_id,
@@ -81,7 +79,6 @@ async def get_today_analytics(
     )
     habits_completed = habits_result.scalar() or 0
 
-    # Total active habits
     total_habits_result = await db.execute(
         select(func.count(Habit.id)).where(
             Habit.user_id == user_id,
@@ -91,7 +88,6 @@ async def get_today_analytics(
     )
     total_habits = total_habits_result.scalar() or 0
 
-    # Prayers completed today
     prayers_result = await db.execute(
         select(func.count(PrayerLog.id)).where(
             PrayerLog.user_id == user_id,
@@ -101,7 +97,6 @@ async def get_today_analytics(
     )
     prayers_completed = prayers_result.scalar() or 0
 
-    # Productivity score (0–100)
     score = _calculate_productivity_score(
         tasks_completed=tasks_completed,
         focus_minutes=int(focus_minutes),
@@ -133,7 +128,6 @@ async def get_weekly_analytics(
     today = _today_utc()
     week_start = _week_start()
 
-    # Daily breakdown for last 7 days
     daily_stats = []
     for i in range(7):
         day = week_start + timedelta(days=i)
@@ -171,22 +165,31 @@ async def get_weekly_analytics(
             )
         )
 
-        daily_stats.append({
-            "date": day.isoformat(),
-            "day_label": day.strftime("%a"),
-            "tasks_completed": tasks_r.scalar() or 0,
-            "focus_minutes": int(focus_r.scalar() or 0),
-            "habits_completed": habits_r.scalar() or 0,
-            "prayers_completed": prayers_r.scalar() or 0,
-        })
+        daily_stats.append(
+            {
+                "date": day.isoformat(),
+                "day_label": day.strftime("%a"),
+                "tasks_completed": tasks_r.scalar() or 0,
+                "focus_minutes": int(focus_r.scalar() or 0),
+                "habits_completed": habits_r.scalar() or 0,
+                "prayers_completed": prayers_r.scalar() or 0,
+            }
+        )
 
-    # Weekly totals
     total_tasks = sum(d["tasks_completed"] for d in daily_stats)
     total_focus = sum(d["focus_minutes"] for d in daily_stats)
     total_habits = sum(d["habits_completed"] for d in daily_stats)
     total_prayers = sum(d["prayers_completed"] for d in daily_stats)
 
-    # Best streak for habits
+    notes_r = await db.execute(
+        select(func.count(Note.id)).where(
+            Note.user_id == user_id,
+            func.date(Note.created_at) >= week_start,
+            func.date(Note.created_at) <= today,
+        )
+    )
+    total_notes_created = notes_r.scalar() or 0
+
     habits_streak_result = await db.execute(
         select(func.max(Habit.current_streak)).where(
             Habit.user_id == user_id,
@@ -195,7 +198,6 @@ async def get_weekly_analytics(
     )
     best_streak = habits_streak_result.scalar() or 0
 
-    # Weekly avg productivity score
     avg_score = int(
         sum(
             _calculate_productivity_score(
@@ -217,6 +219,7 @@ async def get_weekly_analytics(
         "total_focus_minutes": total_focus,
         "total_habits_logged": total_habits,
         "total_prayers_completed": total_prayers,
+        "total_notes_created": total_notes_created,
         "best_habit_streak": best_streak,
         "avg_productivity_score": avg_score,
         "daily_breakdown": daily_stats,
@@ -234,7 +237,6 @@ async def get_insights(
 
     insights = []
 
-    # Best focus day
     focus_by_day = []
     for i in range(7):
         day = week_start + timedelta(days=i)
@@ -249,14 +251,15 @@ async def get_insights(
 
     best_focus_day = max(focus_by_day, key=lambda x: x[1])
     if best_focus_day[1] > 0:
-        insights.append({
-            "type": "focus",
-            "emoji": "⏱️",
-            "title": "Best Focus Day",
-            "message": f"Your most focused day was {best_focus_day[0].strftime('%A')} with {best_focus_day[1]} minutes of deep work.",
-        })
+        insights.append(
+            {
+                "type": "focus",
+                "emoji": "focus",
+                "title": "Best Focus Day",
+                "message": f"Your most focused day was {best_focus_day[0].strftime('%A')} with {best_focus_day[1]} minutes of deep work.",
+            }
+        )
 
-    # Prayer consistency
     prayers_r = await db.execute(
         select(func.count(PrayerLog.id)).where(
             PrayerLog.user_id == user_id,
@@ -267,31 +270,36 @@ async def get_insights(
     prayers_week = prayers_r.scalar() or 0
     prayer_rate = int((prayers_week / 35) * 100)
     if prayer_rate > 0:
-        insights.append({
-            "type": "prayer",
-            "emoji": "🕌",
-            "title": "Prayer Consistency",
-            "message": f"You completed {prayer_rate}% of your prayers this week. {'Excellent! 🎉' if prayer_rate >= 80 else 'Keep going! 💪'}",
-        })
+        insights.append(
+            {
+                "type": "prayer",
+                "emoji": "prayer",
+                "title": "Prayer Consistency",
+                "message": f"You completed {prayer_rate}% of your prayers this week. {'Excellent consistency.' if prayer_rate >= 80 else 'Keep going at a steady pace.'}",
+            }
+        )
 
-    # Habit streaks
     top_habit_r = await db.execute(
-        select(Habit).where(
+        select(Habit)
+        .where(
             Habit.user_id == user_id,
             Habit.is_deleted == False,
             Habit.current_streak > 0,
-        ).order_by(Habit.current_streak.desc()).limit(1)
+        )
+        .order_by(Habit.current_streak.desc())
+        .limit(1)
     )
     top_habit = top_habit_r.scalar_one_or_none()
     if top_habit:
-        insights.append({
-            "type": "habit",
-            "emoji": "🔥",
-            "title": "Top Habit Streak",
-            "message": f"'{top_habit.title}' is on a {top_habit.current_streak}-day streak! Don't break it!",
-        })
+        insights.append(
+            {
+                "type": "habit",
+                "emoji": "habit",
+                "title": "Top Habit Streak",
+                "message": f"Your strongest habit streak is {top_habit.current_streak} day{'s' if top_habit.current_streak != 1 else ''}.",
+            }
+        )
 
-    # Tasks this week
     tasks_r = await db.execute(
         select(func.count(Task.id)).where(
             Task.user_id == user_id,
@@ -302,21 +310,24 @@ async def get_insights(
     )
     tasks_week = tasks_r.scalar() or 0
     if tasks_week > 0:
-        insights.append({
-            "type": "tasks",
-            "emoji": "✅",
-            "title": "Weekly Task Progress",
-            "message": f"You completed {tasks_week} task{'s' if tasks_week != 1 else ''} this week. {'Amazing work! 🚀' if tasks_week >= 10 else 'Keep building momentum! 💪'}",
-        })
+        insights.append(
+            {
+                "type": "tasks",
+                "emoji": "tasks",
+                "title": "Weekly Task Progress",
+                "message": f"You completed {tasks_week} task{'s' if tasks_week != 1 else ''} this week. {'Strong progress.' if tasks_week >= 10 else 'Keep building momentum.'}",
+            }
+        )
 
-    # Fallback if no data yet
     if not insights:
-        insights.append({
-            "type": "welcome",
-            "emoji": "🌟",
-            "title": "Getting Started",
-            "message": "Complete some tasks, habits, and prayers to unlock your personal insights!",
-        })
+        insights.append(
+            {
+                "type": "welcome",
+                "emoji": "welcome",
+                "title": "Getting Started",
+                "message": "Complete some tasks, habits, and prayers to unlock your personal insights.",
+            }
+        )
 
     return {"insights": insights, "generated_at": today.isoformat()}
 
