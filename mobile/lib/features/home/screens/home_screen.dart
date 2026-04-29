@@ -274,8 +274,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onTap: () => context.go('/home/focus'),
       ),
       'productivity_score' => _ProductivityScoreCard(data: data),
-      'quran_goal' => _QuranGoalDashboardCard(
-        onTap: () => context.push('/home/prayer/quran-goal'),
+      'quran_goal' => _SpiritualDashboardCard(
+        summary: personalization.spiritualSummary,
+        onPrayer: () => context.go('/home/prayer'),
+        onQuran: () => context.push('/home/prayer/quran-goal'),
+        onQibla: () => context.push('/home/prayer/qibla'),
+        onRamadan: () => context.push('/home/prayer/ramadan'),
       ),
       _ => const SizedBox.shrink(),
     };
@@ -406,19 +410,160 @@ class _ProductivityScoreCard extends StatelessWidget {
   }
 }
 
-class _QuranGoalDashboardCard extends StatelessWidget {
-  final VoidCallback onTap;
+class _SpiritualDashboardCard extends StatelessWidget {
+  final DashboardSpiritualSummary summary;
+  final VoidCallback onPrayer;
+  final VoidCallback onQuran;
+  final VoidCallback onQibla;
+  final VoidCallback onRamadan;
 
-  const _QuranGoalDashboardCard({required this.onTap});
+  const _SpiritualDashboardCard({
+    required this.summary,
+    required this.onPrayer,
+    required this.onQuran,
+    required this.onQibla,
+    required this.onRamadan,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return _WideActionCard(
-      icon: Icons.menu_book_outlined,
-      title: 'Quran goal',
-      subtitle: 'Open your daily Quran target and progress.',
-      color: AppColors.prayerGold,
+    final prayerTotal = summary.prayerProgress.total <= 0
+        ? 5
+        : summary.prayerProgress.total;
+    final quran = summary.quranGoal;
+    final quranText = quran.enabled
+        ? '${quran.todayPagesCompleted}/${quran.dailyPageTarget} pages (${quran.progressPercent}%)'
+        : 'Set a daily Quran target';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.prayerGold.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.prayerGold.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.mosque_outlined, color: AppColors.prayerGold),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Spiritual today',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _SpiritualMetricRow(
+            icon: Icons.schedule_outlined,
+            label: 'Next prayer',
+            value:
+                '${_prayerDisplayName(summary.nextPrayer.name)} ${_prayerTimeLabel(summary.nextPrayer)}',
+            onTap: onPrayer,
+          ),
+          const SizedBox(height: 8),
+          _SpiritualMetricRow(
+            icon: Icons.check_circle_outline,
+            label: 'Prayers tracked',
+            value: '${summary.prayerProgress.completed}/$prayerTotal today',
+            onTap: onPrayer,
+          ),
+          const SizedBox(height: 8),
+          _SpiritualMetricRow(
+            icon: Icons.menu_book_outlined,
+            label: 'Quran progress',
+            value: quranText,
+            onTap: onQuran,
+          ),
+          if (summary.ramadan.enabled) ...[
+            const SizedBox(height: 8),
+            _SpiritualMetricRow(
+              icon: Icons.nights_stay_outlined,
+              label: 'Ramadan',
+              value: summary.ramadan.label,
+              onTap: onRamadan,
+            ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: onPrayer,
+                icon: const Icon(Icons.mosque_outlined, size: 18),
+                label: const Text('Prayer'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onQuran,
+                icon: const Icon(Icons.menu_book_outlined, size: 18),
+                label: const Text('Quran'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onQibla,
+                icon: const Icon(Icons.explore_outlined, size: 18),
+                label: Text(summary.qibla.available ? 'Qibla' : 'Set Qibla'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpiritualMetricRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  const _SpiritualMetricRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
       onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.prayerGold, size: 19),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -553,7 +698,7 @@ String _dashboardWidgetLabel(String widgetId) {
     'ai_plan' => 'AI plan',
     'focus_shortcut' => 'Focus shortcut',
     'productivity_score' => 'Productivity score',
-    'quran_goal' => 'Quran goal',
+    'quran_goal' => 'Spiritual today',
     _ => widgetId,
   };
 }
@@ -572,33 +717,45 @@ IconData _dashboardWidgetIcon(String widgetId) {
   };
 }
 
+String _prayerDisplayName(String? name) {
+  return switch (name) {
+    'fajr' => 'Fajr',
+    'dhuhr' => 'Dhuhr',
+    'asr' => 'Asr',
+    'maghrib' => 'Maghrib',
+    'isha' => 'Isha',
+    null || '' => 'Next prayer',
+    _ => name,
+  };
+}
+
+String _prayerTimeLabel(DashboardNextPrayer nextPrayer) {
+  final scheduledAt = nextPrayer.scheduledAt;
+  if (scheduledAt == null || scheduledAt.length < 16) {
+    return 'Open Prayer to sync today\'s times';
+  }
+
+  final parsed = DateTime.tryParse(scheduledAt);
+  if (parsed == null) return 'Open Prayer to sync today\'s times';
+  final local = parsed.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
+}
+
 class _NextPrayerCard extends StatelessWidget {
   final DashboardNextPrayer nextPrayer;
   final VoidCallback onTap;
 
   const _NextPrayerCard({required this.nextPrayer, required this.onTap});
 
-  String _timeLabel() {
-    final scheduledAt = nextPrayer.scheduledAt;
-    if (scheduledAt == null || scheduledAt.length < 16) {
-      return 'Open Prayer to sync today\'s times';
-    }
-
-    final parsed = DateTime.tryParse(scheduledAt);
-    if (parsed == null) return 'Open Prayer to sync today\'s times';
-    final local = parsed.toLocal();
-    final hour = local.hour.toString().padLeft(2, '0');
-    final minute = local.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
   @override
   Widget build(BuildContext context) {
     final title = nextPrayer.enabled
-        ? nextPrayer.name ?? 'Next prayer'
+        ? _prayerDisplayName(nextPrayer.name)
         : 'Prayer rhythm';
     final subtitle = nextPrayer.enabled
-        ? _timeLabel()
+        ? _prayerTimeLabel(nextPrayer)
         : 'Add spiritual growth in onboarding settings to prioritize prayer anchors.';
 
     return _WideActionCard(

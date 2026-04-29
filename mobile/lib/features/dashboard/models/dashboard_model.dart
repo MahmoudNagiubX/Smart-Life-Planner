@@ -113,12 +113,109 @@ class DashboardFocusShortcut {
   }
 }
 
+class DashboardQuranGoalSummary {
+  final bool enabled;
+  final int dailyPageTarget;
+  final int todayPagesCompleted;
+  final int progressPercent;
+
+  DashboardQuranGoalSummary({
+    required this.enabled,
+    required this.dailyPageTarget,
+    required this.todayPagesCompleted,
+    required this.progressPercent,
+  });
+
+  factory DashboardQuranGoalSummary.fromJson(Map<String, dynamic> json) {
+    return DashboardQuranGoalSummary(
+      enabled: json['enabled'] as bool? ?? false,
+      dailyPageTarget: _readInt(json['daily_page_target']) ?? 0,
+      todayPagesCompleted: _readInt(json['today_pages_completed']) ?? 0,
+      progressPercent: _readInt(json['progress_percent']) ?? 0,
+    );
+  }
+}
+
+class DashboardRamadanStatus {
+  final bool enabled;
+  final bool todayLogged;
+  final bool? fasted;
+  final String label;
+
+  DashboardRamadanStatus({
+    required this.enabled,
+    required this.todayLogged,
+    required this.fasted,
+    required this.label,
+  });
+
+  factory DashboardRamadanStatus.fromJson(Map<String, dynamic> json) {
+    return DashboardRamadanStatus(
+      enabled: json['enabled'] as bool? ?? false,
+      todayLogged: json['today_logged'] as bool? ?? false,
+      fasted: json['fasted'] as bool?,
+      label: json['label'] as String? ?? 'Ramadan mode is off',
+    );
+  }
+}
+
+class DashboardQiblaShortcut {
+  final bool available;
+  final String label;
+
+  DashboardQiblaShortcut({required this.available, required this.label});
+
+  factory DashboardQiblaShortcut.fromJson(Map<String, dynamic> json) {
+    return DashboardQiblaShortcut(
+      available: json['available'] as bool? ?? false,
+      label: json['label'] as String? ?? 'Open Qibla direction',
+    );
+  }
+}
+
+class DashboardSpiritualSummary {
+  final DashboardNextPrayer nextPrayer;
+  final PrayerProgress prayerProgress;
+  final DashboardQuranGoalSummary quranGoal;
+  final DashboardRamadanStatus ramadan;
+  final DashboardQiblaShortcut qibla;
+
+  DashboardSpiritualSummary({
+    required this.nextPrayer,
+    required this.prayerProgress,
+    required this.quranGoal,
+    required this.ramadan,
+    required this.qibla,
+  });
+
+  factory DashboardSpiritualSummary.fromJson(Map<String, dynamic> json) {
+    return DashboardSpiritualSummary(
+      nextPrayer: DashboardNextPrayer.fromJson(
+        json['next_prayer'] as Map<String, dynamic>? ?? const {},
+      ),
+      prayerProgress: PrayerProgress.fromJson(
+        json['prayer_progress'] as Map<String, dynamic>? ?? const {},
+      ),
+      quranGoal: DashboardQuranGoalSummary.fromJson(
+        json['quran_goal'] as Map<String, dynamic>? ?? const {},
+      ),
+      ramadan: DashboardRamadanStatus.fromJson(
+        json['ramadan'] as Map<String, dynamic>? ?? const {},
+      ),
+      qibla: DashboardQiblaShortcut.fromJson(
+        json['qibla'] as Map<String, dynamic>? ?? const {},
+      ),
+    );
+  }
+}
+
 class DashboardPersonalization {
   final List<String> goalTags;
   final List<String> goalLabels;
   final String taskEnvironment;
   final List<String> dailyDashboardWidgets;
   final DashboardNextPrayer nextPrayer;
+  final DashboardSpiritualSummary spiritualSummary;
   final DashboardHabitSnapshot habitSnapshot;
   final String journalPrompt;
   final DashboardAiPlanCard aiPlanCard;
@@ -130,6 +227,7 @@ class DashboardPersonalization {
     required this.taskEnvironment,
     required this.dailyDashboardWidgets,
     required this.nextPrayer,
+    required this.spiritualSummary,
     required this.habitSnapshot,
     required this.journalPrompt,
     required this.aiPlanCard,
@@ -148,6 +246,9 @@ class DashboardPersonalization {
       dailyDashboardWidgets: dashboardWidgets,
       nextPrayer: DashboardNextPrayer.fromJson(
         json['next_prayer'] as Map<String, dynamic>? ?? const {},
+      ),
+      spiritualSummary: DashboardSpiritualSummary.fromJson(
+        json['spiritual_summary'] as Map<String, dynamic>? ?? const {},
       ),
       habitSnapshot: DashboardHabitSnapshot.fromJson(
         json['habit_snapshot'] as Map<String, dynamic>? ?? const {},

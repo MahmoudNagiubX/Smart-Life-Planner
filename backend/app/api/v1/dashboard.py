@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import case, select, func
@@ -9,9 +9,14 @@ from app.repositories.settings_repository import get_settings_by_user_id
 from app.schemas.settings import DEFAULT_DASHBOARD_WIDGETS, validate_dashboard_widgets
 from app.models.habit import Habit, HabitLog
 from app.models.task import Task
-from app.models.prayer import PrayerLog
+from app.models.prayer import PrayerLog, QuranGoal, QuranProgress, RamadanFastingLog
+from app.services.prayer_calculator import PRAYER_NAMES, calculate_prayer_times
+from app.services.quran_summary import quran_completion_percent
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+DEFAULT_LAT = 30.0444
+DEFAULT_LNG = 31.2357
 
 GOAL_LABELS = {
     "study": "Study",
@@ -71,6 +76,45 @@ def _ai_plan_preview(goals: list[str], wake_time: str | None, sleep_time: str | 
     if goals:
         return f"Prioritize {', '.join(_goal_label(g) for g in goals[:2])} and {rhythm_text}."
     return f"Build a balanced plan and {rhythm_text}."
+
+
+def _normalized_prayer_time(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+def _calculate_next_prayer(settings, now: datetime) -> dict[str, str | None]:
+    lat = settings.prayer_location_lat if settings else DEFAULT_LAT
+    lng = settings.prayer_location_lng if settings else DEFAULT_LNG
+    method = settings.prayer_calculation_method if settings else "MWL"
+    lat = lat or DEFAULT_LAT
+    lng = lng or DEFAULT_LNG
+
+    for day_offset in (0, 1):
+        prayer_date = now.date() + timedelta(days=day_offset)
+        try:
+            times = calculate_prayer_times(lat, lng, prayer_date, method)
+        except Exception:
+            return {"name": None, "scheduled_at": None}
+        for prayer_name in PRAYER_NAMES:
+            scheduled_at = _normalized_prayer_time(times.get(prayer_name))
+            if scheduled_at is not None and scheduled_at >= now:
+                return {
+                    "name": prayer_name,
+                    "scheduled_at": scheduled_at.isoformat(),
+                }
+    return {"name": None, "scheduled_at": None}
+
+
+def _ramadan_dashboard_label(enabled: bool, log: RamadanFastingLog | None) -> str:
+    if not enabled:
+        return "Ramadan mode is off"
+    if log is None:
+        return "Ramadan mode on - fasting not logged yet"
+    return "Fasting logged today" if log.fasted else "Today marked not fasting"
 
 
 @router.get("/home")
@@ -134,18 +178,7 @@ async def get_home_dashboard(
     total_prayers = prayer_row[0] or 0
     completed_prayers = prayer_row[1] or 0
 
-    next_prayer_result = await db.execute(
-        select(PrayerLog)
-        .where(
-            PrayerLog.user_id == user_id,
-            PrayerLog.prayer_date == today,
-            PrayerLog.scheduled_at.is_not(None),
-            PrayerLog.scheduled_at >= now,
-        )
-        .order_by(PrayerLog.scheduled_at.asc())
-        .limit(1)
-    )
-    next_prayer = next_prayer_result.scalar_one_or_none()
+    next_prayer = _calculate_next_prayer(settings, now)
 
     habit_count_result = await db.execute(
         select(func.count(Habit.id)).where(
@@ -165,13 +198,55 @@ async def get_home_dashboard(
     )
     completed_habits = completed_habits_result.scalar() or 0
 
+    quran_goal_result = await db.execute(
+        select(QuranGoal).where(QuranGoal.user_id == user_id)
+    )
+    quran_goal = quran_goal_result.scalar_one_or_none()
+    quran_progress_result = await db.execute(
+        select(QuranProgress).where(
+            QuranProgress.user_id == user_id,
+            QuranProgress.progress_date == today,
+        )
+    )
+    quran_progress = quran_progress_result.scalar_one_or_none()
+    quran_daily_target = quran_goal.daily_page_target if quran_goal else 0
+    quran_pages_today = quran_progress.pages_completed if quran_progress else 0
+
+    ramadan_enabled = bool(settings and settings.ramadan_mode_enabled)
+    ramadan_log = None
+    if ramadan_enabled:
+        ramadan_result = await db.execute(
+            select(RamadanFastingLog).where(
+                RamadanFastingLog.user_id == user_id,
+                RamadanFastingLog.fasting_date == today,
+            )
+        )
+        ramadan_log = ramadan_result.scalar_one_or_none()
+
+    prayer_progress = {
+        "completed": completed_prayers,
+        "total": total_prayers if total_prayers > 0 else len(PRAYER_NAMES),
+    }
+    quran_dashboard = {
+        "enabled": quran_goal is not None,
+        "daily_page_target": quran_daily_target,
+        "today_pages_completed": quran_pages_today,
+        "progress_percent": quran_completion_percent(
+            quran_pages_today,
+            quran_daily_target,
+        ),
+    }
+    ramadan_dashboard = {
+        "enabled": ramadan_enabled,
+        "today_logged": ramadan_log is not None,
+        "fasted": ramadan_log.fasted if ramadan_log else None,
+        "label": _ramadan_dashboard_label(ramadan_enabled, ramadan_log),
+    }
+
     return {
         "pending_count": pending_count,
         "completed_today": completed_today,
-        "prayer_progress": {
-            "completed": completed_prayers,
-            "total": total_prayers if total_prayers > 0 else 5,
-        },
+        "prayer_progress": prayer_progress,
         "top_tasks": [
             {
                 "id": str(t.id),
@@ -190,11 +265,27 @@ async def get_home_dashboard(
                 settings.dashboard_widgets if settings else None
             ),
             "next_prayer": {
-                "name": next_prayer.prayer_name if next_prayer else None,
-                "scheduled_at": next_prayer.scheduled_at.isoformat()
-                if next_prayer and next_prayer.scheduled_at
-                else None,
+                "name": next_prayer["name"],
+                "scheduled_at": next_prayer["scheduled_at"],
                 "enabled": "spiritual_growth" in goals,
+            },
+            "spiritual_summary": {
+                "next_prayer": {
+                    "name": next_prayer["name"],
+                    "scheduled_at": next_prayer["scheduled_at"],
+                    "enabled": True,
+                },
+                "prayer_progress": prayer_progress,
+                "quran_goal": quran_dashboard,
+                "ramadan": ramadan_dashboard,
+                "qibla": {
+                    "available": bool(
+                        settings
+                        and settings.prayer_location_lat is not None
+                        and settings.prayer_location_lng is not None
+                    ),
+                    "label": "Open Qibla direction",
+                },
             },
             "habit_snapshot": {
                 "active_count": active_habits,
