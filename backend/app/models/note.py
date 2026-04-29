@@ -1,6 +1,14 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Boolean, Text, DateTime, ForeignKey, Integer
+from sqlalchemy import (
+    CheckConstraint,
+    String,
+    Boolean,
+    Text,
+    DateTime,
+    ForeignKey,
+    Integer,
+)
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
@@ -54,6 +62,9 @@ class Note(Base):
     attachments: Mapped[list["NoteAttachment"]] = relationship(
         "NoteAttachment", back_populates="note", cascade="all, delete-orphan"
     )
+    smart_jobs: Mapped[list["SmartNoteJob"]] = relationship(
+        "SmartNoteJob", back_populates="note", cascade="all, delete-orphan"
+    )
 
 
 class NoteAttachment(Base):
@@ -77,3 +88,56 @@ class NoteAttachment(Base):
     )
 
     note: Mapped["Note"] = relationship("Note", back_populates="attachments")
+
+
+class SmartNoteJob(Base):
+    __tablename__ = "smart_note_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    note_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("notes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    job_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False)
+    input_attachment_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("note_attachments.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    result_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result_json: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    note: Mapped["Note"] = relationship("Note", back_populates="smart_jobs")
+    input_attachment: Mapped["NoteAttachment | None"] = relationship(
+        "NoteAttachment"
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "job_type IN ('ocr', 'handwriting', 'summary', 'action_extraction')",
+            name="ck_smart_note_jobs_job_type",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'processing', 'completed', 'failed')",
+            name="ck_smart_note_jobs_status",
+        ),
+    )

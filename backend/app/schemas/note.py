@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 ALLOWED_NOTE_COLORS = {
     "default",
@@ -13,6 +13,18 @@ ALLOWED_NOTE_COLORS = {
     "purple",
 }
 ALLOWED_NOTE_SOURCES = {"manual", "voice", "ai", "quick_capture"}
+ALLOWED_SMART_NOTE_JOB_TYPES = {
+    "ocr",
+    "handwriting",
+    "summary",
+    "action_extraction",
+}
+ALLOWED_SMART_NOTE_JOB_STATUSES = {
+    "pending",
+    "processing",
+    "completed",
+    "failed",
+}
 
 
 def _normalize_tags(tags: list[str] | None) -> list[str] | None:
@@ -353,5 +365,61 @@ class NoteResponse(BaseModel):
     source_type: str
     created_at: datetime
     updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class SmartNoteJobCreate(BaseModel):
+    note_id: uuid.UUID
+    job_type: str
+    input_attachment_id: Optional[uuid.UUID] = None
+
+    @field_validator("job_type")
+    @classmethod
+    def job_type_valid(cls, value: str) -> str:
+        clean = value.strip().lower()
+        if clean not in ALLOWED_SMART_NOTE_JOB_TYPES:
+            raise ValueError("Unsupported smart note job type")
+        return clean
+
+
+class SmartNoteJobUpdate(BaseModel):
+    status: Optional[str] = None
+    result_text: Optional[str] = Field(default=None, max_length=20000)
+    result_json: Optional[dict | list] = None
+    error_code: Optional[str] = Field(default=None, max_length=80)
+    completed_at: Optional[datetime] = None
+
+    @field_validator("status")
+    @classmethod
+    def status_valid(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        clean = value.strip().lower()
+        if clean not in ALLOWED_SMART_NOTE_JOB_STATUSES:
+            raise ValueError("Unsupported smart note job status")
+        return clean
+
+    @field_validator("error_code")
+    @classmethod
+    def error_code_valid(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        clean = value.strip().lower()
+        return clean or None
+
+
+class SmartNoteJobResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    note_id: uuid.UUID
+    job_type: str
+    status: str
+    input_attachment_id: Optional[uuid.UUID]
+    result_text: Optional[str]
+    result_json: Optional[dict | list]
+    error_code: Optional[str]
+    created_at: datetime
+    completed_at: Optional[datetime]
 
     model_config = {"from_attributes": True}
