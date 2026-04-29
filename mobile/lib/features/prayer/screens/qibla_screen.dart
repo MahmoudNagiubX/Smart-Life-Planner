@@ -2,10 +2,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_loading_state.dart';
+import '../../../routes/app_routes.dart';
 import '../providers/qibla_provider.dart';
 import '../services/qibla_direction_service.dart';
 
@@ -55,7 +57,14 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
                     sourceLabel: state.sourceLabel,
                     guidanceMessage: state.guidanceMessage,
                     usesDeviceLocation: state.usesDeviceLocation,
+                    saveWarning: state.saveWarning,
                   ),
+                  if (state.isSavingLocation) ...[
+                    const SizedBox(height: 12),
+                    const LinearProgressIndicator(color: AppColors.prayerGold),
+                  ],
+                  const SizedBox(height: 16),
+                  _ManualFallbackCard(coordinateSource: state.coordinateSource),
                   const SizedBox(height: 16),
                   _PermissionCard(permissionState: state.permissionState),
                   const SizedBox(height: 16),
@@ -165,12 +174,14 @@ class _DirectionCard extends StatelessWidget {
   final String sourceLabel;
   final String guidanceMessage;
   final bool usesDeviceLocation;
+  final String? saveWarning;
 
   const _DirectionCard({
     required this.direction,
     required this.sourceLabel,
     required this.guidanceMessage,
     required this.usesDeviceLocation,
+    required this.saveWarning,
   });
 
   @override
@@ -212,7 +223,66 @@ class _DirectionCard extends StatelessWidget {
                 ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
               ),
             ],
+            if (saveWarning != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                saveWarning!,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
+              ),
+            ],
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ManualFallbackCard extends StatelessWidget {
+  final QiblaCoordinateSource coordinateSource;
+
+  const _ManualFallbackCard({required this.coordinateSource});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasSavedFallback =
+        coordinateSource == QiblaCoordinateSource.savedCity;
+    return _QiblaInfoCard(
+      icon: hasSavedFallback
+          ? Icons.location_city_outlined
+          : Icons.add_location_alt_outlined,
+      title: 'Manual Location Fallback',
+      accentColor: hasSavedFallback ? AppColors.success : AppColors.warning,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            hasSavedFallback
+                ? 'Saved city coordinates are available.'
+                : 'No saved prayer location is available.',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            hasSavedFallback
+                ? 'Qibla can still calculate a respectful bearing if live location is denied or unavailable.'
+                : 'Add a manual city with latitude and longitude so Qibla works without live device location.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: () => context.push(AppRoutes.prayerSettings),
+            icon: const Icon(Icons.tune_outlined),
+            label: Text(
+              hasSavedFallback ? 'Edit Manual Location' : 'Add Manual Location',
+            ),
+          ),
         ],
       ),
     );
@@ -294,16 +364,25 @@ class _PermissionCard extends ConsumerWidget {
                   permissionState ==
                       QiblaLocationPermissionState.permanentlyDenied
                   ? notifier.openPermissionSettings
+                  : permissionState ==
+                        QiblaLocationPermissionState.serviceDisabled
+                  ? notifier.openLocationSettings
                   : notifier.requestLocationPermission,
               icon: Icon(
                 permissionState ==
                         QiblaLocationPermissionState.permanentlyDenied
+                    ? Icons.settings_outlined
+                    : permissionState ==
+                          QiblaLocationPermissionState.serviceDisabled
                     ? Icons.settings_outlined
                     : Icons.location_on_outlined,
               ),
               label: Text(
                 permissionState ==
                         QiblaLocationPermissionState.permanentlyDenied
+                    ? l10n.openSettings
+                    : permissionState ==
+                          QiblaLocationPermissionState.serviceDisabled
                     ? l10n.openSettings
                     : l10n.allowLocation,
               ),
@@ -322,6 +401,8 @@ class _PermissionCard extends ConsumerWidget {
         return Icons.settings_outlined;
       case QiblaLocationPermissionState.restricted:
         return Icons.lock_outline;
+      case QiblaLocationPermissionState.serviceDisabled:
+        return Icons.location_disabled_outlined;
       case QiblaLocationPermissionState.denied:
       case QiblaLocationPermissionState.unknown:
         return Icons.location_off_outlined;
@@ -335,6 +416,8 @@ class _PermissionCard extends ConsumerWidget {
       case QiblaLocationPermissionState.permanentlyDenied:
       case QiblaLocationPermissionState.restricted:
         return AppColors.error;
+      case QiblaLocationPermissionState.serviceDisabled:
+        return AppColors.warning;
       case QiblaLocationPermissionState.denied:
       case QiblaLocationPermissionState.unknown:
         return AppColors.warning;
@@ -349,6 +432,8 @@ class _PermissionCard extends ConsumerWidget {
         return 'Location access is blocked';
       case QiblaLocationPermissionState.restricted:
         return 'Location access is restricted';
+      case QiblaLocationPermissionState.serviceDisabled:
+        return 'Device location is off';
       case QiblaLocationPermissionState.denied:
         return 'Location access is off';
       case QiblaLocationPermissionState.unknown:
@@ -364,10 +449,12 @@ class _PermissionCard extends ConsumerWidget {
         return 'Open app settings to allow location for Qibla direction.';
       case QiblaLocationPermissionState.restricted:
         return 'This device or profile is restricting location access.';
+      case QiblaLocationPermissionState.serviceDisabled:
+        return 'Turn on device location services or use a saved manual city.';
       case QiblaLocationPermissionState.denied:
-        return 'Allow location for current-place bearing, or save coordinates in Prayer Settings.';
+        return 'Smart Life Planner uses location only to calculate Qibla and saves a coarse prayer coordinate for fallback. You can also save coordinates in Prayer Settings.';
       case QiblaLocationPermissionState.unknown:
-        return 'Pull to refresh or allow location to check the current permission state.';
+        return 'Allow location after reviewing this explanation, or add a manual prayer location instead.';
     }
   }
 }

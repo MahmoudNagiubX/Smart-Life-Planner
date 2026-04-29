@@ -48,3 +48,24 @@ def test_dashboard_widgets_allow_empty_list_for_hidden_all():
 def test_settings_update_rejects_unknown_dashboard_widget():
     with pytest.raises(ValidationError):
         SettingsUpdate(dashboard_widgets=["top_tasks", "bad_widget"])
+
+
+def test_settings_update_accepts_prayer_coordinates():
+    payload = SettingsUpdate(prayer_location_lat=30.044, prayer_location_lng=31.236)
+
+    assert payload.prayer_location_lat == 30.044
+    assert payload.prayer_location_lng == 31.236
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("prayer_location_lat", 91),
+        ("prayer_location_lat", -91),
+        ("prayer_location_lng", 181),
+        ("prayer_location_lng", -181),
+    ],
+)
+def test_settings_update_rejects_invalid_prayer_coordinates(field, value):
+    with pytest.raises(ValidationError):
+        SettingsUpdate(**{field: value})

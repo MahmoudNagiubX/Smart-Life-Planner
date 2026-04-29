@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'prayer_settings_provider.dart';
 import '../services/qibla_direction_service.dart';
+import '../services/qibla_location_service.dart';
 
 enum QiblaLocationPermissionState {
   unknown,
@@ -11,6 +10,7 @@ enum QiblaLocationPermissionState {
   denied,
   permanentlyDenied,
   restricted,
+  serviceDisabled,
 }
 
 enum QiblaCoordinateSource { deviceLocation, savedCity, unavailable }
@@ -23,6 +23,8 @@ class QiblaState {
   final String sourceLabel;
   final String guidanceMessage;
   final bool compassSensorIntegrationReady;
+  final bool isSavingLocation;
+  final String? saveWarning;
 
   const QiblaState({
     this.permissionState = QiblaLocationPermissionState.unknown,
@@ -33,6 +35,8 @@ class QiblaState {
     this.guidanceMessage =
         'Allow location or save a manual city to calculate Qibla direction.',
     this.compassSensorIntegrationReady = false,
+    this.isSavingLocation = false,
+    this.saveWarning,
   });
 
   bool get hasLocationAccess =>
@@ -51,6 +55,9 @@ class QiblaState {
     String? sourceLabel,
     String? guidanceMessage,
     bool? compassSensorIntegrationReady,
+    bool? isSavingLocation,
+    String? saveWarning,
+    bool clearSaveWarning = false,
     bool clearDirection = false,
   }) {
     return QiblaState(
@@ -64,6 +71,8 @@ class QiblaState {
       guidanceMessage: guidanceMessage ?? this.guidanceMessage,
       compassSensorIntegrationReady:
           compassSensorIntegrationReady ?? this.compassSensorIntegrationReady,
+      isSavingLocation: isSavingLocation ?? this.isSavingLocation,
+      saveWarning: clearSaveWarning ? null : saveWarning ?? this.saveWarning,
     );
   }
 }
@@ -71,8 +80,10 @@ class QiblaState {
 class QiblaNotifier extends StateNotifier<QiblaState> {
   final Ref _ref;
   final QiblaDirectionService _directionService;
+  final QiblaLocationService _locationService;
 
-  QiblaNotifier(this._ref, this._directionService) : super(const QiblaState());
+  QiblaNotifier(this._ref, this._directionService, this._locationService)
+    : super(const QiblaState());
 
   QiblaDirection calculateDirectionForLocation({
     required double latitude,
@@ -97,41 +108,51 @@ class QiblaNotifier extends StateNotifier<QiblaState> {
   }
 
   Future<void> openPermissionSettings() async {
-    await openAppSettings();
+    await _locationService.openAppSettings();
+    await _resolveDirection(requestPermission: false);
+  }
+
+  Future<void> openLocationSettings() async {
+    await _locationService.openLocationSettings();
     await _resolveDirection(requestPermission: false);
   }
 
   Future<void> _resolveDirection({required bool requestPermission}) async {
-    state = state.copyWith(isCheckingPermission: true);
-    final permissionStatus = requestPermission
-        ? await Permission.locationWhenInUse.request()
-        : await Permission.locationWhenInUse.status;
-    final permissionState = _mapPermissionStatus(permissionStatus);
+    state = state.copyWith(isCheckingPermission: true, clearSaveWarning: true);
+    final deviceResult = await _locationService.currentLocation(
+      requestPermission: requestPermission,
+    );
+    final permissionState = _mapPermissionStatus(deviceResult.permissionStatus);
 
-    if (permissionState == QiblaLocationPermissionState.granted) {
-      final deviceCoordinate = await _deviceCoordinate();
-      if (deviceCoordinate != null) {
-        state = _stateForCoordinate(
-          coordinate: deviceCoordinate,
-          permissionState: permissionState,
-          source: QiblaCoordinateSource.deviceLocation,
-          sourceLabel: 'Device location',
-          message:
-              'Bearing is calculated from your current device coordinates.',
-        );
-        return;
-      }
+    if (deviceResult.hasCoordinate) {
+      final deviceCoordinate = _QiblaCoordinate(
+        latitude: deviceResult.latitude!,
+        longitude: deviceResult.longitude!,
+      );
+      final saveWarning = await _saveCoarseDeviceCoordinate(deviceCoordinate);
+      state = _stateForCoordinate(
+        coordinate: deviceCoordinate,
+        permissionState: permissionState,
+        source: QiblaCoordinateSource.deviceLocation,
+        sourceLabel: 'Device location',
+        message:
+            'Bearing is calculated from your current device location. A coarse prayer coordinate is saved for future fallback.',
+        saveWarning: saveWarning,
+      );
+      return;
     }
 
     final savedCoordinate = await _savedCoordinate();
     if (savedCoordinate != null) {
+      final reason = deviceResult.failureMessage;
       state = _stateForCoordinate(
         coordinate: savedCoordinate,
         permissionState: permissionState,
         source: QiblaCoordinateSource.savedCity,
         sourceLabel: savedCoordinate.label ?? 'Saved city',
-        message:
-            'Bearing is calculated from saved prayer settings, not live device location.',
+        message: reason == null
+            ? 'Bearing is calculated from saved prayer settings, not live device location.'
+            : '$reason Using saved prayer settings instead.',
       );
       return;
     }
@@ -142,7 +163,9 @@ class QiblaNotifier extends StateNotifier<QiblaState> {
       coordinateSource: QiblaCoordinateSource.unavailable,
       sourceLabel: 'Unavailable',
       guidanceMessage:
+          deviceResult.failureMessage ??
           'Allow location or add latitude and longitude in Prayer Settings.',
+      clearSaveWarning: true,
       clearDirection: true,
     );
   }
@@ -153,6 +176,7 @@ class QiblaNotifier extends StateNotifier<QiblaState> {
     required QiblaCoordinateSource source,
     required String sourceLabel,
     required String message,
+    String? saveWarning,
   }) {
     final direction = calculateDirectionForLocation(
       latitude: coordinate.latitude,
@@ -165,24 +189,30 @@ class QiblaNotifier extends StateNotifier<QiblaState> {
       referenceDirection: direction,
       sourceLabel: sourceLabel,
       guidanceMessage: message,
+      saveWarning: saveWarning,
     );
   }
 
-  Future<_QiblaCoordinate?> _deviceCoordinate() async {
+  Future<String?> _saveCoarseDeviceCoordinate(
+    _QiblaCoordinate coordinate,
+  ) async {
     try {
-      if (!await Geolocator.isLocationServiceEnabled()) return null;
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
-        ),
-      );
-      return _QiblaCoordinate(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
-    } catch (_) {
+      state = state.copyWith(isSavingLocation: true);
+      await _ref
+          .read(prayerSettingsProvider.notifier)
+          .updateSettings(
+            prayerLocationLat: _coarseCoordinate(coordinate.latitude),
+            prayerLocationLng: _coarseCoordinate(coordinate.longitude),
+          );
+      final settingsError = _ref.read(prayerSettingsProvider).error;
+      state = state.copyWith(isSavingLocation: false);
+      if (settingsError != null) {
+        return 'Live direction is shown for this session, but saving the coarse location failed.';
+      }
       return null;
+    } catch (_) {
+      state = state.copyWith(isSavingLocation: false);
+      return 'Live direction is shown for this session, but saving the coarse location failed.';
     }
   }
 
@@ -204,13 +234,25 @@ class QiblaNotifier extends StateNotifier<QiblaState> {
     }
   }
 
-  QiblaLocationPermissionState _mapPermissionStatus(PermissionStatus status) {
-    if (status.isGranted) return QiblaLocationPermissionState.granted;
-    if (status.isPermanentlyDenied) {
-      return QiblaLocationPermissionState.permanentlyDenied;
+  double _coarseCoordinate(double value) {
+    return double.parse(value.toStringAsFixed(3));
+  }
+
+  QiblaLocationPermissionState _mapPermissionStatus(
+    QiblaDevicePermissionStatus status,
+  ) {
+    switch (status) {
+      case QiblaDevicePermissionStatus.granted:
+        return QiblaLocationPermissionState.granted;
+      case QiblaDevicePermissionStatus.permanentlyDenied:
+        return QiblaLocationPermissionState.permanentlyDenied;
+      case QiblaDevicePermissionStatus.serviceDisabled:
+        return QiblaLocationPermissionState.serviceDisabled;
+      case QiblaDevicePermissionStatus.denied:
+        return QiblaLocationPermissionState.denied;
+      case QiblaDevicePermissionStatus.unknown:
+        return QiblaLocationPermissionState.unknown;
     }
-    if (status.isRestricted) return QiblaLocationPermissionState.restricted;
-    return QiblaLocationPermissionState.denied;
   }
 }
 
@@ -230,6 +272,14 @@ final qiblaDirectionServiceProvider = Provider<QiblaDirectionService>((ref) {
   return const QiblaDirectionService();
 });
 
+final qiblaLocationServiceProvider = Provider<QiblaLocationService>((ref) {
+  return const QiblaLocationService();
+});
+
 final qiblaProvider = StateNotifierProvider<QiblaNotifier, QiblaState>((ref) {
-  return QiblaNotifier(ref, ref.watch(qiblaDirectionServiceProvider));
+  return QiblaNotifier(
+    ref,
+    ref.watch(qiblaDirectionServiceProvider),
+    ref.watch(qiblaLocationServiceProvider),
+  );
 });

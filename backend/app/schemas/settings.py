@@ -77,6 +77,19 @@ def validate_dashboard_widgets(widgets: list[str] | None) -> list[str] | None:
     return normalized
 
 
+def _validate_coordinate(
+    value: float | None,
+    field_name: str,
+    minimum: float,
+    maximum: float,
+) -> float | None:
+    if value is None:
+        return value
+    if value < minimum or value > maximum:
+        raise ValueError(f"{field_name} must be between {minimum} and {maximum}")
+    return value
+
+
 class ReminderChannels(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -292,6 +305,16 @@ class SettingsUpdate(BaseModel):
         if value is not None and value not in ALLOWED_PRAYER_METHODS:
             raise ValueError("Unsupported prayer calculation method")
         return value
+
+    @field_validator("prayer_location_lat")
+    @classmethod
+    def prayer_latitude_valid(cls, value: float | None) -> float | None:
+        return _validate_coordinate(value, "prayer_location_lat", -90, 90)
+
+    @field_validator("prayer_location_lng")
+    @classmethod
+    def prayer_longitude_valid(cls, value: float | None) -> float | None:
+        return _validate_coordinate(value, "prayer_location_lng", -180, 180)
 
     @field_validator("dashboard_widgets")
     @classmethod
