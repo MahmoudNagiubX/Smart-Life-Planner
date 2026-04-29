@@ -24,7 +24,14 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(qiblaProvider.notifier).checkLocationPermission();
+      ref.read(qiblaProvider.notifier).startCompass();
     });
+  }
+
+  @override
+  void dispose() {
+    ref.read(qiblaProvider.notifier).stopCompass();
+    super.dispose();
   }
 
   @override
@@ -50,7 +57,11 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(24),
                 children: [
-                  _CompassPlaceholder(direction: state.referenceDirection),
+                  _QiblaCompass(
+                    direction: state.referenceDirection,
+                    headingDegrees: state.compassHeadingDegrees,
+                    rotationDegrees: state.displayRotationDegrees,
+                  ),
                   const SizedBox(height: 24),
                   _DirectionCard(
                     direction: state.referenceDirection,
@@ -68,9 +79,7 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
                   const SizedBox(height: 16),
                   _PermissionCard(permissionState: state.permissionState),
                   const SizedBox(height: 16),
-                  _SensorStatusCard(
-                    isReady: state.compassSensorIntegrationReady,
-                  ),
+                  _SensorStatusCard(state: state),
                 ],
               ),
             ),
@@ -78,14 +87,21 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
   }
 }
 
-class _CompassPlaceholder extends StatelessWidget {
+class _QiblaCompass extends StatelessWidget {
   final QiblaDirection? direction;
+  final double? headingDegrees;
+  final double? rotationDegrees;
 
-  const _CompassPlaceholder({required this.direction});
+  const _QiblaCompass({
+    required this.direction,
+    required this.headingDegrees,
+    required this.rotationDegrees,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bearing = direction?.bearingDegrees ?? 0;
+    final arrowRotation = rotationDegrees ?? 0;
+    final compassRotation = -(headingDegrees ?? 0);
 
     return Center(
       child: SizedBox(
@@ -104,12 +120,22 @@ class _CompassPlaceholder extends StatelessWidget {
                 ),
               ),
             ),
-            const Positioned(top: 18, child: _CompassLabel('N')),
-            const Positioned(right: 22, child: _CompassLabel('E')),
-            const Positioned(bottom: 18, child: _CompassLabel('S')),
-            const Positioned(left: 22, child: _CompassLabel('W')),
             Transform.rotate(
-              angle: bearing * math.pi / 180,
+              angle: compassRotation * math.pi / 180,
+              child: const SizedBox.expand(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Positioned(top: 18, child: _CompassLabel('N')),
+                    Positioned(right: 22, child: _CompassLabel('E')),
+                    Positioned(bottom: 18, child: _CompassLabel('S')),
+                    Positioned(left: 22, child: _CompassLabel('W')),
+                  ],
+                ),
+              ),
+            ),
+            Transform.rotate(
+              angle: arrowRotation * math.pi / 180,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -142,6 +168,17 @@ class _CompassPlaceholder extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     color: AppColors.prayerGold,
                     fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            if (headingDegrees != null)
+              Positioned(
+                top: 58,
+                child: Text(
+                  'Heading ${headingDegrees!.toStringAsFixed(0)} deg',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -460,24 +497,117 @@ class _PermissionCard extends ConsumerWidget {
 }
 
 class _SensorStatusCard extends StatelessWidget {
-  final bool isReady;
+  final QiblaState state;
 
-  const _SensorStatusCard({required this.isReady});
+  const _SensorStatusCard({required this.state});
 
   @override
   Widget build(BuildContext context) {
+    final status = state.compassSensorStatus;
+    final isReady = state.compassSensorIntegrationReady;
+    final accentColor = switch (status) {
+      QiblaCompassSensorStatus.active => AppColors.success,
+      QiblaCompassSensorStatus.lowAccuracy => AppColors.warning,
+      QiblaCompassSensorStatus.listening => AppColors.primary,
+      QiblaCompassSensorStatus.unavailable => AppColors.warning,
+      QiblaCompassSensorStatus.unknown => AppColors.primary,
+    };
+
     return _QiblaInfoCard(
       icon: Icons.sensors_outlined,
       title: 'Compass Sensor',
-      accentColor: isReady ? AppColors.success : AppColors.primary,
-      child: Text(
-        isReady
-            ? 'Compass sensor integration is available.'
-            : 'Bearing calculation is active. Live sensor rotation is still a placeholder, so the arrow shows calculated bearing only.',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: AppColors.textSecondary,
-          height: 1.45,
-        ),
+      accentColor: accentColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _titleForStatus(status),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            state.compassMessage,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.45,
+            ),
+          ),
+          if (isReady) ...[
+            const SizedBox(height: 12),
+            _CompassMetricRow(
+              label: 'Current heading',
+              value: '${state.compassHeadingDegrees!.toStringAsFixed(0)} deg',
+            ),
+            if (state.qiblaRotationDegrees != null)
+              _CompassMetricRow(
+                label: 'Turn toward Qibla',
+                value: '${state.qiblaRotationDegrees!.toStringAsFixed(0)} deg',
+              ),
+            if (state.compassAccuracyDegrees != null)
+              _CompassMetricRow(
+                label: 'Sensor accuracy',
+                value:
+                    '+/- ${state.compassAccuracyDegrees!.toStringAsFixed(0)} deg',
+              ),
+          ] else if (state.referenceDirection != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Fallback: face the numeric bearing ${state.referenceDirection!.displayDegrees} ${state.referenceDirection!.compassLabel}.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _titleForStatus(QiblaCompassSensorStatus status) {
+    switch (status) {
+      case QiblaCompassSensorStatus.active:
+        return 'Live compass active';
+      case QiblaCompassSensorStatus.lowAccuracy:
+        return 'Compass needs calibration';
+      case QiblaCompassSensorStatus.listening:
+        return 'Starting compass sensor';
+      case QiblaCompassSensorStatus.unavailable:
+        return 'Compass sensor unavailable';
+      case QiblaCompassSensorStatus.unknown:
+        return 'Compass sensor not checked';
+    }
+  }
+}
+
+class _CompassMetricRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _CompassMetricRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }

@@ -33,7 +33,7 @@ class QiblaService {
         math.cos(lat1) * math.sin(lat2) -
         math.sin(lat1) * math.cos(lat2) * math.cos(deltaLongitude);
 
-    final bearing = _normalizeDegrees(_radiansToDegrees(math.atan2(y, x)));
+    final bearing = normalizeDegrees(_radiansToDegrees(math.atan2(y, x)));
     return QiblaDirection(
       bearingDegrees: bearing,
       compassLabel: _compassLabelForBearing(bearing),
@@ -42,6 +42,13 @@ class QiblaService {
 
   QiblaDirection calculateCairoReferenceBearing() {
     return calculateBearing(latitude: 30.0444, longitude: 31.2357);
+  }
+
+  double calculateRotationDifference({
+    required double qiblaBearingDegrees,
+    required double headingDegrees,
+  }) {
+    return normalizeDegrees(qiblaBearingDegrees - headingDegrees);
   }
 
   void _validateCoordinates({
@@ -68,7 +75,7 @@ class QiblaService {
 
   double _radiansToDegrees(double radians) => radians * 180 / math.pi;
 
-  double _normalizeDegrees(double degrees) => (degrees + 360) % 360;
+  double normalizeDegrees(double degrees) => (degrees % 360 + 360) % 360;
 
   String _compassLabelForBearing(double bearing) {
     const labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];

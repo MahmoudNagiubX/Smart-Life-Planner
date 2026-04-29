@@ -48,6 +48,30 @@ void main() {
       expect(sydney.compassLabel, 'W');
     });
 
+    test('calculates normalized rotation difference from compass heading', () {
+      expect(
+        service.calculateRotationDifference(
+          qiblaBearingDegrees: 136.1,
+          headingDegrees: 100,
+        ),
+        closeTo(36.1, 0.1),
+      );
+      expect(
+        service.calculateRotationDifference(
+          qiblaBearingDegrees: 10,
+          headingDegrees: 350,
+        ),
+        closeTo(20, 0.1),
+      );
+      expect(
+        service.calculateRotationDifference(
+          qiblaBearingDegrees: 350,
+          headingDegrees: 10,
+        ),
+        closeTo(340, 0.1),
+      );
+    });
+
     test('rejects invalid coordinates', () {
       expect(
         () => service.calculateBearing(latitude: 91, longitude: 31.2357),
