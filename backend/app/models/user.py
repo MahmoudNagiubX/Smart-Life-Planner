@@ -126,6 +126,15 @@ class UserSettings(Base):
     suhoor_reminder_minutes_before_fajr: Mapped[int] = mapped_column(
         Integer, default=45, nullable=False
     )
+    iftar_reminder_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+    taraweeh_tracking_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    fasting_tracker_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

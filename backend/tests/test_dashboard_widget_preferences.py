@@ -69,3 +69,26 @@ def test_settings_update_accepts_prayer_coordinates():
 def test_settings_update_rejects_invalid_prayer_coordinates(field, value):
     with pytest.raises(ValidationError):
         SettingsUpdate(**{field: value})
+
+
+def test_settings_update_accepts_real_ramadan_mode_settings():
+    payload = SettingsUpdate(
+        ramadan_mode_enabled=True,
+        suhoor_reminder_enabled=True,
+        suhoor_reminder_minutes_before_fajr=35,
+        iftar_reminder_enabled=False,
+        taraweeh_tracking_enabled=True,
+        fasting_tracker_enabled=False,
+    )
+
+    assert payload.ramadan_mode_enabled is True
+    assert payload.suhoor_reminder_enabled is True
+    assert payload.suhoor_reminder_minutes_before_fajr == 35
+    assert payload.iftar_reminder_enabled is False
+    assert payload.taraweeh_tracking_enabled is True
+    assert payload.fasting_tracker_enabled is False
+
+
+def test_settings_update_rejects_invalid_suhoor_offset():
+    with pytest.raises(ValidationError):
+        SettingsUpdate(suhoor_reminder_minutes_before_fajr=241)

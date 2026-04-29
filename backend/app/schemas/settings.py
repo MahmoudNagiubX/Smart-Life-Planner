@@ -239,6 +239,9 @@ class SettingsResponse(BaseModel):
     ramadan_mode_enabled: bool
     suhoor_reminder_enabled: bool
     suhoor_reminder_minutes_before_fajr: int
+    iftar_reminder_enabled: bool
+    taraweeh_tracking_enabled: bool
+    fasting_tracker_enabled: bool
 
     updated_at: datetime
 
@@ -274,6 +277,9 @@ class SettingsUpdate(BaseModel):
     suhoor_reminder_minutes_before_fajr: Optional[int] = Field(
         default=None, ge=0, le=240
     )
+    iftar_reminder_enabled: Optional[bool] = None
+    taraweeh_tracking_enabled: Optional[bool] = None
+    fasting_tracker_enabled: Optional[bool] = None
 
     @field_validator("language")
     @classmethod

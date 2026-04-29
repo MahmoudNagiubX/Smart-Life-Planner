@@ -15,6 +15,9 @@ class RamadanSettingsService {
     bool? ramadanModeEnabled,
     bool? suhoorReminderEnabled,
     int? suhoorReminderMinutesBeforeFajr,
+    bool? iftarReminderEnabled,
+    bool? taraweehTrackingEnabled,
+    bool? fastingTrackerEnabled,
   }) async {
     final data = <String, dynamic>{};
     if (ramadanModeEnabled != null) {
@@ -26,6 +29,15 @@ class RamadanSettingsService {
     if (suhoorReminderMinutesBeforeFajr != null) {
       data['suhoor_reminder_minutes_before_fajr'] =
           suhoorReminderMinutesBeforeFajr;
+    }
+    if (iftarReminderEnabled != null) {
+      data['iftar_reminder_enabled'] = iftarReminderEnabled;
+    }
+    if (taraweehTrackingEnabled != null) {
+      data['taraweeh_tracking_enabled'] = taraweehTrackingEnabled;
+    }
+    if (fastingTrackerEnabled != null) {
+      data['fasting_tracker_enabled'] = fastingTrackerEnabled;
     }
 
     final response = await _apiClient.dio.patch('/settings', data: data);

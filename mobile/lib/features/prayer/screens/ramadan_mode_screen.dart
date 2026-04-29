@@ -37,12 +37,18 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
     bool? ramadanModeEnabled,
     bool? suhoorReminderEnabled,
     int? suhoorReminderMinutesBeforeFajr,
+    bool? iftarReminderEnabled,
+    bool? taraweehTrackingEnabled,
+    bool? fastingTrackerEnabled,
   }) async {
     final notifier = ref.read(ramadanSettingsProvider.notifier);
     await notifier.updateSettings(
       ramadanModeEnabled: ramadanModeEnabled,
       suhoorReminderEnabled: suhoorReminderEnabled,
       suhoorReminderMinutesBeforeFajr: suhoorReminderMinutesBeforeFajr,
+      iftarReminderEnabled: iftarReminderEnabled,
+      taraweehTrackingEnabled: taraweehTrackingEnabled,
+      fastingTrackerEnabled: fastingTrackerEnabled,
     );
 
     final prayers = ref.read(prayerProvider).data?.prayers;
@@ -99,10 +105,19 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
                   ),
                   const SizedBox(height: 16),
                   _IftarTimeCard(
+                    settings: settings ?? _fallbackSettings,
                     prayers: prayerState.data?.prayers ?? const [],
+                    onReminderEnabledChanged: (value) =>
+                        _updateRamadanSettings(iftarReminderEnabled: value),
                   ),
                   const SizedBox(height: 16),
-                  const _RamadanGoalsCard(),
+                  _RamadanTrackingCard(
+                    settings: settings ?? _fallbackSettings,
+                    onFastingTrackerChanged: (value) =>
+                        _updateRamadanSettings(fastingTrackerEnabled: value),
+                    onTaraweehTrackingChanged: (value) =>
+                        _updateRamadanSettings(taraweehTrackingEnabled: value),
+                  ),
                   if (ramadanState.isSaving) ...[
                     const SizedBox(height: 16),
                     const LinearProgressIndicator(color: AppColors.prayerGold),
@@ -126,6 +141,9 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
       ramadanModeEnabled: false,
       suhoorReminderEnabled: true,
       suhoorReminderMinutesBeforeFajr: 45,
+      iftarReminderEnabled: true,
+      taraweehTrackingEnabled: false,
+      fastingTrackerEnabled: true,
     );
   }
 }
@@ -162,6 +180,29 @@ class _FastingStatusCard extends StatelessWidget {
               color: AppColors.textSecondary,
               height: 1.45,
             ),
+          ),
+          const SizedBox(height: 14),
+          _RamadanDetailRow(
+            label: 'Fasting tracker',
+            value: settings.ramadanModeEnabled && settings.fastingTrackerEnabled
+                ? 'Enabled'
+                : 'Disabled',
+          ),
+          _RamadanDetailRow(
+            label: 'Fajr',
+            value: _timeLabel(_prayerTime('fajr')),
+          ),
+          _RamadanDetailRow(
+            label: 'Maghrib / Iftar',
+            value: _timeLabel(_prayerTime('maghrib')),
+          ),
+          _RamadanDetailRow(
+            label: 'Suhoor reminder',
+            value: _suhoorReminderLabel(),
+          ),
+          _RamadanDetailRow(
+            label: 'Iftar reminder',
+            value: _iftarReminderLabel(),
           ),
         ],
       ),
@@ -211,6 +252,31 @@ class _FastingStatusCard extends StatelessWidget {
       }
     }
     return null;
+  }
+
+  String _timeLabel(DateTime? time) =>
+      time == null ? '--:--' : _formatTime(time);
+
+  String _suhoorReminderLabel() {
+    if (!settings.ramadanModeEnabled || !settings.suhoorReminderEnabled) {
+      return 'Disabled';
+    }
+    final fajr = _prayerTime('fajr');
+    if (fajr == null) return 'Waiting for Fajr';
+    return _formatTime(
+      fajr.subtract(
+        Duration(minutes: settings.suhoorReminderMinutesBeforeFajr),
+      ),
+    );
+  }
+
+  String _iftarReminderLabel() {
+    if (!settings.ramadanModeEnabled || !settings.iftarReminderEnabled) {
+      return 'Disabled';
+    }
+    final maghrib = _prayerTime('maghrib');
+    if (maghrib == null) return 'Waiting for Maghrib';
+    return _formatTime(maghrib);
   }
 }
 
@@ -319,9 +385,15 @@ class _SuhoorReminderCard extends StatelessWidget {
 }
 
 class _IftarTimeCard extends StatelessWidget {
+  final RamadanSettings settings;
   final List<PrayerTime> prayers;
+  final ValueChanged<bool> onReminderEnabledChanged;
 
-  const _IftarTimeCard({required this.prayers});
+  const _IftarTimeCard({
+    required this.settings,
+    required this.prayers,
+    required this.onReminderEnabledChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -347,6 +419,18 @@ class _IftarTimeCard extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
           ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: settings.iftarReminderEnabled,
+            title: const Text('Iftar reminder at Maghrib'),
+            subtitle: Text(
+              maghrib == null
+                  ? 'Reminder will schedule when Maghrib is available.'
+                  : 'Reminder time: ${_formatTime(maghrib)}',
+            ),
+            onChanged: onReminderEnabledChanged,
+          ),
         ],
       ),
     );
@@ -360,32 +444,88 @@ class _IftarTimeCard extends StatelessWidget {
     }
     return null;
   }
-
-  String _formatTime(DateTime time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
 }
 
-class _RamadanGoalsCard extends StatelessWidget {
-  const _RamadanGoalsCard();
+class _RamadanTrackingCard extends StatelessWidget {
+  final RamadanSettings settings;
+  final ValueChanged<bool> onFastingTrackerChanged;
+  final ValueChanged<bool> onTaraweehTrackingChanged;
+
+  const _RamadanTrackingCard({
+    required this.settings,
+    required this.onFastingTrackerChanged,
+    required this.onTaraweehTrackingChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return _RamadanCard(
       icon: Icons.flag_outlined,
-      title: 'Ramadan Goals',
+      title: 'Ramadan Tracking',
       accentColor: AppColors.warning,
-      child: Text(
-        'Daily fasting, prayer, Quran, and reflection goals will appear here as Ramadan mode expands.',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: AppColors.textSecondary,
-          height: 1.45,
-        ),
+      child: Column(
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: settings.fastingTrackerEnabled,
+            title: const Text('Fasting tracker'),
+            subtitle: const Text(
+              'Shows fasting status and prepares today\'s fasting log.',
+            ),
+            onChanged: onFastingTrackerChanged,
+          ),
+          const Divider(height: 1),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: settings.taraweehTrackingEnabled,
+            title: const Text('Taraweeh tracking'),
+            subtitle: const Text(
+              'Keeps Taraweeh visible for the Ramadan flow.',
+            ),
+            onChanged: onTaraweehTrackingChanged,
+          ),
+        ],
       ),
     );
   }
+}
+
+class _RamadanDetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _RamadanDetailRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatTime(DateTime time) {
+  final hour = time.hour.toString().padLeft(2, '0');
+  final minute = time.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
 }
 
 class _RamadanCard extends StatelessWidget {

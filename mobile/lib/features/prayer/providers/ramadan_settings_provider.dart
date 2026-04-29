@@ -65,6 +65,9 @@ class RamadanSettingsNotifier extends StateNotifier<RamadanSettingsState> {
     bool? ramadanModeEnabled,
     bool? suhoorReminderEnabled,
     int? suhoorReminderMinutesBeforeFajr,
+    bool? iftarReminderEnabled,
+    bool? taraweehTrackingEnabled,
+    bool? fastingTrackerEnabled,
   }) async {
     state = state.copyWith(isSaving: true, error: null);
     try {
@@ -73,6 +76,9 @@ class RamadanSettingsNotifier extends StateNotifier<RamadanSettingsState> {
         ramadanModeEnabled: ramadanModeEnabled,
         suhoorReminderEnabled: suhoorReminderEnabled,
         suhoorReminderMinutesBeforeFajr: suhoorReminderMinutesBeforeFajr,
+        iftarReminderEnabled: iftarReminderEnabled,
+        taraweehTrackingEnabled: taraweehTrackingEnabled,
+        fastingTrackerEnabled: fastingTrackerEnabled,
       );
       state = state.copyWith(settings: settings, isSaving: false);
       if (!settings.ramadanModeEnabled) {
@@ -127,7 +133,7 @@ class RamadanSettingsNotifier extends StateNotifier<RamadanSettingsState> {
       } else {
         await _dismissRamadanReminder('suhoor', fajr ?? DateTime.now());
       }
-      if (maghrib != null) {
+      if (settings.iftarReminderEnabled && maghrib != null) {
         final reminder = await _ref
             .read(reminderServiceProvider)
             .syncTargetReminder(
@@ -143,6 +149,8 @@ class RamadanSettingsNotifier extends StateNotifier<RamadanSettingsState> {
             reminderId: reminder?.id,
           );
         }
+      } else {
+        await _dismissRamadanReminder('iftar', maghrib ?? DateTime.now());
       }
     } on DioException catch (e) {
       state = state.copyWith(

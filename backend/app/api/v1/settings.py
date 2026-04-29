@@ -25,6 +25,9 @@ PRAYER_REMINDER_FIELDS = {
     "ramadan_mode_enabled",
     "suhoor_reminder_enabled",
     "suhoor_reminder_minutes_before_fajr",
+    "iftar_reminder_enabled",
+    "taraweeh_tracking_enabled",
+    "fasting_tracker_enabled",
     "timezone",
     "reminder_preferences",
 }
