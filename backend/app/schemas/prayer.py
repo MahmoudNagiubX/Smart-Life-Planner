@@ -74,3 +74,30 @@ class QuranGoalSummaryResponse(BaseModel):
     weekly_total_pages: int
     weekly_target_pages: int
     weekly_summary: list[QuranWeeklyProgressItem]
+
+
+class RamadanFastingLogUpdate(BaseModel):
+    fasted: bool
+    note: Optional[str] = Field(default=None, max_length=500)
+
+
+class RamadanFastingLogResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    fasting_date: date
+    fasted: bool
+    note: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RamadanDailySummaryResponse(BaseModel):
+    date: date
+    today: Optional[RamadanFastingLogResponse]
+    month: int
+    year: int
+    month_fasted_count: int
+    month_not_fasted_count: int
+    month_logged_count: int

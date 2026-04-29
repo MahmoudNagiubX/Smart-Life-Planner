@@ -11,6 +11,8 @@ from app.schemas.prayer import (
     QuranGoalUpsert,
     QuranProgressUpdate,
     QuranWeeklyProgressItem,
+    RamadanDailySummaryResponse,
+    RamadanFastingLogUpdate,
 )
 from app.repositories.prayer_repository import (
     get_prayer_logs_for_date,
@@ -25,6 +27,9 @@ from app.repositories.prayer_repository import (
     get_quran_progress_range,
     upsert_quran_goal,
     upsert_quran_progress,
+    get_ramadan_fasting_log,
+    get_ramadan_fasting_logs_for_month,
+    upsert_ramadan_fasting_log,
 )
 from app.repositories.settings_repository import get_settings_by_user_id
 from app.services.prayer_calculator import calculate_prayer_times, PRAYER_NAMES
@@ -73,6 +78,31 @@ async def _build_quran_goal_summary(
         weekly_total_pages=weekly_total,
         weekly_target_pages=target * 7,
         weekly_summary=weekly_summary,
+    )
+
+
+async def _build_ramadan_daily_summary(
+    db: AsyncSession,
+    user_id,
+    target_date: date,
+) -> RamadanDailySummaryResponse:
+    today_log = await get_ramadan_fasting_log(db, user_id, target_date)
+    month_logs = await get_ramadan_fasting_logs_for_month(
+        db,
+        user_id,
+        target_date.year,
+        target_date.month,
+    )
+    fasted_count = sum(1 for log in month_logs if log.fasted)
+    not_fasted_count = sum(1 for log in month_logs if not log.fasted)
+    return RamadanDailySummaryResponse(
+        date=target_date,
+        today=today_log,
+        month=target_date.month,
+        year=target_date.year,
+        month_fasted_count=fasted_count,
+        month_not_fasted_count=not_fasted_count,
+        month_logged_count=len(month_logs),
     )
 
 
@@ -163,6 +193,31 @@ async def update_today_quran_progress(
         payload.pages_completed,
     )
     return await _build_quran_goal_summary(db, current_user.id)
+
+
+@router.get("/ramadan/fasting/today", response_model=RamadanDailySummaryResponse)
+async def get_today_ramadan_fasting_summary(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await _build_ramadan_daily_summary(db, current_user.id, date.today())
+
+
+@router.put("/ramadan/fasting/today", response_model=RamadanDailySummaryResponse)
+async def update_today_ramadan_fasting_log(
+    payload: RamadanFastingLogUpdate,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    today = date.today()
+    await upsert_ramadan_fasting_log(
+        db,
+        current_user.id,
+        today,
+        payload.fasted,
+        payload.note.strip() if payload.note else None,
+    )
+    return await _build_ramadan_daily_summary(db, current_user.id, today)
 
 
 @router.patch("/{prayer_name}/{prayer_date}/complete", response_model=PrayerLogResponse)

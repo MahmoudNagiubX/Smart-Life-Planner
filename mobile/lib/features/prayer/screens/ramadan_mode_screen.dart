@@ -6,6 +6,7 @@ import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../models/prayer_model.dart';
 import '../models/ramadan_settings_model.dart';
+import '../providers/ramadan_fasting_provider.dart';
 import '../providers/prayer_provider.dart';
 import '../providers/ramadan_settings_provider.dart';
 
@@ -22,6 +23,7 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(ramadanSettingsProvider.notifier).loadSettings();
+      ref.read(ramadanFastingProvider.notifier).loadToday();
       ref.read(prayerProvider.notifier).loadTodayPrayers();
     });
   }
@@ -29,6 +31,7 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
   Future<void> _reload() async {
     await Future.wait([
       ref.read(ramadanSettingsProvider.notifier).loadSettings(),
+      ref.read(ramadanFastingProvider.notifier).loadToday(),
       ref.read(prayerProvider.notifier).loadTodayPrayers(),
     ]);
   }
@@ -57,9 +60,14 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
     }
   }
 
+  Future<void> _updateFastingLog(bool fasted) async {
+    await ref.read(ramadanFastingProvider.notifier).updateToday(fasted: fasted);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ramadanState = ref.watch(ramadanSettingsProvider);
+    final fastingState = ref.watch(ramadanFastingProvider);
     final prayerState = ref.watch(prayerProvider);
     final settings = ramadanState.settings;
 
@@ -87,6 +95,13 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
                   _FastingStatusCard(
                     settings: settings ?? _fallbackSettings,
                     prayers: prayerState.data?.prayers ?? const [],
+                  ),
+                  const SizedBox(height: 16),
+                  _FastingLogCard(
+                    settings: settings ?? _fallbackSettings,
+                    state: fastingState,
+                    onMarkFasted: () => _updateFastingLog(true),
+                    onMarkNotFasted: () => _updateFastingLog(false),
                   ),
                   const SizedBox(height: 16),
                   _RamadanModeToggle(
@@ -126,6 +141,15 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
                     const SizedBox(height: 16),
                     Text(
                       ramadanState.error!,
+                      style: const TextStyle(color: AppColors.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  if (fastingState.error != null &&
+                      fastingState.summary != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      fastingState.error!,
                       style: const TextStyle(color: AppColors.error),
                       textAlign: TextAlign.center,
                     ),
@@ -308,6 +332,102 @@ class _RamadanModeToggle extends StatelessWidget {
           'Shows fasting status, Suhoor preference, and Iftar from Maghrib.',
         ),
         onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _FastingLogCard extends StatelessWidget {
+  final RamadanSettings settings;
+  final RamadanFastingState state;
+  final VoidCallback onMarkFasted;
+  final VoidCallback onMarkNotFasted;
+
+  const _FastingLogCard({
+    required this.settings,
+    required this.state,
+    required this.onMarkFasted,
+    required this.onMarkNotFasted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = state.summary;
+    final today = summary?.today;
+    final trackerEnabled =
+        settings.ramadanModeEnabled && settings.fastingTrackerEnabled;
+    final statusText = today == null
+        ? 'No fasting status recorded for today.'
+        : today.fasted
+        ? 'Marked as fasted today.'
+        : 'Marked as not fasted today.';
+    final monthText = summary == null
+        ? 'Monthly fasting count will appear after loading.'
+        : '${summary.monthFastedCount} fasted days from ${summary.monthLoggedCount} logged days this month.';
+
+    return _RamadanCard(
+      icon: Icons.check_circle_outline,
+      title: 'Today\'s Fast',
+      accentColor: trackerEnabled ? AppColors.success : AppColors.textSecondary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (state.isLoading && summary == null)
+            const AppLoadingState(message: 'Loading fasting log...')
+          else if (state.error != null && summary == null)
+            Text(state.error!, style: const TextStyle(color: AppColors.error))
+          else ...[
+            Text(
+              trackerEnabled
+                  ? statusText
+                  : 'Enable Ramadan mode and fasting tracker to log today.',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              monthText,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: trackerEnabled && !state.isSaving
+                        ? onMarkFasted
+                        : null,
+                    icon: const Icon(Icons.done_all_outlined),
+                    label: const Text('Fasted'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: today?.fasted == true
+                          ? AppColors.success
+                          : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: trackerEnabled && !state.isSaving
+                        ? onMarkNotFasted
+                        : null,
+                    icon: const Icon(Icons.close_outlined),
+                    label: const Text('Not fasted'),
+                  ),
+                ),
+              ],
+            ),
+            if (state.isSaving) ...[
+              const SizedBox(height: 12),
+              const LinearProgressIndicator(color: AppColors.prayerGold),
+            ],
+          ],
+        ],
       ),
     );
   }

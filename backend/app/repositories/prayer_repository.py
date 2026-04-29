@@ -2,7 +2,12 @@ import uuid
 from datetime import datetime, date, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.models.prayer import PrayerLog, QuranGoal, QuranProgress
+from app.models.prayer import (
+    PrayerLog,
+    QuranGoal,
+    QuranProgress,
+    RamadanFastingLog,
+)
 from app.services.reminder_invalidation import invalidate_target_reminders
 
 
@@ -192,5 +197,61 @@ async def get_quran_progress_range(
             QuranProgress.progress_date >= date_from,
             QuranProgress.progress_date <= date_to,
         ).order_by(QuranProgress.progress_date.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_ramadan_fasting_log(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    fasting_date: date,
+) -> RamadanFastingLog | None:
+    result = await db.execute(
+        select(RamadanFastingLog).where(
+            RamadanFastingLog.user_id == user_id,
+            RamadanFastingLog.fasting_date == fasting_date,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def upsert_ramadan_fasting_log(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    fasting_date: date,
+    fasted: bool,
+    note: str | None,
+) -> RamadanFastingLog:
+    log = await get_ramadan_fasting_log(db, user_id, fasting_date)
+    if not log:
+        log = RamadanFastingLog(
+            user_id=user_id,
+            fasting_date=fasting_date,
+            fasted=fasted,
+            note=note,
+        )
+        db.add(log)
+    else:
+        log.fasted = fasted
+        log.note = note
+    await db.commit()
+    await db.refresh(log)
+    return log
+
+
+async def get_ramadan_fasting_logs_for_month(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    year: int,
+    month: int,
+) -> list[RamadanFastingLog]:
+    start_date = date(year, month, 1)
+    end_date = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    result = await db.execute(
+        select(RamadanFastingLog).where(
+            RamadanFastingLog.user_id == user_id,
+            RamadanFastingLog.fasting_date >= start_date,
+            RamadanFastingLog.fasting_date < end_date,
+        ).order_by(RamadanFastingLog.fasting_date.asc())
     )
     return list(result.scalars().all())
