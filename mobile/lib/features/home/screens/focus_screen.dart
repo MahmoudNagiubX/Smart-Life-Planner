@@ -255,8 +255,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
               ),
               const SizedBox(height: 24),
               _ReportSummary(state: state),
-              const SizedBox(height: 24),
-              const _FocusUpgradePlaceholders(),
               if (state.sessions.isNotEmpty) ...[
                 const SizedBox(height: 32),
                 Text(
@@ -534,71 +532,6 @@ class _ReportSummary extends StatelessWidget {
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FocusUpgradePlaceholders extends StatelessWidget {
-  const _FocusUpgradePlaceholders();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Expanded(
-          child: _PlaceholderTile(
-            icon: Icons.music_note,
-            title: 'Ambient sound',
-            subtitle: 'Prepared for a future sound pack.',
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: _PlaceholderTile(
-            icon: Icons.auto_awesome,
-            title: 'AI focus pick',
-            subtitle: 'Ready for task-aware suggestions.',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PlaceholderTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _PlaceholderTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppColors.primary),
-          const SizedBox(height: 10),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),

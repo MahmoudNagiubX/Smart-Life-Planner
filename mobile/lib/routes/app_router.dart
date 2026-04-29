@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../core/theme/app_colors.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/change_password_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
+import '../features/auth/screens/splash_screen.dart';
 import '../features/auth/screens/verify_email_screen.dart';
 import '../features/auth/screens/welcome_screen.dart';
 import '../features/auth/screens/sign_in_screen.dart';
@@ -15,7 +15,7 @@ import '../features/home/screens/tasks_screen.dart';
 import '../features/home/screens/focus_screen.dart';
 import '../features/home/screens/prayer_screen.dart';
 import '../features/home/screens/profile_screen.dart';
-import '../features/home/screens/feature_placeholder_screen.dart';
+import '../features/home/screens/deferred_scope_screen.dart';
 import '../features/habits/screens/habits_screen.dart';
 import '../features/notes/screens/notes_screen.dart';
 import '../features/tasks/screens/task_details_screen.dart';
@@ -89,11 +89,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        builder: (context, state) => const FeaturePlaceholderScreen(
-          title: 'Splash',
-          description: 'Startup status and session checks will appear here.',
-          icon: Icons.bolt,
-        ),
+        builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
         path: AppRoutes.onboarding,
@@ -148,19 +144,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.taskCreate,
-            builder: (context, state) => const FeaturePlaceholderScreen(
+            builder: (context, state) => const DeferredScopeScreen(
               title: 'Create Task',
-              description: 'Task creation is available from the task sheet.',
               icon: Icons.add_task,
+              description:
+                  'The standalone create-task route is deferred for now.',
+              availableNow:
+                  'Create tasks from the Tasks screen using the real task sheet.',
             ),
           ),
           GoRoute(
             path: AppRoutes.taskEdit,
-            builder: (context, state) => const FeaturePlaceholderScreen(
+            builder: (context, state) => const DeferredScopeScreen(
               title: 'Edit Task',
-              description:
-                  'Task editing will open here once full details land.',
               icon: Icons.edit_note,
+              description: 'The standalone task edit route is deferred.',
+              availableNow:
+                  'Open Task Details for real task data and completion history.',
             ),
           ),
           GoRoute(
@@ -180,18 +180,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.focusSession,
-            builder: (context, state) => const FeaturePlaceholderScreen(
+            builder: (context, state) => const DeferredScopeScreen(
               title: 'Active Focus Session',
-              description: 'Live focus timer and session controls.',
               icon: Icons.timer_outlined,
+              description:
+                  'A separate active-session route is deferred from the MVP.',
+              availableNow:
+                  'Use the Focus tab for the real timer, breaks, settings, and reports.',
             ),
           ),
           GoRoute(
             path: AppRoutes.focusHistory,
-            builder: (context, state) => const FeaturePlaceholderScreen(
+            builder: (context, state) => const DeferredScopeScreen(
               title: 'Focus History',
-              description: 'Past focus sessions and summaries.',
               icon: Icons.history,
+              description: 'The full focus history route is deferred.',
+              availableNow:
+                  'Recent sessions and report summary are available in the Focus tab.',
             ),
           ),
           GoRoute(
@@ -200,11 +205,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.prayerHistory,
-            builder: (context, state) => const FeaturePlaceholderScreen(
+            builder: (context, state) => const DeferredScopeScreen(
               title: 'Prayer History',
-              description: 'Prayer tracking history and consistency.',
               icon: Icons.calendar_month,
-              accentColor: AppColors.prayerGold,
+              description:
+                  'Prayer history and missed-prayer tracking are deferred until the real logging flow is implemented.',
+              availableNow:
+                  'Use the Prayer tab for today’s prayer times and daily tracking.',
             ),
           ),
           GoRoute(
@@ -253,16 +260,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.journal,
-            builder: (context, state) => const FeaturePlaceholderScreen(
+            builder: (context, state) => const DeferredScopeScreen(
               title: 'Journal',
-              description: 'Daily reflections and journal entries.',
               icon: Icons.auto_stories_outlined,
-              destructiveActionLabel: 'Delete Journal Entry',
-              destructiveActionTitle: 'Delete Journal Entry',
-              destructiveActionMessage:
-                  'Delete this journal entry? This action will require confirmation before anything is removed.',
-              destructiveActionDoneMessage:
-                  'Journal deletion is not active on this placeholder screen.',
+              description:
+                  'The standalone journal module is deferred from this MVP pass.',
+              availableNow:
+                  'Use Notes for real persisted reflections, voice notes, checklists, tags, and reminders.',
             ),
           ),
           GoRoute(

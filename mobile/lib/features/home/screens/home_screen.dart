@@ -211,15 +211,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           onTap: () => context.go('/home/daily-plan'),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _NavCard(
-                          icon: Icons.sensors_outlined,
-                          label: 'Context',
-                          color: AppColors.prayerGold,
-                          onTap: () => context.go('/home/context-intelligence'),
-                        ),
-                      ),
                     ],
                   ),
                 ],

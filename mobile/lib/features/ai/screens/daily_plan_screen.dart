@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
-import '../../../routes/app_routes.dart';
 import '../models/daily_plan_model.dart';
 import '../providers/ai_provider.dart';
 
@@ -41,11 +39,6 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
-          IconButton(
-            tooltip: 'AI life coach',
-            icon: const Icon(Icons.psychology_alt_outlined),
-            onPressed: () => context.push(AppRoutes.aiCoach),
-          ),
           IconButton(
             tooltip: 'Generate new plan',
             icon: const Icon(Icons.refresh),

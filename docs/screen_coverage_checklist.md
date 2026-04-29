@@ -42,7 +42,7 @@ Current implementation is a single onboarding flow screen. Step 13.2/13.3 should
 | Home | `/home` | Exists | `HomeScreen` routed inside shell. |
 | Notes | `/home/notes` | Exists | `NotesScreen` routed inside shell. |
 | Habits | `/home/habits` | Exists | `HabitsScreen` routed inside shell. |
-| Journal | `/home/journal` | Exists | Placeholder screen is routed. |
+| Journal | `/home/journal` | Deferred | Standalone journal is removed from main flow; Notes remains the real capture surface. |
 | Tasks | `/home/tasks` | Exists | `TasksScreen` routed inside shell. |
 | Focus | `/home/focus` | Exists | Current home focus screen routed. |
 | Prayer | `/home/prayer` | Exists | Current home prayer screen routed. |
@@ -55,7 +55,7 @@ Current implementation is a single onboarding flow screen. Step 13.2/13.3 should
 | Screen | Expected route | Current status | Notes |
 | --- | --- | --- | --- |
 | Task Details | `/home/tasks/:taskId` | Exists | Placeholder route exists until full details implementation. |
-| Create/Edit Task | Modal or `/home/tasks/create` / `/home/tasks/:taskId/edit` | Exists | Create sheet exists; create/edit placeholder routes are wired. |
+| Create/Edit Task | Modal or `/home/tasks/create` / `/home/tasks/:taskId/edit` | Partial | Create sheet is real; standalone create/edit routes are deferred from main flow. |
 | Project Details | `/home/projects/:projectId` | Exists | Placeholder route exists until full project implementation. |
 | Ranked Tasks | `/home/ranked-tasks` | Exists | H-ASAE route exists. |
 
@@ -64,15 +64,15 @@ Current implementation is a single onboarding flow screen. Step 13.2/13.3 should
 | Screen | Expected route | Current status | Notes |
 | --- | --- | --- | --- |
 | Focus | `/home/focus` | Exists | Current focus entry screen. |
-| Active Focus Session | `/home/focus/session` | Exists | Placeholder route exists. |
-| Focus History | `/home/focus/history` | Exists | Placeholder route exists. |
+| Active Focus Session | `/home/focus/session` | Deferred | Real active timer controls live in `/home/focus`; standalone route is not promoted. |
+| Focus History | `/home/focus/history` | Deferred | Recent sessions/report live in `/home/focus`; standalone route is not promoted. |
 
 ## Spiritual Screens
 
 | Screen | Expected route | Current status | Notes |
 | --- | --- | --- | --- |
 | Prayer | `/home/prayer` | Exists | Current prayer screen. |
-| Prayer History | `/home/prayer/history` | Exists | Placeholder route exists and is reachable from Prayer. |
+| Prayer History | `/home/prayer/history` | Deferred | Removed from Prayer tools until real history/missed-prayer logic lands. |
 | Quran Goal | `/home/prayer/quran-goal` | Exists | Daily target/progress screen exists and is reachable from Prayer. |
 | Qibla | `/home/prayer/qibla` | Exists | Qibla UI and bearing service placeholder are routed and reachable. |
 | Ramadan Mode | `/home/prayer/ramadan` | Exists | Ramadan settings UI is routed and reachable. |

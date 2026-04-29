@@ -174,9 +174,6 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                         onQibla: () => context.push(AppRoutes.qibla),
                         onRamadan: () => context.push(AppRoutes.ramadan),
                         onQuranGoal: () => context.push(AppRoutes.quranGoal),
-                        onHistory: () => context.push(AppRoutes.prayerHistory),
-                        onUpgrades: () =>
-                            context.push(AppRoutes.spiritualUpgrades),
                       ),
                       const SizedBox(height: 28),
 
@@ -384,15 +381,11 @@ class _PrayerToolsGrid extends StatelessWidget {
   final VoidCallback onQibla;
   final VoidCallback onRamadan;
   final VoidCallback onQuranGoal;
-  final VoidCallback onHistory;
-  final VoidCallback onUpgrades;
 
   const _PrayerToolsGrid({
     required this.onQibla,
     required this.onRamadan,
     required this.onQuranGoal,
-    required this.onHistory,
-    required this.onUpgrades,
   });
 
   @override
@@ -408,12 +401,6 @@ class _PrayerToolsGrid extends StatelessWidget {
         icon: Icons.menu_book_outlined,
         label: 'Quran Goal',
         onTap: onQuranGoal,
-      ),
-      _PrayerTool(icon: Icons.history, label: 'History', onTap: onHistory),
-      _PrayerTool(
-        icon: Icons.auto_awesome_outlined,
-        label: 'Upgrades',
-        onTap: onUpgrades,
       ),
     ];
 
