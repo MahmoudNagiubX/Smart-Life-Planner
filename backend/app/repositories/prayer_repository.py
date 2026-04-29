@@ -169,6 +169,7 @@ async def upsert_quran_progress(
     user_id: uuid.UUID,
     progress_date: date,
     pages_completed: int,
+    target_pages: int,
 ) -> QuranProgress:
     progress = await get_quran_progress_for_date(db, user_id, progress_date)
     if not progress:
@@ -176,10 +177,12 @@ async def upsert_quran_progress(
             user_id=user_id,
             progress_date=progress_date,
             pages_completed=pages_completed,
+            target_pages=target_pages,
         )
         db.add(progress)
     else:
         progress.pages_completed = pages_completed
+        progress.target_pages = target_pages
     await db.commit()
     await db.refresh(progress)
     return progress

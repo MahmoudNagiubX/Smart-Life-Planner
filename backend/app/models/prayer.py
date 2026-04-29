@@ -91,6 +91,7 @@ class QuranProgress(Base):
     )
     progress_date: Mapped[date] = mapped_column(Date, nullable=False)
     pages_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    target_pages: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, nullable=False
     )

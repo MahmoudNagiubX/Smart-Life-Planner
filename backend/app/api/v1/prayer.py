@@ -33,6 +33,10 @@ from app.repositories.prayer_repository import (
 )
 from app.repositories.settings_repository import get_settings_by_user_id
 from app.services.prayer_calculator import calculate_prayer_times, PRAYER_NAMES
+from app.services.quran_summary import (
+    quran_completion_percent,
+    quran_current_streak,
+)
 
 router = APIRouter(prefix="/prayers", tags=["prayers"])
 
@@ -60,25 +64,40 @@ async def _build_quran_goal_summary(
         current_date = week_start + timedelta(days=offset)
         progress = progress_by_date.get(current_date)
         pages_completed = progress.pages_completed if progress else 0
+        target_pages = (progress.target_pages if progress else 0) or target
         weekly_summary.append(
             QuranWeeklyProgressItem(
                 progress_date=current_date,
                 pages_completed=pages_completed,
-                target_met=target > 0 and pages_completed >= target,
+                target_pages=target_pages,
+                target_met=target_pages > 0 and pages_completed >= target_pages,
+                completion_percent=quran_completion_percent(
+                    pages_completed,
+                    target_pages,
+                ),
             )
         )
+    weekly_target = sum(item.target_pages for item in weekly_summary)
 
     return QuranGoalSummaryResponse(
         goal=goal,
         today=today_progress,
         today_pages_completed=today_pages,
-        progress_percent=0
-        if target == 0
-        else min(100, int(today_pages / target * 100)),
+        progress_percent=quran_completion_percent(today_pages, target),
         weekly_total_pages=weekly_total,
-        weekly_target_pages=target * 7,
+        weekly_target_pages=weekly_target,
+        weekly_completion_percent=quran_completion_percent(
+            weekly_total,
+            weekly_target,
+        ),
+        current_streak_days=quran_current_streak(weekly_summary),
         weekly_summary=weekly_summary,
     )
+
+
+async def _active_quran_target(db: AsyncSession, user_id) -> int:
+    goal = await get_quran_goal(db, user_id)
+    return goal.daily_page_target if goal else 0
 
 
 async def _build_ramadan_daily_summary(
@@ -186,11 +205,39 @@ async def update_today_quran_progress(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    target_pages = await _active_quran_target(db, current_user.id)
     await upsert_quran_progress(
         db,
         current_user.id,
         date.today(),
         payload.pages_completed,
+        target_pages,
+    )
+    return await _build_quran_goal_summary(db, current_user.id)
+
+
+@router.put(
+    "/quran-progress/{progress_date}",
+    response_model=QuranGoalSummaryResponse,
+)
+async def update_quran_progress_for_date(
+    progress_date: date,
+    payload: QuranProgressUpdate,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if progress_date > date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Quran progress cannot be logged for a future date",
+        )
+    target_pages = await _active_quran_target(db, current_user.id)
+    await upsert_quran_progress(
+        db,
+        current_user.id,
+        progress_date,
+        payload.pages_completed,
+        target_pages,
     )
     return await _build_quran_goal_summary(db, current_user.id)
 

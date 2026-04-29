@@ -28,4 +28,15 @@ class QuranGoalService {
     );
     return QuranGoalSummary.fromJson(response.data as Map<String, dynamic>);
   }
+
+  Future<QuranGoalSummary> updateProgressForDate({
+    required String progressDate,
+    required int pagesCompleted,
+  }) async {
+    final response = await _apiClient.dio.put(
+      '/prayers/quran-progress/$progressDate',
+      data: {'pages_completed': pagesCompleted},
+    );
+    return QuranGoalSummary.fromJson(response.data as Map<String, dynamic>);
+  }
 }

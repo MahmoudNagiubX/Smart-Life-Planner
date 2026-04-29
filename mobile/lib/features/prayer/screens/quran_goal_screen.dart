@@ -62,6 +62,82 @@ class _QuranGoalScreenState extends ConsumerState<QuranGoalScreen> {
         .updateTodayProgress(_pagesCompleted);
   }
 
+  Future<void> _editWeeklyDay(QuranWeeklyProgressItem item) async {
+    final summary = ref.read(quranGoalProvider).summary;
+    if (summary?.goal == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Set a daily target before logging.')),
+      );
+      return;
+    }
+
+    final controller = TextEditingController(
+      text: item.pagesCompleted.toString(),
+    );
+    final pages = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Update ${_formatDateLabel(item.progressDate)}',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Pages read',
+                  prefixIcon: Icon(Icons.menu_book_outlined),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final value = int.tryParse(controller.text.trim());
+                    if (value == null || value < 0 || value > 604) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Enter pages between 0 and 604.'),
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.of(context).pop(value);
+                  },
+                  icon: const Icon(Icons.save_outlined),
+                  label: const Text('Save Day'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    controller.dispose();
+    if (pages == null) return;
+    if (!mounted) return;
+    await ref
+        .read(quranGoalProvider.notifier)
+        .updateProgressForDate(item.progressDate, pages);
+  }
+
   void _changeProgress(int delta) {
     setState(() {
       _pagesCompleted = (_pagesCompleted + delta).clamp(0, 604);
@@ -113,7 +189,11 @@ class _QuranGoalScreenState extends ConsumerState<QuranGoalScreen> {
                     onSave: _saveProgress,
                   ),
                   const SizedBox(height: 16),
-                  _WeeklySummaryCard(summary: summary),
+                  _WeeklySummaryCard(
+                    summary: summary,
+                    isSaving: state.isSaving,
+                    onEditDay: _editWeeklyDay,
+                  ),
                   if (state.error != null && summary != null) ...[
                     const SizedBox(height: 16),
                     Text(
@@ -127,6 +207,13 @@ class _QuranGoalScreenState extends ConsumerState<QuranGoalScreen> {
             ),
     );
   }
+}
+
+String _formatDateLabel(String value) {
+  if (value.length >= 10) {
+    return value.substring(5);
+  }
+  return value;
 }
 
 class _DailyTargetCard extends StatelessWidget {
@@ -265,8 +352,14 @@ class _TodayProgressCard extends StatelessWidget {
 
 class _WeeklySummaryCard extends StatelessWidget {
   final QuranGoalSummary? summary;
+  final bool isSaving;
+  final ValueChanged<QuranWeeklyProgressItem> onEditDay;
 
-  const _WeeklySummaryCard({required this.summary});
+  const _WeeklySummaryCard({
+    required this.summary,
+    required this.isSaving,
+    required this.onEditDay,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -284,11 +377,17 @@ class _WeeklySummaryCard extends StatelessWidget {
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
-          Text(
-            'A fuller weekly Quran reflection will be added after the MVP goal flow is stable.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.4,
+          _WeeklyMetrics(summary: summary),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: ((summary?.weeklyCompletionPercent ?? 0) / 100).clamp(
+              0.0,
+              1.0,
+            ),
+            minHeight: 8,
+            backgroundColor: AppColors.prayerGold.withValues(alpha: 0.15),
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              AppColors.prayerGold,
             ),
           ),
           const SizedBox(height: 12),
@@ -297,11 +396,82 @@ class _WeeklySummaryCard extends StatelessWidget {
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(right: 6),
-                  child: _WeeklyDayPill(item: item),
+                  child: _WeeklyDayPill(
+                    item: item,
+                    isDisabled: isSaving,
+                    onTap: () => onEditDay(item),
+                  ),
                 ),
               );
             }).toList(),
           ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap a day to correct its pages. Targets use the saved daily goal for each log.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeeklyMetrics extends StatelessWidget {
+  final QuranGoalSummary? summary;
+
+  const _WeeklyMetrics({required this.summary});
+
+  @override
+  Widget build(BuildContext context) {
+    final today = summary?.todayPagesCompleted ?? 0;
+    final weeklyTotal = summary?.weeklyTotalPages ?? 0;
+    final weeklyTarget = summary?.weeklyTargetPages ?? 0;
+    final completion = summary?.weeklyCompletionPercent ?? 0;
+    final streak = summary?.currentStreakDays ?? 0;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _MetricChip(label: 'Today', value: '$today pages'),
+        _MetricChip(label: 'Week', value: '$weeklyTotal pages'),
+        _MetricChip(label: 'Target', value: '$weeklyTarget pages'),
+        _MetricChip(label: 'Complete', value: '$completion%'),
+        _MetricChip(label: 'Streak', value: '$streak days'),
+      ],
+    );
+  }
+}
+
+class _MetricChip extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _MetricChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.prayerGold.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.prayerGold.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 11,
+            ),
+          ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -310,45 +480,80 @@ class _WeeklySummaryCard extends StatelessWidget {
 
 class _WeeklyDayPill extends StatelessWidget {
   final QuranWeeklyProgressItem item;
+  final bool isDisabled;
+  final VoidCallback onTap;
 
-  const _WeeklyDayPill({required this.item});
+  const _WeeklyDayPill({
+    required this.item,
+    required this.isDisabled,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final label = item.progressDate.length >= 10
-        ? item.progressDate.substring(5)
-        : item.progressDate;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: item.targetMet
-            ? AppColors.prayerGold.withValues(alpha: 0.16)
-            : Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
+    final label = _formatDateLabel(item.progressDate);
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: isDisabled ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
           color: item.targetMet
-              ? AppColors.prayerGold.withValues(alpha: 0.45)
-              : AppColors.textSecondary.withValues(alpha: 0.18),
+              ? AppColors.prayerGold.withValues(alpha: 0.16)
+              : Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: item.targetMet
+                ? AppColors.prayerGold.withValues(alpha: 0.45)
+                : AppColors.textSecondary.withValues(alpha: 0.18),
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 10,
-              color: AppColors.textSecondary,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            '${item.pagesCompleted}',
-            style: const TextStyle(
-              color: AppColors.prayerGold,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 3),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '${item.pagesCompleted}/${item.targetPages}',
+                  style: const TextStyle(
+                    color: AppColors.prayerGold,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '${item.completionPercent}%',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

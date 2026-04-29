@@ -29,6 +29,7 @@ class QuranProgress {
   final String userId;
   final String progressDate;
   final int pagesCompleted;
+  final int targetPages;
   final String createdAt;
   final String updatedAt;
 
@@ -37,6 +38,7 @@ class QuranProgress {
     required this.userId,
     required this.progressDate,
     required this.pagesCompleted,
+    required this.targetPages,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -46,7 +48,9 @@ class QuranProgress {
       id: json['id'] as String,
       userId: json['user_id'] as String,
       progressDate: json['progress_date'] as String,
-      pagesCompleted: json['pages_completed'] as int,
+      pagesCompleted:
+          json['pages_completed'] as int? ?? json['pages_read'] as int? ?? 0,
+      targetPages: json['target_pages'] as int? ?? 0,
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
     );
@@ -56,19 +60,26 @@ class QuranProgress {
 class QuranWeeklyProgressItem {
   final String progressDate;
   final int pagesCompleted;
+  final int targetPages;
   final bool targetMet;
+  final int completionPercent;
 
   const QuranWeeklyProgressItem({
     required this.progressDate,
     required this.pagesCompleted,
+    required this.targetPages,
     required this.targetMet,
+    required this.completionPercent,
   });
 
   factory QuranWeeklyProgressItem.fromJson(Map<String, dynamic> json) {
     return QuranWeeklyProgressItem(
       progressDate: json['progress_date'] as String,
-      pagesCompleted: json['pages_completed'] as int,
+      pagesCompleted:
+          json['pages_completed'] as int? ?? json['pages_read'] as int? ?? 0,
+      targetPages: json['target_pages'] as int? ?? 0,
       targetMet: json['target_met'] as bool,
+      completionPercent: json['completion_percent'] as int? ?? 0,
     );
   }
 }
@@ -80,6 +91,8 @@ class QuranGoalSummary {
   final int progressPercent;
   final int weeklyTotalPages;
   final int weeklyTargetPages;
+  final int weeklyCompletionPercent;
+  final int currentStreakDays;
   final List<QuranWeeklyProgressItem> weeklySummary;
 
   const QuranGoalSummary({
@@ -89,6 +102,8 @@ class QuranGoalSummary {
     required this.progressPercent,
     required this.weeklyTotalPages,
     required this.weeklyTargetPages,
+    required this.weeklyCompletionPercent,
+    required this.currentStreakDays,
     required this.weeklySummary,
   });
 
@@ -106,6 +121,8 @@ class QuranGoalSummary {
       progressPercent: json['progress_percent'] as int? ?? 0,
       weeklyTotalPages: json['weekly_total_pages'] as int? ?? 0,
       weeklyTargetPages: json['weekly_target_pages'] as int? ?? 0,
+      weeklyCompletionPercent: json['weekly_completion_percent'] as int? ?? 0,
+      currentStreakDays: json['current_streak_days'] as int? ?? 0,
       weeklySummary: (json['weekly_summary'] as List<dynamic>? ?? [])
           .map(
             (item) =>

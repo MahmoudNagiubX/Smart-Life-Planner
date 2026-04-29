@@ -90,6 +90,28 @@ class QuranGoalNotifier extends StateNotifier<QuranGoalState> {
       return false;
     }
   }
+
+  Future<bool> updateProgressForDate(
+    String progressDate,
+    int pagesCompleted,
+  ) async {
+    state = state.copyWith(isSaving: true, error: null);
+    try {
+      final service = _ref.read(quranGoalServiceProvider);
+      final summary = await service.updateProgressForDate(
+        progressDate: progressDate,
+        pagesCompleted: pagesCompleted,
+      );
+      state = state.copyWith(summary: summary, isSaving: false);
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isSaving: false,
+        error: friendlyApiError(e, 'Failed to update Quran progress'),
+      );
+      return false;
+    }
+  }
 }
 
 final quranGoalProvider =

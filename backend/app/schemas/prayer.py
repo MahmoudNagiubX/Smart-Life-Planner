@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, date
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class PrayerResponse(BaseModel):
@@ -54,16 +54,29 @@ class QuranProgressResponse(BaseModel):
     user_id: uuid.UUID
     progress_date: date
     pages_completed: int
+    target_pages: int
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
 
+    @computed_field
+    @property
+    def pages_read(self) -> int:
+        return self.pages_completed
+
 
 class QuranWeeklyProgressItem(BaseModel):
     progress_date: date
     pages_completed: int
+    target_pages: int
     target_met: bool
+    completion_percent: int
+
+    @computed_field
+    @property
+    def pages_read(self) -> int:
+        return self.pages_completed
 
 
 class QuranGoalSummaryResponse(BaseModel):
@@ -73,6 +86,8 @@ class QuranGoalSummaryResponse(BaseModel):
     progress_percent: int
     weekly_total_pages: int
     weekly_target_pages: int
+    weekly_completion_percent: int
+    current_streak_days: int
     weekly_summary: list[QuranWeeklyProgressItem]
 
 
