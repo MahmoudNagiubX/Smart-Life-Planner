@@ -32,6 +32,7 @@ class UserResponse(BaseModel):
     id: uuid.UUID
     email: str
     full_name: str
+    auth_provider: str
     is_active: bool
     is_verified: bool          # ← now exposed to frontend
     onboarding_completed: bool = False

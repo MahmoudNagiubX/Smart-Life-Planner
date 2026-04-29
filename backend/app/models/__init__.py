@@ -7,3 +7,4 @@ from app.models.prayer import PrayerLog, QuranGoal, QuranProgress
 from app.models.reminder import Reminder
 from app.models.scheduling import DailySchedule, ScheduleBlock
 from app.models.verification import EmailVerification, PasswordReset
+from app.models.feedback import FeedbackMessage

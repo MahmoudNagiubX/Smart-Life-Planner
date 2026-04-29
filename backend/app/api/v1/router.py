@@ -4,6 +4,7 @@ from app.api.v1 import (
     analytics,
     auth,
     dashboard,
+    feedback,
     focus,
     habit,
     hasae,
@@ -21,6 +22,7 @@ router.include_router(auth.router)
 router.include_router(settings.router)
 router.include_router(tasks.router)
 router.include_router(dashboard.router)
+router.include_router(feedback.router)
 router.include_router(note.router)
 router.include_router(habit.router)
 router.include_router(focus.router)

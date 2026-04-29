@@ -36,6 +36,8 @@ import '../features/reminders/screens/notification_center_screen.dart';
 import '../features/reminders/screens/notification_settings_screen.dart';
 import '../features/settings/screens/app_settings_screen.dart';
 import '../features/settings/screens/language_settings_screen.dart';
+import '../features/support/screens/about_screen.dart';
+import '../features/support/screens/support_screen.dart';
 import '../features/voice/screens/voice_capture_screen.dart';
 import '../features/voice/screens/voice_future_capabilities_screen.dart';
 import 'app_routes.dart';
@@ -228,6 +230,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.profile,
             builder: (context, state) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.about,
+            builder: (context, state) => const AboutScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.support,
+            builder: (context, state) => const SupportScreen(),
           ),
           GoRoute(
             path: AppRoutes.changePassword,

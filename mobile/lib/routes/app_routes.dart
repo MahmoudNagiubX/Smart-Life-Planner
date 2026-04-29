@@ -24,6 +24,8 @@ abstract class AppRoutes {
   static const spiritualUpgrades = '/home/prayer/spiritual-upgrades';
   static const prayerSettings = '/home/prayer/settings';
   static const profile = '/home/profile';
+  static const about = '/home/about';
+  static const support = '/home/support';
   static const changePassword = '/home/change-password';
   static const habits = '/home/habits';
   static const notes = '/home/notes';

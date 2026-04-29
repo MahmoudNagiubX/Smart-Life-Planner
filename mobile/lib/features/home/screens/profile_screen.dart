@@ -13,6 +13,9 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
+    final provider = user?['auth_provider'] as String? ?? 'email';
+    final isVerified = user?['is_verified'] == true;
+    final isActive = user?['is_active'] != false;
 
     Future<void> showDeleteDialog() async {
       final controller = TextEditingController();
@@ -102,37 +105,77 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              // User card
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardTheme.color,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-                      child: const Icon(
-                        Icons.person,
-                        size: 28,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        Text(
-                          user?['full_name'] as String? ?? '',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: AppColors.primary.withValues(
+                            alpha: 0.2,
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            size: 28,
+                            color: AppColors.primary,
+                          ),
                         ),
-                        Text(
-                          user?['email'] as String? ?? '',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.textSecondary),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user?['full_name'] as String? ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                user?['email'] as String? ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _StatusChip(
+                          icon: Icons.login_outlined,
+                          label: _providerLabel(provider),
+                          color: AppColors.primary,
+                        ),
+                        _StatusChip(
+                          icon: isVerified
+                              ? Icons.verified_outlined
+                              : Icons.mark_email_unread_outlined,
+                          label: isVerified ? 'Verified' : 'Unverified',
+                          color: isVerified
+                              ? AppColors.success
+                              : AppColors.warning,
+                        ),
+                        _StatusChip(
+                          icon: isActive
+                              ? Icons.check_circle_outline
+                              : Icons.block_outlined,
+                          label: isActive ? 'Active' : 'Inactive',
+                          color: isActive ? AppColors.success : AppColors.error,
                         ),
                       ],
                     ),
@@ -218,6 +261,20 @@ class ProfileScreen extends ConsumerWidget {
                 color: AppColors.prayerGold,
                 onTap: () => context.push(AppRoutes.prayerSettings),
               ),
+              const SizedBox(height: 10),
+              _MenuItem(
+                icon: Icons.support_agent_outlined,
+                label: 'Support',
+                color: AppColors.primary,
+                onTap: () => context.push(AppRoutes.support),
+              ),
+              const SizedBox(height: 10),
+              _MenuItem(
+                icon: Icons.info_outline,
+                label: 'About',
+                color: AppColors.textSecondary,
+                onTap: () => context.push(AppRoutes.about),
+              ),
 
               const SizedBox(height: 32),
 
@@ -269,6 +326,53 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+String _providerLabel(String provider) {
+  return switch (provider) {
+    'google' => 'Google account',
+    'apple' => 'Apple account',
+    _ => 'Email account',
+  };
+}
+
+class _StatusChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _StatusChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

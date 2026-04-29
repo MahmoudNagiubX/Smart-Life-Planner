@@ -46,7 +46,9 @@ Current implementation is a single onboarding flow screen. Step 13.2/13.3 should
 | Tasks | `/home/tasks` | Exists | `TasksScreen` routed inside shell. |
 | Focus | `/home/focus` | Exists | Current home focus screen routed. |
 | Prayer | `/home/prayer` | Exists | Current home prayer screen routed. |
-| Profile | `/home/profile` | Exists | `ProfileScreen` routed inside shell. |
+| Profile | `/home/profile` | Exists | Shows real user name, email, provider, verification, and account status. |
+| About | `/home/about` | Exists | Shows app name, version, and stack summary. |
+| Support | `/home/support` | Exists | Feedback form posts to `/support/feedback`. |
 
 ## Task And Project Screens
 
