@@ -12,11 +12,11 @@ class QiblaDirection {
   String get displayDegrees => '${bearingDegrees.toStringAsFixed(1)} deg';
 }
 
-class QiblaDirectionService {
+class QiblaService {
   static const double kaabaLatitude = 21.4225;
   static const double kaabaLongitude = 39.8262;
 
-  const QiblaDirectionService();
+  const QiblaService();
 
   QiblaDirection calculateBearing({
     required double latitude,
@@ -28,10 +28,10 @@ class QiblaDirectionService {
     final lat2 = _degreesToRadians(kaabaLatitude);
     final deltaLongitude = _degreesToRadians(kaabaLongitude - longitude);
 
-    final y = math.sin(deltaLongitude);
+    final y = math.sin(deltaLongitude) * math.cos(lat2);
     final x =
-        math.cos(lat1) * math.tan(lat2) -
-        math.sin(lat1) * math.cos(deltaLongitude);
+        math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(deltaLongitude);
 
     final bearing = _normalizeDegrees(_radiansToDegrees(math.atan2(y, x)));
     return QiblaDirection(
@@ -75,4 +75,8 @@ class QiblaDirectionService {
     final index = ((bearing + 22.5) / 45).floor() % labels.length;
     return labels[index];
   }
+}
+
+class QiblaDirectionService extends QiblaService {
+  const QiblaDirectionService();
 }

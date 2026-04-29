@@ -79,17 +79,17 @@ class QiblaState {
 
 class QiblaNotifier extends StateNotifier<QiblaState> {
   final Ref _ref;
-  final QiblaDirectionService _directionService;
+  final QiblaService _qiblaService;
   final QiblaLocationService _locationService;
 
-  QiblaNotifier(this._ref, this._directionService, this._locationService)
+  QiblaNotifier(this._ref, this._qiblaService, this._locationService)
     : super(const QiblaState());
 
   QiblaDirection calculateDirectionForLocation({
     required double latitude,
     required double longitude,
   }) {
-    return _directionService.calculateBearing(
+    return _qiblaService.calculateBearing(
       latitude: latitude,
       longitude: longitude,
     );
@@ -272,6 +272,10 @@ final qiblaDirectionServiceProvider = Provider<QiblaDirectionService>((ref) {
   return const QiblaDirectionService();
 });
 
+final qiblaServiceProvider = Provider<QiblaService>((ref) {
+  return ref.watch(qiblaDirectionServiceProvider);
+});
+
 final qiblaLocationServiceProvider = Provider<QiblaLocationService>((ref) {
   return const QiblaLocationService();
 });
@@ -279,7 +283,7 @@ final qiblaLocationServiceProvider = Provider<QiblaLocationService>((ref) {
 final qiblaProvider = StateNotifierProvider<QiblaNotifier, QiblaState>((ref) {
   return QiblaNotifier(
     ref,
-    ref.watch(qiblaDirectionServiceProvider),
+    ref.watch(qiblaServiceProvider),
     ref.watch(qiblaLocationServiceProvider),
   );
 });
