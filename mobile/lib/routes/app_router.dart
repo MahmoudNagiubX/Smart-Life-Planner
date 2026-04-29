@@ -34,6 +34,8 @@ import '../features/prayer/screens/ramadan_mode_screen.dart';
 import '../features/prayer/screens/spiritual_upgrades_screen.dart';
 import '../features/reminders/screens/notification_center_screen.dart';
 import '../features/reminders/screens/notification_settings_screen.dart';
+import '../features/settings/screens/app_settings_screen.dart';
+import '../features/settings/screens/language_settings_screen.dart';
 import '../features/voice/screens/voice_capture_screen.dart';
 import '../features/voice/screens/voice_future_capabilities_screen.dart';
 import 'app_routes.dart';
@@ -255,17 +257,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.settings,
-            builder: (context, state) => const FeaturePlaceholderScreen(
-              title: 'Settings',
-              description: 'Account, app preferences, and privacy controls.',
-              icon: Icons.settings_outlined,
-              destructiveActionLabel: 'Clear Local Cache',
-              destructiveActionTitle: 'Clear Local Cache',
-              destructiveActionMessage:
-                  'Clear local cache on this device? This may remove downloaded or temporary app data.',
-              destructiveActionDoneMessage:
-                  'Local cache clearing is not active on this placeholder screen.',
-            ),
+            builder: (context, state) => const AppSettingsScreen(),
           ),
           GoRoute(
             path: AppRoutes.notificationCenter,
@@ -277,11 +269,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.languageSettings,
-            builder: (context, state) => const FeaturePlaceholderScreen(
-              title: 'Language And Localization',
-              description: 'Arabic and English language preferences.',
-              icon: Icons.language,
-            ),
+            builder: (context, state) => const LanguageSettingsScreen(),
           ),
           GoRoute(
             path: AppRoutes.analytics,

@@ -80,10 +80,10 @@ Current implementation is a single onboarding flow screen. Step 13.2/13.3 should
 
 | Screen | Expected route | Current status | Notes |
 | --- | --- | --- | --- |
-| Settings | `/home/settings` | Exists | Placeholder route exists and is reachable from Profile. |
+| Settings | `/home/settings` | Exists | Real editable settings screen wired to `/settings`. |
 | Notification Settings | `/home/settings/notifications` | Exists | Placeholder route exists and is reachable from Profile. |
 | Analytics | `/home/analytics` | Exists | `AnalyticsScreen` routed inside shell. |
-| Language and Localization | `/home/settings/language` | Exists | Placeholder route exists and is reachable from Profile. |
+| Language and Localization | `/home/settings/language` | Exists | Real language preference screen wired to `/settings` and app locale. |
 
 ## Capture And Voice Screens
 

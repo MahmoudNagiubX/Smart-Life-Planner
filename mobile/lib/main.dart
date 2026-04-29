@@ -7,6 +7,8 @@ import 'core/monitoring/crash_monitoring_service.dart';
 import 'core/notifications/notification_action_handler.dart';
 import 'core/theme/app_theme.dart';
 import 'core/notifications/notification_service.dart';
+import 'features/auth/providers/auth_provider.dart';
+import 'features/settings/providers/app_settings_provider.dart';
 import 'routes/app_router.dart';
 
 void main() async {
@@ -41,6 +43,32 @@ class SmartLifePlannerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final authState = ref.watch(authProvider);
+    final settingsState = ref.watch(appSettingsProvider);
+
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.status == AuthStatus.authenticated) {
+        unawaited(ref.read(appSettingsProvider.notifier).loadSettings());
+      } else if (next.status == AuthStatus.unauthenticated) {
+        ref.read(appSettingsProvider.notifier).reset();
+      }
+    });
+
+    if (authState.status == AuthStatus.authenticated &&
+        !settingsState.hasLoaded &&
+        !settingsState.isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(appSettingsProvider.notifier).loadSettings();
+      });
+    }
+
+    final appSettings = settingsState.settings;
+    final locale = switch (appSettings?.language) {
+      'ar' => const Locale('ar'),
+      'en' => const Locale('en'),
+      _ => null,
+    };
+
     NotificationService().setResponseHandler((response) {
       unawaited(
         NotificationActionHandler(ref: ref, router: router).handle(response),
@@ -52,8 +80,9 @@ class SmartLifePlannerApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.dark,
+      themeMode: appSettings?.themeMode ?? ThemeMode.dark,
       routerConfig: router,
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     );
