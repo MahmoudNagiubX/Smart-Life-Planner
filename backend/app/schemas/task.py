@@ -75,6 +75,7 @@ class TaskCreate(BaseModel):
     category: Optional[str] = None
     estimated_minutes: Optional[int] = None
     estimated_duration_minutes: Optional[int] = None
+    estimated_pomodoros: Optional[int] = None
     manual_order: int = 0
 
     @field_validator("title")
@@ -116,6 +117,13 @@ class TaskCreate(BaseModel):
             raise ValueError("estimated duration cannot be negative")
         return v
 
+    @field_validator("estimated_pomodoros")
+    @classmethod
+    def pomodoro_estimate_valid(cls, v: int | None) -> int | None:
+        if v is not None and (v < 0 or v > 99):
+            raise ValueError("estimated_pomodoros must be between 0 and 99")
+        return v
+
     @model_validator(mode="after")
     def timeline_dates_valid(self) -> "TaskCreate":
         if self.start_date is not None and self.due_at is not None:
@@ -140,6 +148,8 @@ class TaskUpdate(BaseModel):
     category: Optional[str] = None
     estimated_minutes: Optional[int] = None
     estimated_duration_minutes: Optional[int] = None
+    estimated_pomodoros: Optional[int] = None
+    completed_pomodoros: Optional[int] = None
     status: Optional[str] = None
     manual_order: Optional[int] = None
 
@@ -164,6 +174,20 @@ class TaskUpdate(BaseModel):
     def update_estimate_valid(cls, v: int | None) -> int | None:
         if v is not None and v < 0:
             raise ValueError("estimated duration cannot be negative")
+        return v
+
+    @field_validator("estimated_pomodoros")
+    @classmethod
+    def update_pomodoro_estimate_valid(cls, v: int | None) -> int | None:
+        if v is not None and (v < 0 or v > 99):
+            raise ValueError("estimated_pomodoros must be between 0 and 99")
+        return v
+
+    @field_validator("completed_pomodoros")
+    @classmethod
+    def completed_pomodoros_valid(cls, v: int | None) -> int | None:
+        if v is not None and (v < 0 or v > 999):
+            raise ValueError("completed_pomodoros must be between 0 and 999")
         return v
 
     @model_validator(mode="after")
@@ -220,6 +244,8 @@ class TaskResponse(BaseModel):
     category: Optional[str]
     estimated_minutes: Optional[int]
     estimated_duration_minutes: Optional[int] = None
+    estimated_pomodoros: int = 0
+    completed_pomodoros: int = 0
     manual_order: int
     is_deleted: bool
     completed_at: Optional[datetime]

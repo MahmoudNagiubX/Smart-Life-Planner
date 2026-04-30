@@ -328,6 +328,8 @@ class _TaskSummaryCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
+          _PomodoroProgressCard(task: task),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -346,6 +348,60 @@ class _TaskSummaryCard extends StatelessWidget {
                   label: Text(task.dueAt!.substring(0, 10)),
                 ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PomodoroProgressCard extends StatelessWidget {
+  final TaskModel task;
+
+  const _PomodoroProgressCard({required this.task});
+
+  @override
+  Widget build(BuildContext context) {
+    final estimate = task.estimatedPomodoros;
+    final completed = task.completedPomodoros;
+    final hasEstimate = estimate > 0;
+    final progress = hasEstimate ? (completed / estimate).clamp(0.0, 1.0) : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.timer_outlined, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                hasEstimate
+                    ? '$completed / $estimate Pomodoros'
+                    : '$completed Pomodoro${completed == 1 ? '' : 's'} completed',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: hasEstimate ? progress : null,
+            minHeight: 5,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.18),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hasEstimate
+                ? 'Linked focus sessions update this progress.'
+                : 'Set a Pomodoro estimate when creating a task.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),

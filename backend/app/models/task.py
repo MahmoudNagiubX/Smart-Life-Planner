@@ -36,6 +36,8 @@ class Task(Base):
     reminder_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     recurrence_rule: Mapped[str | None] = mapped_column(Text, nullable=True)
     estimated_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    estimated_pomodoros: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completed_pomodoros: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     category: Mapped[str | None] = mapped_column(String(80), nullable=True)
     manual_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     ai_parsed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

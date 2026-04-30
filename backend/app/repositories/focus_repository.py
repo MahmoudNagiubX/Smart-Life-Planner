@@ -3,7 +3,9 @@ from datetime import date, datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.models.focus import FocusSession
+from app.models.task import Task
 from app.models.user import UserSettings
+from app.services.pomodoro_progress import next_completed_pomodoro_count
 
 
 async def get_active_session(
@@ -83,9 +85,29 @@ async def complete_session(
     session.ended_at = now
     elapsed = now - session.started_at.replace(tzinfo=timezone.utc)
     session.actual_minutes = max(1, int(elapsed.total_seconds() / 60))
+    if session.task_id and session.session_type not in {"short_break", "long_break"}:
+        task = await _get_linked_task_for_session(db, session)
+        if task:
+            task.completed_pomodoros = next_completed_pomodoro_count(
+                task.completed_pomodoros,
+                task.estimated_pomodoros,
+            )
     await db.commit()
     await db.refresh(session)
     return session
+
+
+async def _get_linked_task_for_session(
+    db: AsyncSession, session: FocusSession
+) -> Task | None:
+    result = await db.execute(
+        select(Task).where(
+            Task.id == session.task_id,
+            Task.user_id == session.user_id,
+            Task.is_deleted == False,
+        )
+    )
+    return result.scalar_one_or_none()
 
 
 async def cancel_session(

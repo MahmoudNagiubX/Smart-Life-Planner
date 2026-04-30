@@ -71,6 +71,7 @@ class TaskService {
     String? reminderAt,
     String? category,
     int? estimatedMinutes,
+    int? estimatedPomodoros,
     String? status,
   }) async {
     final data = <String, dynamic>{'title': title, 'priority': priority};
@@ -81,6 +82,9 @@ class TaskService {
     if (reminderAt != null) data['reminder_at'] = reminderAt;
     if (category != null) data['category'] = category;
     if (estimatedMinutes != null) data['estimated_minutes'] = estimatedMinutes;
+    if (estimatedPomodoros != null) {
+      data['estimated_pomodoros'] = estimatedPomodoros;
+    }
     if (status != null) data['status'] = status;
 
     final response = await _apiClient.dio.post('/tasks', data: data);
@@ -103,6 +107,7 @@ class TaskService {
     String? reminderAt,
     String? category,
     int? estimatedMinutes,
+    int? estimatedPomodoros,
     String? status,
     int? manualOrder,
     bool clearDueAt = false,
@@ -126,6 +131,9 @@ class TaskService {
     }
     if (category != null) data['category'] = category;
     if (estimatedMinutes != null) data['estimated_minutes'] = estimatedMinutes;
+    if (estimatedPomodoros != null) {
+      data['estimated_pomodoros'] = estimatedPomodoros;
+    }
     if (status != null) data['status'] = status;
     if (manualOrder != null) data['manual_order'] = manualOrder;
 

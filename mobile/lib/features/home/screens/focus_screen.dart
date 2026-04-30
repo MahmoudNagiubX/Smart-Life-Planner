@@ -93,6 +93,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
               (task.estimatedMinutes ?? 0) > 0,
         )
         .toList();
+    final activeTask = _taskById(tasksState.tasks, state.activeSession?.taskId);
 
     return PopScope(
       canPop: !distractionActive,
@@ -171,6 +172,10 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: AppColors.textSecondary),
                           ),
+                        ],
+                        if (activeTask != null) ...[
+                          const SizedBox(height: 12),
+                          _ActivePomodoroProgress(task: activeTask),
                         ],
                         const SizedBox(height: 8),
                         LinearProgressIndicator(
@@ -342,6 +347,63 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+TaskModel? _taskById(List<TaskModel> tasks, String? taskId) {
+  if (taskId == null) return null;
+  for (final task in tasks) {
+    if (task.id == taskId) return task;
+  }
+  return null;
+}
+
+class _ActivePomodoroProgress extends StatelessWidget {
+  final TaskModel task;
+
+  const _ActivePomodoroProgress({required this.task});
+
+  @override
+  Widget build(BuildContext context) {
+    final estimate = task.estimatedPomodoros;
+    final completed = task.completedPomodoros;
+    final label = estimate > 0
+        ? '$completed / $estimate Pomodoros'
+        : '$completed Pomodoro${completed == 1 ? '' : 's'} completed';
+    final value = estimate > 0 ? (completed / estimate).clamp(0.0, 1.0) : 0.0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            task.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: estimate > 0 ? value : null,
+            minHeight: 5,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.18),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
       ),
     );
   }

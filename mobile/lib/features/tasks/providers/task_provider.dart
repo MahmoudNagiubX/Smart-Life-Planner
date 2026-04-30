@@ -66,6 +66,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
     DateTime? reminderAt,
     String? category,
     int? estimatedMinutes,
+    int? estimatedPomodoros,
     String? status,
     List<TaskReminderPresetDraft> reminderPresets = const [],
   }) async {
@@ -80,6 +81,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
         reminderAt: reminderAt?.toUtc().toIso8601String(),
         category: category,
         estimatedMinutes: estimatedMinutes,
+        estimatedPomodoros: estimatedPomodoros,
         status: status,
       );
 
@@ -145,6 +147,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
     DateTime? reminderAt,
     String? category,
     int? estimatedMinutes,
+    int? estimatedPomodoros,
     String? status,
     int? manualOrder,
     bool clearDueAt = false,
@@ -163,6 +166,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
         reminderAt: reminderAt?.toUtc().toIso8601String(),
         category: category,
         estimatedMinutes: estimatedMinutes,
+        estimatedPomodoros: estimatedPomodoros,
         status: status,
         manualOrder: manualOrder,
         clearDueAt: clearDueAt,

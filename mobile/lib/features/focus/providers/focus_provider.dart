@@ -7,6 +7,7 @@ import '../../../core/notifications/notification_scheduler.dart';
 import '../models/focus_model.dart';
 import '../services/focus_ambient_sound_service.dart';
 import '../services/focus_service.dart';
+import '../../tasks/providers/task_provider.dart';
 
 final focusServiceProvider = Provider<FocusService>((ref) {
   return FocusService(ref.watch(apiClientProvider));
@@ -280,6 +281,9 @@ class FocusNotifier extends StateNotifier<FocusState> {
         remainingSeconds: 0,
         lastCompletedSession: completed,
       );
+      if (completed.taskId != null) {
+        await _ref.read(tasksProvider.notifier).loadTasks();
+      }
       await loadAnalytics();
       if (shouldContinue) {
         if (_isBreakSession(completed.sessionType)) {

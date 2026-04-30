@@ -30,6 +30,8 @@ class TaskModel {
   final String? dueAt;
   final String? reminderAt;
   final int? estimatedMinutes;
+  final int estimatedPomodoros;
+  final int completedPomodoros;
   final int manualOrder;
   final bool isDeleted;
   final String? completedAt;
@@ -48,6 +50,8 @@ class TaskModel {
     this.dueAt,
     this.reminderAt,
     this.estimatedMinutes,
+    this.estimatedPomodoros = 0,
+    this.completedPomodoros = 0,
     required this.manualOrder,
     required this.isDeleted,
     this.completedAt,
@@ -67,6 +71,8 @@ class TaskModel {
     dueAt: json['due_at'],
     reminderAt: json['reminder_at'],
     estimatedMinutes: json['estimated_minutes'],
+    estimatedPomodoros: json['estimated_pomodoros'] as int? ?? 0,
+    completedPomodoros: json['completed_pomodoros'] as int? ?? 0,
     manualOrder: json['manual_order'] as int? ?? 0,
     isDeleted: json['is_deleted'] ?? false,
     completedAt: json['completed_at'],

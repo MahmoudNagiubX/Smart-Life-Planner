@@ -16,6 +16,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
   final _descController = TextEditingController();
   String _priority = 'medium';
   String _bucket = 'pending';
+  int _estimatedPomodoros = 0;
   DateTime? _dueAt;
   final Set<String> _selectedReminderPresets = {};
   DateTime? _customReminderAt;
@@ -70,6 +71,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
               : _descController.text.trim(),
           priority: _priority,
           dueAt: _dueAt,
+          estimatedPomodoros: _estimatedPomodoros,
           status: _bucket == 'calendar' ? 'pending' : _bucket,
           reminderPresets: TaskReminderPresetsTile.buildDraftsFrom(
             dueAt: _dueAt,
@@ -177,6 +179,11 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
                   : () => setState(() => _dueAt = null),
             ),
             const SizedBox(height: 12),
+            _PomodoroEstimateStepper(
+              value: _estimatedPomodoros,
+              onChanged: (value) => setState(() => _estimatedPomodoros = value),
+            ),
+            const SizedBox(height: 12),
             TaskReminderPresetsTile(
               dueAt: _dueAt,
               selectedPresets: _selectedReminderPresets,
@@ -211,6 +218,61 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
                   ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PomodoroEstimateStepper extends StatelessWidget {
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  const _PomodoroEstimateStepper({
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.timer_outlined, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Pomodoro estimate',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  value == 0 ? 'No estimate' : '$value focus session target',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Decrease',
+            onPressed: value == 0 ? null : () => onChanged(value - 1),
+            icon: const Icon(Icons.remove_circle_outline),
+          ),
+          Text('$value', style: const TextStyle(fontWeight: FontWeight.bold)),
+          IconButton(
+            tooltip: 'Increase',
+            onPressed: value >= 12 ? null : () => onChanged(value + 1),
+            icon: const Icon(Icons.add_circle_outline),
+          ),
+        ],
       ),
     );
   }
