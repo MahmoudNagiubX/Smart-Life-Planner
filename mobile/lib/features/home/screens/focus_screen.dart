@@ -50,6 +50,35 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
     }
   }
 
+  Future<bool> _confirmLeaveDistractionMode() async {
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave focus session?'),
+        content: const Text(
+          'Distraction-free mode is active. Your timer will keep running if you leave.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Stay'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+    return leave ?? false;
+  }
+
+  Future<void> _handleBlockedPop() async {
+    if (await _confirmLeaveDistractionMode() && mounted) {
+      context.go(AppRoutes.home);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(focusProvider);
@@ -65,218 +94,253 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
         )
         .toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Focus',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Focus settings',
-            onPressed: () => context.push(AppRoutes.focusSettings),
-            icon: const Icon(Icons.settings_outlined),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (state.analytics != null && !distractionActive) ...[
-              _AnalyticsGrid(analytics: state.analytics!),
-              const SizedBox(height: 24),
-            ],
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardTheme.color,
-                borderRadius: BorderRadius.circular(20),
+    return PopScope(
+      canPop: !distractionActive,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && distractionActive) {
+          _handleBlockedPop();
+        }
+      },
+      child: Scaffold(
+        appBar: distractionActive
+            ? null
+            : AppBar(
+                title: const Text(
+                  'Focus',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Focus settings',
+                    onPressed: () => context.push(AppRoutes.focusSettings),
+                    icon: const Icon(Icons.settings_outlined),
+                  ),
+                ],
               ),
-              child: Column(
-                children: [
-                  if (hasActive) ...[
-                    Icon(
-                      _isBreakSession(state.activeSession!.sessionType)
-                          ? Icons.self_improvement
-                          : Icons.timer,
-                      color: AppColors.primary,
-                      size: 44,
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (state.analytics != null && !distractionActive) ...[
+                _AnalyticsGrid(analytics: state.analytics!),
+                const SizedBox(height: 24),
+              ],
+              AnimatedOpacity(
+                opacity: distractionActive ? 0.96 : 1,
+                duration: const Duration(milliseconds: 180),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(distractionActive ? 28 : 32),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardTheme.color,
+                    borderRadius: BorderRadius.circular(
+                      distractionActive ? 0 : 20,
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _formatTime(state.remainingSeconds),
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                        fontSize: 72,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _sessionLabel(state.activeSession!.sessionType),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: state.activeSession != null
-                          ? state.remainingSeconds /
-                                (state.activeSession!.plannedMinutes * 60)
-                          : 0,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
-                      ),
-                      minHeight: 6,
-                    ),
-                    const SizedBox(height: 32),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => ref
-                                .read(focusProvider.notifier)
-                                .cancelSession(),
-                            icon: const Icon(
-                              Icons.close,
-                              color: AppColors.error,
-                            ),
-                            label: const Text(
-                              'Cancel',
-                              style: TextStyle(color: AppColors.error),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppColors.error),
-                              minimumSize: const Size(0, 48),
-                            ),
+                  ),
+                  child: Column(
+                    children: [
+                      if (hasActive) ...[
+                        Icon(
+                          _isBreakSession(state.activeSession!.sessionType)
+                              ? Icons.self_improvement
+                              : Icons.timer,
+                          color: AppColors.primary,
+                          size: 44,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _formatTime(state.remainingSeconds),
+                          style: Theme.of(context).textTheme.displayLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                fontSize: distractionActive ? 84 : 72,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _sessionLabel(state.activeSession!.sessionType),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.textSecondary),
+                        ),
+                        if (distractionActive) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Distraction-free mode',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppColors.textSecondary),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => ref
-                                .read(focusProvider.notifier)
-                                .completeSession(),
-                            icon: const Icon(Icons.check),
-                            label: const Text('Done'),
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(0, 48),
-                            ),
+                        ],
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: state.activeSession != null
+                              ? state.remainingSeconds /
+                                    (state.activeSession!.plannedMinutes * 60)
+                              : 0,
+                          backgroundColor: AppColors.primary.withValues(
+                            alpha: 0.2,
                           ),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.primary,
+                          ),
+                          minHeight: 6,
                         ),
-                      ],
-                    ),
-                    if (_isBreakSession(state.activeSession!.sessionType)) ...[
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton.icon(
-                          onPressed: () =>
-                              ref.read(focusProvider.notifier).skipBreak(),
-                          icon: const Icon(Icons.skip_next),
-                          label: const Text('Skip break'),
-                        ),
-                      ),
-                    ],
-                  ] else ...[
-                    const Icon(
-                      Icons.track_changes,
-                      size: 56,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Start a Focus Session',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    state.isLoading
-                        ? const CircularProgressIndicator()
-                        : Column(
-                            children: [
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: () => ref
-                                      .read(focusProvider.notifier)
-                                      .startFocusSession(),
-                                  icon: const Icon(Icons.play_arrow),
-                                  label: Text(
-                                    'Start ${state.focusMinutes} min focus',
+                        const SizedBox(height: 32),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => ref
+                                    .read(focusProvider.notifier)
+                                    .cancelSession(),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: AppColors.error,
+                                ),
+                                label: const Text(
+                                  'Cancel',
+                                  style: TextStyle(color: AppColors.error),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                    color: AppColors.error,
                                   ),
+                                  minimumSize: const Size(0, 48),
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                              Row(
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => ref
+                                    .read(focusProvider.notifier)
+                                    .completeSession(),
+                                icon: const Icon(Icons.check),
+                                label: const Text('Done'),
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(0, 48),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_isBreakSession(
+                          state.activeSession!.sessionType,
+                        )) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: TextButton.icon(
+                              onPressed: () =>
+                                  ref.read(focusProvider.notifier).skipBreak(),
+                              icon: const Icon(Icons.skip_next),
+                              label: const Text('Skip break'),
+                            ),
+                          ),
+                        ],
+                      ] else ...[
+                        const Icon(
+                          Icons.track_changes,
+                          size: 56,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Start a Focus Session',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 24),
+                        state.isLoading
+                            ? const CircularProgressIndicator()
+                            : Column(
                                 children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
                                       onPressed: () => ref
                                           .read(focusProvider.notifier)
-                                          .startBreakSession(longBreak: false),
-                                      icon: const Icon(Icons.coffee),
+                                          .startFocusSession(),
+                                      icon: const Icon(Icons.play_arrow),
                                       label: Text(
-                                        '${state.shortBreakMinutes}m break',
+                                        'Start ${state.focusMinutes} min focus',
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: () => ref
-                                          .read(focusProvider.notifier)
-                                          .startBreakSession(longBreak: true),
-                                      icon: const Icon(Icons.weekend),
-                                      label: Text(
-                                        '${state.longBreakMinutes}m long',
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () => ref
+                                              .read(focusProvider.notifier)
+                                              .startBreakSession(
+                                                longBreak: false,
+                                              ),
+                                          icon: const Icon(Icons.coffee),
+                                          label: Text(
+                                            '${state.shortBreakMinutes}m break',
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () => ref
+                                              .read(focusProvider.notifier)
+                                              .startBreakSession(
+                                                longBreak: true,
+                                              ),
+                                          icon: const Icon(Icons.weekend),
+                                          label: Text(
+                                            '${state.longBreakMinutes}m long',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ],
+                        if (state.error != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            state.error!,
+                            style: const TextStyle(color: AppColors.error),
+                            textAlign: TextAlign.center,
                           ),
-                    if (state.error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        state.error!,
-                        style: const TextStyle(color: AppColors.error),
-                        textAlign: TextAlign.center,
-                      ),
+                        ],
+                      ],
                     ],
-                  ],
-                ],
-              ),
-            ),
-            if (!distractionActive) ...[
-              const SizedBox(height: 24),
-              _FocusSettings(state: state),
-              const SizedBox(height: 24),
-              _EstimatedPomodoros(
-                tasks: estimatedTasks,
-                focusMinutes: state.focusMinutes,
-              ),
-              const SizedBox(height: 24),
-              _ReportSummary(state: state),
-              if (state.sessions.isNotEmpty) ...[
-                const SizedBox(height: 32),
-                Text(
-                  'Recent Sessions',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 12),
-                ...state.sessions.take(5).map((s) => _SessionTile(session: s)),
+              ),
+              if (!distractionActive) ...[
+                const SizedBox(height: 24),
+                _FocusSettings(state: state),
+                const SizedBox(height: 24),
+                _EstimatedPomodoros(
+                  tasks: estimatedTasks,
+                  focusMinutes: state.focusMinutes,
+                ),
+                const SizedBox(height: 24),
+                _ReportSummary(state: state),
+                if (state.sessions.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  Text(
+                    'Recent Sessions',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...state.sessions
+                      .take(5)
+                      .map((s) => _SessionTile(session: s)),
+                ],
               ],
             ],
-          ],
+          ),
         ),
       ),
     );
