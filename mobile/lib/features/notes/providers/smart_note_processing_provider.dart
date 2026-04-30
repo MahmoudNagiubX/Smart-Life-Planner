@@ -16,18 +16,51 @@ class SmartNoteProcessingNotifier
     : super(const SmartNoteProcessingState());
 
   Future<void> runOcr(NoteModel note) async {
+    await _runImageTextExtraction(
+      note: note,
+      jobType: SmartNoteJobType.ocr,
+      missingImageMessage:
+          'Attach a local image to this note before running OCR.',
+      emptyResultMessage:
+          'No readable text was found in this image. Try a clearer photo.',
+      failureMessage: 'OCR failed. Please try again with a clearer image.',
+      sourceMode: 'ocr',
+    );
+  }
+
+  Future<void> runHandwriting(NoteModel note) async {
+    await _runImageTextExtraction(
+      note: note,
+      jobType: SmartNoteJobType.handwriting,
+      missingImageMessage:
+          'Attach a local handwriting image to this note first.',
+      emptyResultMessage:
+          'No readable handwriting was found. Try a clearer, brighter image.',
+      failureMessage: 'Handwriting extraction failed. Try a clearer image.',
+      sourceMode: 'handwriting_best_effort',
+    );
+  }
+
+  Future<void> _runImageTextExtraction({
+    required NoteModel note,
+    required SmartNoteJobType jobType,
+    required String missingImageMessage,
+    required String emptyResultMessage,
+    required String failureMessage,
+    required String sourceMode,
+  }) async {
     final attachment = firstLocalOcrAttachment(note.attachments);
     if (attachment == null) {
       state = SmartNoteProcessingState.fail(
-        jobType: SmartNoteJobType.ocr,
+        jobType: jobType,
         noteId: note.id,
-        errorMessage: 'Attach a local image to this note before running OCR.',
+        errorMessage: missingImageMessage,
       );
       return;
     }
 
     state = SmartNoteProcessingState.processing(
-      jobType: SmartNoteJobType.ocr,
+      jobType: jobType,
       noteId: note.id,
       inputAttachmentId: attachment.id,
     );
@@ -38,36 +71,39 @@ class SmartNoteProcessingNotifier
           .extractTextFromImagePath(attachment.localPath!);
       if (!result.hasText) {
         state = SmartNoteProcessingState.fail(
-          jobType: SmartNoteJobType.ocr,
+          jobType: jobType,
           noteId: note.id,
-          errorMessage:
-              'No readable text was found in this image. Try a clearer photo.',
+          errorMessage: emptyResultMessage,
         );
         return;
       }
 
       state = SmartNoteProcessingState.preview(
-        jobType: SmartNoteJobType.ocr,
+        jobType: jobType,
         noteId: note.id,
         inputAttachmentId: attachment.id,
         previewText: result.text,
         previewJson: {
           'block_count': result.blockCount,
-          'source': 'on_device_mlkit',
+          'line_count': result.lineCount,
+          'average_confidence': result.averageConfidence,
+          'confidence_available': result.averageConfidence != null,
+          'source': 'on_device_mlkit_text_recognition',
+          'mode': sourceMode,
           'source_path': result.sourcePath,
         },
       );
     } on NoteOcrException catch (e) {
       state = SmartNoteProcessingState.fail(
-        jobType: SmartNoteJobType.ocr,
+        jobType: jobType,
         noteId: note.id,
         errorMessage: e.message,
       );
     } catch (_) {
       state = SmartNoteProcessingState.fail(
-        jobType: SmartNoteJobType.ocr,
+        jobType: jobType,
         noteId: note.id,
-        errorMessage: 'OCR failed. Please try again with a clearer image.',
+        errorMessage: failureMessage,
       );
     }
   }

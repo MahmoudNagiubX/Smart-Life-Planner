@@ -960,12 +960,20 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
     final ocrAttachment = activeNote == null
         ? null
         : firstLocalOcrAttachment(activeNote.attachments);
+    final canRunImageExtraction = activeNote != null && ocrAttachment != null;
     final isOcrForThisNote =
         activeNote != null &&
         state.jobType == SmartNoteJobType.ocr &&
         state.noteId == activeNote.id;
+    final isHandwritingForThisNote =
+        activeNote != null &&
+        state.jobType == SmartNoteJobType.handwriting &&
+        state.noteId == activeNote.id;
+    final isImageExtractionForThisNote =
+        isOcrForThisNote || isHandwritingForThisNote;
     final isOcrProcessing = isOcrForThisNote && state.isProcessing;
-    final canRunOcr = activeNote != null && ocrAttachment != null;
+    final isHandwritingProcessing =
+        isHandwritingForThisNote && state.isProcessing;
 
     return SafeArea(
       child: Padding(
@@ -1018,11 +1026,11 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
               _SmartToolTile(
                 icon: Icons.document_scanner_outlined,
                 title: 'OCR from images',
-                description: canRunOcr
+                description: canRunImageExtraction
                     ? 'Read text from the first attached local image.'
                     : 'Open a saved note with a local image attachment.',
-                statusLabel: canRunOcr ? 'Run' : 'Needs image',
-                enabled: canRunOcr && !isOcrProcessing,
+                statusLabel: canRunImageExtraction ? 'Run' : 'Needs image',
+                enabled: canRunImageExtraction && !isOcrProcessing,
                 onTap: activeNote == null
                     ? null
                     : () => ref
@@ -1040,23 +1048,46 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
                   ),
                 ),
               ],
-              if (isOcrForThisNote && state.isFailure) ...[
+              _SmartToolTile(
+                icon: Icons.draw_outlined,
+                title: 'Handwriting extraction',
+                description: canRunImageExtraction
+                    ? 'Best-effort reading for clear handwritten notes.'
+                    : 'Open a saved note with a local handwriting image.',
+                statusLabel: canRunImageExtraction ? 'Run' : 'Needs image',
+                enabled: canRunImageExtraction && !isHandwritingProcessing,
+                onTap: activeNote == null
+                    ? null
+                    : () => ref
+                          .read(smartNoteProcessingProvider.notifier)
+                          .runHandwriting(activeNote),
+              ),
+              if (isHandwritingProcessing) ...[
+                const SizedBox(height: 4),
+                const LinearProgressIndicator(),
                 const SizedBox(height: 10),
-                _SmartNoteError(message: state.errorMessage ?? 'OCR failed.'),
-              ],
-              if (isOcrForThisNote && state.hasPreview) ...[
-                const SizedBox(height: 12),
-                _OcrPreviewCard(
-                  note: activeNote,
-                  previewText: state.previewText ?? '',
+                Text(
+                  'Reading handwriting as best-effort text...',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
-              const _SmartToolTile(
-                icon: Icons.draw_outlined,
-                title: 'Handwriting support',
-                description: 'Best-effort handwriting extraction comes next.',
-                statusLabel: 'Next',
-              ),
+              if (isImageExtractionForThisNote && state.isFailure) ...[
+                const SizedBox(height: 10),
+                _SmartNoteError(
+                  message: state.errorMessage ?? 'Text extraction failed.',
+                ),
+              ],
+              if (isImageExtractionForThisNote && state.hasPreview) ...[
+                const SizedBox(height: 12),
+                _TextExtractionPreviewCard(
+                  note: activeNote,
+                  jobType: state.jobType ?? SmartNoteJobType.ocr,
+                  previewText: state.previewText ?? '',
+                  previewJson: state.previewJson,
+                ),
+              ],
               const _SmartToolTile(
                 icon: Icons.summarize_outlined,
                 title: 'AI note summary',
@@ -1071,7 +1102,7 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'OCR never changes the note until you choose an action.',
+                'Text extraction never changes the note until you choose an action.',
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
@@ -1084,14 +1115,51 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
   }
 }
 
-class _OcrPreviewCard extends ConsumerWidget {
+class _TextExtractionPreviewCard extends ConsumerStatefulWidget {
   final NoteModel note;
+  final SmartNoteJobType jobType;
   final String previewText;
+  final Map<String, dynamic>? previewJson;
 
-  const _OcrPreviewCard({required this.note, required this.previewText});
+  const _TextExtractionPreviewCard({
+    required this.note,
+    required this.jobType,
+    required this.previewText,
+    required this.previewJson,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TextExtractionPreviewCard> createState() =>
+      _TextExtractionPreviewCardState();
+}
+
+class _TextExtractionPreviewCardState
+    extends ConsumerState<_TextExtractionPreviewCard> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.previewText);
+  }
+
+  @override
+  void didUpdateWidget(covariant _TextExtractionPreviewCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.previewText != widget.previewText) {
+      _controller.text = widget.previewText;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final confidence = _previewConfidence(widget.previewJson);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1108,7 +1176,7 @@ class _OcrPreviewCard extends ConsumerWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Extracted text preview',
+                  _textExtractionPreviewTitle(widget.jobType),
                   style: Theme.of(
                     context,
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -1117,99 +1185,181 @@ class _OcrPreviewCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 10),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 180),
-            child: SingleChildScrollView(
-              child: SelectableText(
-                previewText,
-                style: Theme.of(context).textTheme.bodyMedium,
+          if (widget.jobType == SmartNoteJobType.handwriting) ...[
+            _HandwritingConfidenceNotice(confidence: confidence),
+            const SizedBox(height: 10),
+          ],
+          TextField(
+            controller: _controller,
+            minLines: 4,
+            maxLines: 8,
+            decoration: InputDecoration(
+              hintText: 'Review and edit extracted text before saving.',
+              filled: true,
+              fillColor: Theme.of(context).cardTheme.color,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilledButton.icon(
-                onPressed: () => _applyOcrText(
-                  context,
-                  ref,
-                  note,
-                  _appendOcrText(note.content, previewText),
-                ),
-                icon: const Icon(Icons.add_outlined),
-                label: const Text('Append'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final confirmed = await confirmDestructiveAction(
-                    context: context,
-                    title: 'Replace note content?',
-                    message:
-                        'This will replace the current note body with the OCR text.',
-                    confirmLabel: 'Replace',
-                  );
-                  if (!confirmed || !context.mounted) return;
-                  await _applyOcrText(context, ref, note, previewText);
-                },
-                icon: const Icon(Icons.swap_horiz_outlined),
-                label: const Text('Replace'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: previewText));
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Extracted text copied.')),
-                  );
-                },
-                icon: const Icon(Icons.copy_outlined),
-                label: const Text('Copy'),
-              ),
-              TextButton(
-                onPressed: () =>
-                    ref.read(smartNoteProcessingProvider.notifier).reset(),
-                child: const Text('Cancel'),
-              ),
-            ],
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _controller,
+            builder: (context, value, _) {
+              final editedText = value.text.trim();
+              final hasEditedText = editedText.isNotEmpty;
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    onPressed: hasEditedText
+                        ? () => _applyExtractedText(
+                            context,
+                            ref,
+                            _appendOcrText(widget.note.content, editedText),
+                          )
+                        : null,
+                    icon: const Icon(Icons.add_outlined),
+                    label: const Text('Append'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: hasEditedText
+                        ? () async {
+                            final confirmed = await confirmDestructiveAction(
+                              context: context,
+                              title: 'Replace note content?',
+                              message:
+                                  'This will replace the current note body with the reviewed text.',
+                              confirmLabel: 'Replace',
+                            );
+                            if (!confirmed || !context.mounted) return;
+                            await _applyExtractedText(context, ref, editedText);
+                          }
+                        : null,
+                    icon: const Icon(Icons.swap_horiz_outlined),
+                    label: const Text('Replace'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: hasEditedText
+                        ? () async {
+                            await Clipboard.setData(
+                              ClipboardData(text: editedText),
+                            );
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Extracted text copied.'),
+                              ),
+                            );
+                          }
+                        : null,
+                    icon: const Icon(Icons.copy_outlined),
+                    label: const Text('Copy'),
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        ref.read(smartNoteProcessingProvider.notifier).reset(),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Future<void> _applyOcrText(
+  Future<void> _applyExtractedText(
     BuildContext context,
     WidgetRef ref,
-    NoteModel note,
     String content,
   ) async {
     await ref
         .read(notesProvider.notifier)
         .updateNote(
-          noteId: note.id,
-          title: note.title,
+          noteId: widget.note.id,
+          title: widget.note.title,
           content: content,
-          taskId: note.taskId,
-          noteType: note.noteType,
-          tags: note.tags,
-          checklistItems: note.checklistItems,
-          structuredBlocks: note.structuredBlocks,
-          attachments: note.attachments,
-          reminderAt: note.reminderAt,
-          sourceType: note.sourceType,
-          colorKey: note.colorKey,
+          taskId: widget.note.taskId,
+          noteType: widget.note.noteType,
+          tags: widget.note.tags,
+          checklistItems: widget.note.checklistItems,
+          structuredBlocks: widget.note.structuredBlocks,
+          attachments: widget.note.attachments,
+          reminderAt: widget.note.reminderAt,
+          sourceType: widget.note.sourceType,
+          colorKey: widget.note.colorKey,
         );
     ref
         .read(smartNoteProcessingProvider.notifier)
-        .markSuccess(jobType: SmartNoteJobType.ocr, noteId: note.id);
+        .markSuccess(jobType: widget.jobType, noteId: widget.note.id);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('OCR text saved to note.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${_textExtractionActionName(widget.jobType)} saved to note.',
+        ),
+      ),
+    );
     Navigator.of(context).pop();
   }
+}
+
+class _HandwritingConfidenceNotice extends StatelessWidget {
+  final double? confidence;
+
+  const _HandwritingConfidenceNotice({required this.confidence});
+
+  @override
+  Widget build(BuildContext context) {
+    final confidenceText = confidence == null
+        ? 'Confidence unavailable on this device.'
+        : 'Estimated confidence: ${(confidence! * 100).round()}%.';
+    final needsCarefulReview = confidence == null || confidence! < 0.65;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        needsCarefulReview
+            ? '$confidenceText Review carefully before saving.'
+            : '$confidenceText Still review before saving; handwriting is best-effort.',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: AppColors.warning,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+String _textExtractionPreviewTitle(SmartNoteJobType jobType) {
+  return switch (jobType) {
+    SmartNoteJobType.handwriting => 'Handwriting preview',
+    _ => 'Extracted text preview',
+  };
+}
+
+String _textExtractionActionName(SmartNoteJobType jobType) {
+  return switch (jobType) {
+    SmartNoteJobType.handwriting => 'Handwriting text',
+    _ => 'Extracted text',
+  };
+}
+
+double? _previewConfidence(Map<String, dynamic>? previewJson) {
+  final confidence = previewJson?['average_confidence'];
+  if (confidence is num) {
+    return confidence.toDouble().clamp(0.0, 1.0).toDouble();
+  }
+  return null;
 }
 
 String _appendOcrText(String currentContent, String extractedText) {

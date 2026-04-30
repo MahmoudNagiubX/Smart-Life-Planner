@@ -16,15 +16,29 @@ class NoteOcrException implements Exception {
 class NoteOcrResult {
   final String text;
   final int blockCount;
+  final int lineCount;
+  final double? averageConfidence;
   final String sourcePath;
 
   const NoteOcrResult({
     required this.text,
     required this.blockCount,
+    required this.lineCount,
+    required this.averageConfidence,
     required this.sourcePath,
   });
 
   bool get hasText => text.trim().isNotEmpty;
+}
+
+double? averageRecognitionConfidence(Iterable<double?> confidences) {
+  final safeConfidences = confidences
+      .whereType<double>()
+      .map((value) => value.clamp(0.0, 1.0).toDouble())
+      .toList(growable: false);
+  if (safeConfidences.isEmpty) return null;
+  final total = safeConfidences.fold<double>(0, (sum, value) => sum + value);
+  return total / safeConfidences.length;
 }
 
 bool isOcrSupportedAttachment(NoteAttachmentModel attachment) {
@@ -70,9 +84,19 @@ class NoteOcrService {
     try {
       final inputImage = InputImage.fromFilePath(trimmedPath);
       final recognizedText = await recognizer.processImage(inputImage);
+      final lines = recognizedText.blocks
+          .expand((block) => block.lines)
+          .toList(growable: false);
+      final confidence = averageRecognitionConfidence([
+        for (final line in lines) line.confidence,
+        for (final line in lines)
+          for (final element in line.elements) element.confidence,
+      ]);
       return NoteOcrResult(
         text: recognizedText.text.trim(),
         blockCount: recognizedText.blocks.length,
+        lineCount: lines.length,
+        averageConfidence: confidence,
         sourcePath: trimmedPath,
       );
     } catch (_) {

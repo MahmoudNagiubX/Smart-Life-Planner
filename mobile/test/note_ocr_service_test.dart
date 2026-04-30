@@ -59,5 +59,10 @@ void main() {
 
       expect(attachment?.id, 'image-1');
     });
+
+    test('averages available recognition confidence values safely', () {
+      expect(averageRecognitionConfidence([0.8, null, 1.2, -0.2]), 0.6);
+      expect(averageRecognitionConfidence([null, null]), isNull);
+    });
   });
 }
