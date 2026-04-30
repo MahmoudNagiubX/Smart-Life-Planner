@@ -57,4 +57,17 @@ class FocusService {
     final response = await _apiClient.dio.get('/focus/analytics');
     return FocusAnalytics.fromJson(response.data as Map<String, dynamic>);
   }
+
+  Future<FocusSettings> getSettings() async {
+    final response = await _apiClient.dio.get('/focus/settings');
+    return FocusSettings.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<FocusSettings> updateSettings(FocusSettings settings) async {
+    final response = await _apiClient.dio.patch(
+      '/focus/settings',
+      data: settings.toJson(),
+    );
+    return FocusSettings.fromJson(response.data as Map<String, dynamic>);
+  }
 }

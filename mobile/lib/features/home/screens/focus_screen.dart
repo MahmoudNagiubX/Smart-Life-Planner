@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../routes/app_routes.dart';
 import '../../focus/models/focus_model.dart';
 import '../../focus/providers/focus_provider.dart';
 import '../../tasks/models/task_model.dart';
@@ -69,6 +71,13 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
           'Focus',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Focus settings',
+            onPressed: () => context.push(AppRoutes.focusSettings),
+            icon: const Icon(Icons.settings_outlined),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -379,6 +388,15 @@ class _FocusSettings extends ConsumerWidget {
             divisions: 11,
             onChanged: notifier.setLongBreakMinutes,
           ),
+          _DurationSlider(
+            label: 'Long break after',
+            value: state.sessionsBeforeLongBreak,
+            min: 1,
+            max: 12,
+            divisions: 11,
+            suffix: ' sessions',
+            onChanged: notifier.setSessionsBeforeLongBreak,
+          ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: state.continuousMode,
@@ -393,6 +411,25 @@ class _FocusSettings extends ConsumerWidget {
             title: const Text('Distraction-free mode'),
             subtitle: const Text('Hide secondary panels during active focus.'),
           ),
+          DropdownButtonFormField<String>(
+            initialValue: state.ambientSoundKey,
+            decoration: const InputDecoration(
+              labelText: 'Ambient sound',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'silence', child: Text('Silence')),
+              DropdownMenuItem(value: 'rain', child: Text('Rain')),
+              DropdownMenuItem(value: 'cafe', child: Text('Cafe')),
+              DropdownMenuItem(
+                value: 'white_noise',
+                child: Text('White noise'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value != null) notifier.setAmbientSoundKey(value);
+            },
+          ),
         ],
       ),
     );
@@ -405,6 +442,7 @@ class _DurationSlider extends StatelessWidget {
   final int min;
   final int max;
   final int divisions;
+  final String suffix;
   final ValueChanged<int> onChanged;
 
   const _DurationSlider({
@@ -413,6 +451,7 @@ class _DurationSlider extends StatelessWidget {
     required this.min,
     required this.max,
     required this.divisions,
+    this.suffix = 'm',
     required this.onChanged,
   });
 
@@ -424,7 +463,7 @@ class _DurationSlider extends StatelessWidget {
           children: [
             Expanded(child: Text(label)),
             Text(
-              '${value}m',
+              '$value$suffix',
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ],
@@ -434,7 +473,7 @@ class _DurationSlider extends StatelessWidget {
           min: min.toDouble(),
           max: max.toDouble(),
           divisions: divisions,
-          label: '${value}m',
+          label: '$value$suffix',
           onChanged: (next) => onChanged(next.round()),
         ),
       ],

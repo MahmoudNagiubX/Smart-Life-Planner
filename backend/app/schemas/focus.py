@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
+
+ALLOWED_AMBIENT_SOUND_KEYS = {"silence", "rain", "cafe", "white_noise"}
 
 
 class FocusSessionCreate(BaseModel):
@@ -50,3 +52,38 @@ class FocusAnalyticsResponse(BaseModel):
     longest_streak_days: int
     average_session_minutes: int
     report_summary: str
+
+
+class FocusSettingsResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    default_focus_minutes: int
+    short_break_minutes: int
+    long_break_minutes: int
+    sessions_before_long_break: int
+    continuous_mode_enabled: bool
+    ambient_sound_key: str
+    distraction_free_mode_enabled: bool
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FocusSettingsUpdate(BaseModel):
+    default_focus_minutes: Optional[int] = Field(default=None, ge=5, le=180)
+    short_break_minutes: Optional[int] = Field(default=None, ge=1, le=60)
+    long_break_minutes: Optional[int] = Field(default=None, ge=5, le=120)
+    sessions_before_long_break: Optional[int] = Field(default=None, ge=1, le=12)
+    continuous_mode_enabled: Optional[bool] = None
+    ambient_sound_key: Optional[str] = None
+    distraction_free_mode_enabled: Optional[bool] = None
+
+    @field_validator("ambient_sound_key")
+    @classmethod
+    def ambient_sound_supported(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip().lower()
+        if normalized not in ALLOWED_AMBIENT_SOUND_KEYS:
+            raise ValueError("Unsupported ambient sound")
+        return normalized

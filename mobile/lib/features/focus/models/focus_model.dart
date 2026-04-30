@@ -72,3 +72,48 @@ class FocusAnalytics {
     );
   }
 }
+
+class FocusSettings {
+  final int defaultFocusMinutes;
+  final int shortBreakMinutes;
+  final int longBreakMinutes;
+  final int sessionsBeforeLongBreak;
+  final bool continuousModeEnabled;
+  final String ambientSoundKey;
+  final bool distractionFreeModeEnabled;
+
+  const FocusSettings({
+    this.defaultFocusMinutes = 25,
+    this.shortBreakMinutes = 5,
+    this.longBreakMinutes = 15,
+    this.sessionsBeforeLongBreak = 4,
+    this.continuousModeEnabled = false,
+    this.ambientSoundKey = 'silence',
+    this.distractionFreeModeEnabled = false,
+  });
+
+  factory FocusSettings.fromJson(Map<String, dynamic> json) {
+    return FocusSettings(
+      defaultFocusMinutes: json['default_focus_minutes'] as int? ?? 25,
+      shortBreakMinutes: json['short_break_minutes'] as int? ?? 5,
+      longBreakMinutes: json['long_break_minutes'] as int? ?? 15,
+      sessionsBeforeLongBreak: json['sessions_before_long_break'] as int? ?? 4,
+      continuousModeEnabled: json['continuous_mode_enabled'] as bool? ?? false,
+      ambientSoundKey: json['ambient_sound_key'] as String? ?? 'silence',
+      distractionFreeModeEnabled:
+          json['distraction_free_mode_enabled'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'default_focus_minutes': defaultFocusMinutes,
+      'short_break_minutes': shortBreakMinutes,
+      'long_break_minutes': longBreakMinutes,
+      'sessions_before_long_break': sessionsBeforeLongBreak,
+      'continuous_mode_enabled': continuousModeEnabled,
+      'ambient_sound_key': ambientSoundKey,
+      'distraction_free_mode_enabled': distractionFreeModeEnabled,
+    };
+  }
+}

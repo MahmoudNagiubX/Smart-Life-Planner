@@ -4,22 +4,59 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_db
 from app.api.v1.auth import get_current_user
 from app.schemas.focus import (
+    FocusAnalyticsResponse,
+    FocusSettingsResponse,
+    FocusSettingsUpdate,
     FocusSessionCreate,
     FocusSessionResponse,
-    FocusAnalyticsResponse,
 )
 from app.repositories.focus_repository import (
-    get_active_session,
-    get_sessions,
-    get_session_by_id,
-    create_session,
-    complete_session,
     cancel_session,
+    complete_session,
+    create_session,
+    get_active_session,
     get_focus_analytics,
+    get_focus_settings,
+    get_session_by_id,
+    get_sessions,
+    update_focus_settings,
 )
 from app.repositories.task_repository import get_task_by_id
 
 router = APIRouter(prefix="/focus", tags=["focus"])
+
+
+@router.get("/settings", response_model=FocusSettingsResponse)
+async def get_settings(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    settings = await get_focus_settings(db, current_user.id)
+    if not settings:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Focus settings not found",
+        )
+    return settings
+
+
+@router.patch("/settings", response_model=FocusSettingsResponse)
+async def update_settings(
+    payload: FocusSettingsUpdate,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    settings = await update_focus_settings(
+        db,
+        current_user.id,
+        payload.model_dump(exclude_none=True),
+    )
+    if not settings:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Focus settings not found",
+        )
+    return settings
 
 
 @router.post(

@@ -14,6 +14,7 @@ abstract class AppRoutes {
   static const taskEdit = '/home/tasks/:taskId/edit';
   static const projectDetails = '/home/projects/:projectId';
   static const focus = '/home/focus';
+  static const focusSettings = '/home/focus/settings';
   static const focusSession = '/home/focus/session';
   static const focusHistory = '/home/focus/history';
   static const prayer = '/home/prayer';

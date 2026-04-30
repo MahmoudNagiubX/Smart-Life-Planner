@@ -21,7 +21,9 @@ class FocusState {
   final int focusMinutes;
   final int shortBreakMinutes;
   final int longBreakMinutes;
+  final int sessionsBeforeLongBreak;
   final bool continuousMode;
+  final String ambientSoundKey;
   final bool distractionFreeMode;
   final FocusSession? lastCompletedSession;
 
@@ -35,7 +37,9 @@ class FocusState {
     this.focusMinutes = 25,
     this.shortBreakMinutes = 5,
     this.longBreakMinutes = 15,
+    this.sessionsBeforeLongBreak = 4,
     this.continuousMode = false,
+    this.ambientSoundKey = 'silence',
     this.distractionFreeMode = false,
     this.lastCompletedSession,
   });
@@ -50,7 +54,9 @@ class FocusState {
     int? focusMinutes,
     int? shortBreakMinutes,
     int? longBreakMinutes,
+    int? sessionsBeforeLongBreak,
     bool? continuousMode,
+    String? ambientSoundKey,
     bool? distractionFreeMode,
     FocusSession? lastCompletedSession,
     bool clearSession = false,
@@ -65,7 +71,10 @@ class FocusState {
       focusMinutes: focusMinutes ?? this.focusMinutes,
       shortBreakMinutes: shortBreakMinutes ?? this.shortBreakMinutes,
       longBreakMinutes: longBreakMinutes ?? this.longBreakMinutes,
+      sessionsBeforeLongBreak:
+          sessionsBeforeLongBreak ?? this.sessionsBeforeLongBreak,
       continuousMode: continuousMode ?? this.continuousMode,
+      ambientSoundKey: ambientSoundKey ?? this.ambientSoundKey,
       distractionFreeMode: distractionFreeMode ?? this.distractionFreeMode,
       lastCompletedSession: lastCompletedSession ?? this.lastCompletedSession,
     );
@@ -75,14 +84,37 @@ class FocusState {
 class FocusNotifier extends StateNotifier<FocusState> {
   final Ref _ref;
   Timer? _timer;
+  Timer? _settingsSaveDebounce;
 
   FocusNotifier(this._ref) : super(const FocusState()) {
     _init();
   }
 
   Future<void> _init() async {
+    await loadSettings();
     await loadAnalytics();
     await _checkActiveSession();
+  }
+
+  Future<void> loadSettings() async {
+    try {
+      final settings = await _ref.read(focusServiceProvider).getSettings();
+      state = state.copyWith(
+        focusMinutes: settings.defaultFocusMinutes,
+        shortBreakMinutes: settings.shortBreakMinutes,
+        longBreakMinutes: settings.longBreakMinutes,
+        sessionsBeforeLongBreak: settings.sessionsBeforeLongBreak,
+        continuousMode: settings.continuousModeEnabled,
+        ambientSoundKey: settings.ambientSoundKey,
+        distractionFreeMode: settings.distractionFreeModeEnabled,
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to load focus settings'),
+      );
+    } catch (_) {
+      state = state.copyWith(error: 'Failed to load focus settings');
+    }
   }
 
   Future<void> _checkActiveSession() async {
@@ -124,22 +156,37 @@ class FocusNotifier extends StateNotifier<FocusState> {
 
   void setFocusMinutes(int minutes) {
     state = state.copyWith(focusMinutes: minutes.clamp(5, 120));
+    _queueSettingsSave();
   }
 
   void setShortBreakMinutes(int minutes) {
     state = state.copyWith(shortBreakMinutes: minutes.clamp(1, 30));
+    _queueSettingsSave();
   }
 
   void setLongBreakMinutes(int minutes) {
     state = state.copyWith(longBreakMinutes: minutes.clamp(5, 60));
+    _queueSettingsSave();
+  }
+
+  void setSessionsBeforeLongBreak(int sessions) {
+    state = state.copyWith(sessionsBeforeLongBreak: sessions.clamp(1, 12));
+    _queueSettingsSave();
   }
 
   void setContinuousMode(bool value) {
     state = state.copyWith(continuousMode: value);
+    _queueSettingsSave();
+  }
+
+  void setAmbientSoundKey(String key) {
+    state = state.copyWith(ambientSoundKey: key);
+    _queueSettingsSave();
   }
 
   void setDistractionFreeMode(bool value) {
     state = state.copyWith(distractionFreeMode: value);
+    _queueSettingsSave();
   }
 
   Future<void> startFocusSession({String? taskId}) {
@@ -221,7 +268,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
         if (_isBreakSession(completed.sessionType)) {
           await startFocusSession();
         } else {
-          await startBreakSession(longBreak: false);
+          await startBreakSession(longBreak: _shouldStartLongBreak(completed));
         }
       }
     } catch (_) {}
@@ -271,9 +318,65 @@ class FocusNotifier extends StateNotifier<FocusState> {
     return sessionType == 'short_break' || sessionType == 'long_break';
   }
 
+  bool _shouldStartLongBreak(FocusSession completed) {
+    if (_isBreakSession(completed.sessionType)) return false;
+    final completedFocusIds = state.sessions
+        .where(
+          (session) =>
+              session.status == 'completed' &&
+              !_isBreakSession(session.sessionType),
+        )
+        .map((session) => session.id)
+        .toSet();
+    completedFocusIds.add(completed.id);
+    return completedFocusIds.length % state.sessionsBeforeLongBreak == 0;
+  }
+
+  void _queueSettingsSave() {
+    _settingsSaveDebounce?.cancel();
+    _settingsSaveDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => unawaited(saveSettings()),
+    );
+  }
+
+  Future<void> saveSettings() async {
+    try {
+      final settings = FocusSettings(
+        defaultFocusMinutes: state.focusMinutes,
+        shortBreakMinutes: state.shortBreakMinutes,
+        longBreakMinutes: state.longBreakMinutes,
+        sessionsBeforeLongBreak: state.sessionsBeforeLongBreak,
+        continuousModeEnabled: state.continuousMode,
+        ambientSoundKey: state.ambientSoundKey,
+        distractionFreeModeEnabled: state.distractionFreeMode,
+      );
+      final saved = await _ref
+          .read(focusServiceProvider)
+          .updateSettings(settings);
+      state = state.copyWith(
+        focusMinutes: saved.defaultFocusMinutes,
+        shortBreakMinutes: saved.shortBreakMinutes,
+        longBreakMinutes: saved.longBreakMinutes,
+        sessionsBeforeLongBreak: saved.sessionsBeforeLongBreak,
+        continuousMode: saved.continuousModeEnabled,
+        ambientSoundKey: saved.ambientSoundKey,
+        distractionFreeMode: saved.distractionFreeModeEnabled,
+        error: null,
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to save focus settings'),
+      );
+    } catch (_) {
+      state = state.copyWith(error: 'Failed to save focus settings');
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
+    _settingsSaveDebounce?.cancel();
     super.dispose();
   }
 }

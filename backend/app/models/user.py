@@ -138,6 +138,27 @@ class UserSettings(Base):
     fasting_tracker_enabled: Mapped[bool] = mapped_column(
         Boolean, default=True, nullable=False
     )
+    default_focus_minutes: Mapped[int] = mapped_column(
+        Integer, default=25, nullable=False
+    )
+    short_break_minutes: Mapped[int] = mapped_column(
+        Integer, default=5, nullable=False
+    )
+    long_break_minutes: Mapped[int] = mapped_column(
+        Integer, default=15, nullable=False
+    )
+    sessions_before_long_break: Mapped[int] = mapped_column(
+        Integer, default=4, nullable=False
+    )
+    continuous_mode_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    ambient_sound_key: Mapped[str] = mapped_column(
+        String(40), default="silence", nullable=False
+    )
+    distraction_free_mode_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

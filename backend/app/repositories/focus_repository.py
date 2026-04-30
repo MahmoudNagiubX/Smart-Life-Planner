@@ -3,6 +3,7 @@ from datetime import date, datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.models.focus import FocusSession
+from app.models.user import UserSettings
 
 
 async def get_active_session(
@@ -27,6 +28,29 @@ async def get_sessions(
         .limit(20)
     )
     return list(result.scalars().all())
+
+
+async def get_focus_settings(
+    db: AsyncSession, user_id: uuid.UUID
+) -> UserSettings | None:
+    result = await db.execute(
+        select(UserSettings).where(UserSettings.user_id == user_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_focus_settings(
+    db: AsyncSession, user_id: uuid.UUID, data: dict
+) -> UserSettings | None:
+    settings = await get_focus_settings(db, user_id)
+    if not settings:
+        return None
+    for key, value in data.items():
+        if value is not None:
+            setattr(settings, key, value)
+    await db.commit()
+    await db.refresh(settings)
+    return settings
 
 
 async def get_session_by_id(

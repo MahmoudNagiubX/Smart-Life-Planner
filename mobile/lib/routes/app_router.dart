@@ -16,6 +16,7 @@ import '../features/home/screens/focus_screen.dart';
 import '../features/home/screens/prayer_screen.dart';
 import '../features/home/screens/profile_screen.dart';
 import '../features/home/screens/deferred_scope_screen.dart';
+import '../features/focus/screens/focus_settings_screen.dart';
 import '../features/habits/screens/habits_screen.dart';
 import '../features/notes/screens/notes_screen.dart';
 import '../features/tasks/screens/task_details_screen.dart';
@@ -177,6 +178,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.focus,
             builder: (context, state) => const FocusScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.focusSettings,
+            builder: (context, state) => const FocusSettingsScreen(),
           ),
           GoRoute(
             path: AppRoutes.focusSession,
