@@ -6,6 +6,7 @@ import '../../../core/notifications/notification_scheduler.dart';
 import '../../reminders/models/reminder_model.dart';
 import '../../reminders/providers/reminder_preferences_provider.dart';
 import '../../reminders/providers/reminder_provider.dart';
+import '../models/project_timeline_model.dart';
 import '../models/task_model.dart';
 import '../services/task_service.dart';
 
@@ -492,26 +493,30 @@ final taskCalendarProvider =
 
 class ProjectTimelineState {
   final TaskProject? project;
-  final List<TaskModel> tasks;
+  final List<ProjectTimelineTaskBarModel> taskBars;
+  final List<ProjectTimelineDependencyModel> dependencies;
   final bool isLoading;
   final String? error;
 
   const ProjectTimelineState({
     this.project,
-    this.tasks = const [],
+    this.taskBars = const [],
+    this.dependencies = const [],
     this.isLoading = false,
     this.error,
   });
 
   ProjectTimelineState copyWith({
     TaskProject? project,
-    List<TaskModel>? tasks,
+    List<ProjectTimelineTaskBarModel>? taskBars,
+    List<ProjectTimelineDependencyModel>? dependencies,
     bool? isLoading,
     String? error,
   }) {
     return ProjectTimelineState(
       project: project ?? this.project,
-      tasks: tasks ?? this.tasks,
+      taskBars: taskBars ?? this.taskBars,
+      dependencies: dependencies ?? this.dependencies,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
@@ -529,22 +534,11 @@ class ProjectTimelineNotifier extends StateNotifier<ProjectTimelineState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final service = _ref.read(taskServiceProvider);
-      final projects = await service.getProjects();
-      TaskProject? project;
-      for (final candidate in projects) {
-        if (candidate.id == projectId) {
-          project = candidate;
-          break;
-        }
-      }
-      if (project == null) {
-        state = state.copyWith(isLoading: false, error: 'Project not found');
-        return;
-      }
-      final tasks = await service.getTasks(projectId: projectId);
+      final timeline = await service.getProjectTimeline(projectId);
       state = state.copyWith(
-        project: project,
-        tasks: tasks..sort(_compareManualOrder),
+        project: timeline.project,
+        taskBars: timeline.taskBars,
+        dependencies: timeline.dependencies,
         isLoading: false,
       );
     } on DioException catch (e) {
@@ -560,12 +554,14 @@ class ProjectTimelineNotifier extends StateNotifier<ProjectTimelineState> {
     }
   }
 
-  Future<bool> reorderProjectTasks(List<TaskModel> orderedTasks) async {
+  Future<bool> reorderProjectTasks(
+    List<ProjectTimelineTaskBarModel> orderedTasks,
+  ) async {
     try {
-      final updatedTasks = await _ref
+      await _ref
           .read(taskServiceProvider)
-          .reorderTasks(orderedTasks.map((task) => task.id).toList());
-      state = state.copyWith(tasks: updatedTasks..sort(_compareManualOrder));
+          .reorderTasks(orderedTasks.map((task) => task.taskId).toList());
+      await load();
       return true;
     } catch (_) {
       return false;

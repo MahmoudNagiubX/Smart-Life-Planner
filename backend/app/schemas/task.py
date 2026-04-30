@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 VALID_TASK_STATUSES = {
     "pending",
@@ -69,10 +69,12 @@ class TaskCreate(BaseModel):
     priority: Optional[str] = "medium"
     status: Optional[str] = "pending"
     due_at: Optional[datetime] = None
+    start_date: Optional[datetime] = None
     reminder_at: Optional[datetime] = None
     project_id: Optional[uuid.UUID] = None
     category: Optional[str] = None
     estimated_minutes: Optional[int] = None
+    estimated_duration_minutes: Optional[int] = None
     manual_order: int = 0
 
     @field_validator("title")
@@ -107,16 +109,37 @@ class TaskCreate(BaseModel):
             raise ValueError("manual_order cannot be negative")
         return v
 
+    @field_validator("estimated_minutes", "estimated_duration_minutes")
+    @classmethod
+    def estimate_valid(cls, v: int | None) -> int | None:
+        if v is not None and v < 0:
+            raise ValueError("estimated duration cannot be negative")
+        return v
+
+    @model_validator(mode="after")
+    def timeline_dates_valid(self) -> "TaskCreate":
+        if self.start_date is not None and self.due_at is not None:
+            try:
+                if self.start_date > self.due_at:
+                    raise ValueError("start_date cannot be after due_at")
+            except TypeError as exc:
+                raise ValueError("start_date and due_at must use compatible timezones") from exc
+        if self.estimated_minutes is None and self.estimated_duration_minutes is not None:
+            self.estimated_minutes = self.estimated_duration_minutes
+        return self
+
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[str] = None
     due_at: Optional[datetime] = None
+    start_date: Optional[datetime] = None
     reminder_at: Optional[datetime] = None
     project_id: Optional[uuid.UUID] = None
     category: Optional[str] = None
     estimated_minutes: Optional[int] = None
+    estimated_duration_minutes: Optional[int] = None
     status: Optional[str] = None
     manual_order: Optional[int] = None
 
@@ -135,6 +158,25 @@ class TaskUpdate(BaseModel):
         if v is not None and v < 0:
             raise ValueError("manual_order cannot be negative")
         return v
+
+    @field_validator("estimated_minutes", "estimated_duration_minutes")
+    @classmethod
+    def update_estimate_valid(cls, v: int | None) -> int | None:
+        if v is not None and v < 0:
+            raise ValueError("estimated duration cannot be negative")
+        return v
+
+    @model_validator(mode="after")
+    def update_timeline_dates_valid(self) -> "TaskUpdate":
+        if self.start_date is not None and self.due_at is not None:
+            try:
+                if self.start_date > self.due_at:
+                    raise ValueError("start_date cannot be after due_at")
+            except TypeError as exc:
+                raise ValueError("start_date and due_at must use compatible timezones") from exc
+        if self.estimated_minutes is None and self.estimated_duration_minutes is not None:
+            self.estimated_minutes = self.estimated_duration_minutes
+        return self
 
 
 class TaskReorderRequest(BaseModel):
@@ -173,9 +215,11 @@ class TaskResponse(BaseModel):
     priority: str
     status: str
     due_at: Optional[datetime]
+    start_date: Optional[datetime] = None
     reminder_at: Optional[datetime]
     category: Optional[str]
     estimated_minutes: Optional[int]
+    estimated_duration_minutes: Optional[int] = None
     manual_order: int
     is_deleted: bool
     completed_at: Optional[datetime]
@@ -184,3 +228,30 @@ class TaskResponse(BaseModel):
     subtasks: List[SubtaskResponse] = []
 
     model_config = {"from_attributes": True}
+
+
+class ProjectTimelineDependencyResponse(BaseModel):
+    task_id: uuid.UUID
+    depends_on_task_id: uuid.UUID
+    dependency_type: str
+
+
+class ProjectTimelineTaskBarResponse(BaseModel):
+    task_id: uuid.UUID
+    title: str
+    status: str
+    priority: str
+    project_id: uuid.UUID
+    start_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    estimated_duration_minutes: Optional[int] = None
+    dependency_ids: List[uuid.UUID] = []
+    overdue: bool = False
+    conflict: bool = False
+    conflict_reasons: List[str] = []
+
+
+class ProjectTimelineResponse(BaseModel):
+    project: ProjectResponse
+    task_bars: List[ProjectTimelineTaskBarResponse]
+    dependencies: List[ProjectTimelineDependencyResponse] = []

@@ -10,6 +10,7 @@ from app.api.v1.auth import get_current_user
 from app.schemas.task import (
     ProjectCreate,
     ProjectResponse,
+    ProjectTimelineResponse,
     ProjectUpdate,
     SubtaskCreate,
     SubtaskResponse,
@@ -27,6 +28,7 @@ from app.repositories.task_repository import (
     create_task,
     delete_subtask,
     get_project_by_id,
+    get_project_timeline_tasks,
     get_projects,
     get_subtask_by_id,
     get_task_completion_events,
@@ -39,8 +41,10 @@ from app.repositories.task_repository import (
     update_project,
     update_task,
 )
+from app.services.project_timeline_service import build_project_timeline
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+project_router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 # ── Projects ──────────────────────────────────────────────
@@ -73,6 +77,19 @@ async def update_existing_project(
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     return await update_project(db, project, payload.model_dump(exclude_none=True))
+
+
+@project_router.get("/{project_id}/timeline", response_model=ProjectTimelineResponse)
+async def get_project_timeline(
+    project_id: uuid.UUID,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await get_project_by_id(db, project_id, current_user.id)
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    tasks = await get_project_timeline_tasks(db, current_user.id, project_id)
+    return build_project_timeline(project, tasks)
 
 
 # ── Tasks ──────────────────────────────────────────────────
@@ -139,7 +156,7 @@ async def create_new_task(
         project = await get_project_by_id(db, payload.project_id, current_user.id)
         if not project:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-    return await create_task(db, current_user.id, payload.model_dump())
+    return await create_task(db, current_user.id, _task_payload_data(payload))
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
@@ -182,7 +199,7 @@ async def update_existing_task(
     task = await get_task_by_id(db, task_id, current_user.id)
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-    return await update_task(db, task, payload.model_dump(exclude_unset=True))
+    return await update_task(db, task, _task_payload_data(payload, exclude_unset=True))
 
 
 @router.patch("/{task_id}/complete", response_model=TaskResponse)
@@ -319,3 +336,14 @@ async def bulk_create(
             for t in created
         ],
     )
+
+
+def _task_payload_data(payload: TaskCreate | TaskUpdate, *, exclude_unset: bool = False) -> dict:
+    data = payload.model_dump(exclude_unset=exclude_unset)
+    if "start_date" in data:
+        data["earliest_start_at"] = data.pop("start_date")
+    if "estimated_duration_minutes" in data:
+        estimated_duration = data.pop("estimated_duration_minutes")
+        if data.get("estimated_minutes") is None:
+            data["estimated_minutes"] = estimated_duration
+    return data

@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
+import '../models/project_timeline_model.dart';
 import '../models/task_model.dart';
 import '../providers/task_provider.dart';
 
@@ -31,7 +32,7 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(projectTimelineProvider(widget.projectId));
     final project = state.project;
-    final sortedTasks = [...state.tasks]..sort(_compareTimelineTasks);
+    final sortedBars = [...state.taskBars]..sort(_compareTimelineBars);
 
     return Scaffold(
       appBar: AppBar(title: Text(project?.title ?? 'Project Timeline')),
@@ -49,7 +50,7 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
               onRefresh: () => ref
                   .read(projectTimelineProvider(widget.projectId).notifier)
                   .load(),
-              child: sortedTasks.isEmpty
+              child: sortedBars.isEmpty
                   ? const AppEmptyState(
                       icon: Icons.timeline_outlined,
                       title: 'No project tasks',
@@ -62,34 +63,21 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                           child: _ProjectTimelineHeader(
                             project: project,
-                            tasks: sortedTasks,
+                            taskBars: sortedBars,
                           ),
                         ),
                         const SizedBox(height: 16),
                         Expanded(
-                          child: ReorderableListView.builder(
+                          child: ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: sortedTasks.length,
-                            onReorder: (oldIndex, newIndex) {
-                              final reordered = [...sortedTasks];
-                              if (newIndex > oldIndex) newIndex -= 1;
-                              final task = reordered.removeAt(oldIndex);
-                              reordered.insert(newIndex, task);
-                              ref
-                                  .read(
-                                    projectTimelineProvider(
-                                      widget.projectId,
-                                    ).notifier,
-                                  )
-                                  .reorderProjectTasks(reordered);
-                            },
+                            itemCount: sortedBars.length,
                             itemBuilder: (context, index) {
-                              final task = sortedTasks[index];
+                              final bar = sortedBars[index];
                               return _TimelineTaskRow(
-                                key: ValueKey(task.id),
-                                task: task,
+                                key: ValueKey(bar.taskId),
+                                bar: bar,
                                 isFirst: index == 0,
-                                isLast: index == sortedTasks.length - 1,
+                                isLast: index == sortedBars.length - 1,
                               );
                             },
                           ),
@@ -103,24 +91,27 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
 
 class _ProjectTimelineHeader extends StatelessWidget {
   final TaskProject? project;
-  final List<TaskModel> tasks;
+  final List<ProjectTimelineTaskBarModel> taskBars;
 
-  const _ProjectTimelineHeader({required this.project, required this.tasks});
+  const _ProjectTimelineHeader({required this.project, required this.taskBars});
 
   @override
   Widget build(BuildContext context) {
-    final datedTasks = tasks
-        .where((task) => _taskTimelineDate(task) != null)
+    final datedTasks = taskBars
+        .where((bar) => bar.startDateTime != null || bar.dueDateTime != null)
         .toList();
     final start = datedTasks.isEmpty
         ? null
-        : _taskTimelineDate(datedTasks.first);
-    final end = datedTasks.isEmpty ? null : _taskTimelineDate(datedTasks.last);
-    final totalMinutes = tasks.fold<int>(
+        : datedTasks.first.startDateTime ?? datedTasks.first.dueDateTime;
+    final end = datedTasks.isEmpty
+        ? null
+        : datedTasks.last.dueDateTime ?? datedTasks.last.startDateTime;
+    final totalMinutes = taskBars.fold<int>(
       0,
-      (total, task) => total + (task.estimatedMinutes ?? 0),
+      (total, bar) => total + (bar.estimatedDurationMinutes ?? 0),
     );
-    final completed = tasks.where((task) => task.status == 'completed').length;
+    final completed = taskBars.where((bar) => bar.status == 'completed').length;
+    final conflicts = taskBars.where((bar) => bar.conflict).length;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -144,7 +135,7 @@ class _ProjectTimelineHeader extends StatelessWidget {
             children: [
               _TimelineMetricChip(
                 icon: Icons.task_alt,
-                label: '${tasks.length} tasks',
+                label: '${taskBars.length} tasks',
               ),
               _TimelineMetricChip(
                 icon: Icons.check_circle_outline,
@@ -160,6 +151,11 @@ class _ProjectTimelineHeader extends StatelessWidget {
                     ? 'No dates'
                     : '${_shortDate(start)} - ${_shortDate(end)}',
               ),
+              if (conflicts > 0)
+                _TimelineMetricChip(
+                  icon: Icons.warning_amber_outlined,
+                  label: '$conflicts conflicts',
+                ),
             ],
           ),
         ],
@@ -169,22 +165,22 @@ class _ProjectTimelineHeader extends StatelessWidget {
 }
 
 class _TimelineTaskRow extends StatelessWidget {
-  final TaskModel task;
+  final ProjectTimelineTaskBarModel bar;
   final bool isFirst;
   final bool isLast;
 
   const _TimelineTaskRow({
     super.key,
-    required this.task,
+    required this.bar,
     required this.isFirst,
     required this.isLast,
   });
 
   @override
   Widget build(BuildContext context) {
-    final timelineDate = _taskTimelineDate(task);
-    final dueAt = task.dueAt == null ? null : DateTime.tryParse(task.dueAt!);
-    final estimate = task.estimatedMinutes;
+    final timelineDate = bar.startDateTime;
+    final dueAt = bar.dueDateTime;
+    final estimate = bar.estimatedDurationMinutes;
 
     return IntrinsicHeight(
       child: Row(
@@ -206,7 +202,7 @@ class _TimelineTaskRow extends StatelessWidget {
                   width: 16,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: _statusColor(task.status),
+                    color: _statusColor(bar.status),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -224,7 +220,7 @@ class _TimelineTaskRow extends StatelessWidget {
           Expanded(
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
-              onTap: () => context.push('/home/tasks/${task.id}'),
+              onTap: () => context.push('/home/tasks/${bar.taskId}'),
               child: Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),
@@ -232,28 +228,16 @@ class _TimelineTaskRow extends StatelessWidget {
                   color: Theme.of(context).cardTheme.color,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: _statusColor(task.status).withValues(alpha: 0.2),
+                    color: _statusColor(bar.status).withValues(alpha: 0.2),
                   ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      task.title,
+                      bar.title,
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    if (task.description != null &&
-                        task.description!.isNotEmpty) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        task.description!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -277,8 +261,23 @@ class _TimelineTaskRow extends StatelessWidget {
                         ),
                         _TimelineMetricChip(
                           icon: Icons.layers_outlined,
-                          label: _statusLabel(task.status),
+                          label: _statusLabel(bar.status),
                         ),
+                        if (bar.dependencyIds.isNotEmpty)
+                          _TimelineMetricChip(
+                            icon: Icons.account_tree_outlined,
+                            label: '${bar.dependencyIds.length} deps',
+                          ),
+                        if (bar.overdue)
+                          const _TimelineMetricChip(
+                            icon: Icons.schedule_outlined,
+                            label: 'Overdue',
+                          ),
+                        if (bar.conflict)
+                          const _TimelineMetricChip(
+                            icon: Icons.warning_amber_outlined,
+                            label: 'Conflict',
+                          ),
                       ],
                     ),
                   ],
@@ -325,22 +324,18 @@ class _TimelineMetricChip extends StatelessWidget {
   }
 }
 
-int _compareTimelineTasks(TaskModel left, TaskModel right) {
-  final manualOrder = left.manualOrder.compareTo(right.manualOrder);
-  if (manualOrder != 0) return manualOrder;
-
-  final leftDate = _taskTimelineDate(left);
-  final rightDate = _taskTimelineDate(right);
+int _compareTimelineBars(
+  ProjectTimelineTaskBarModel left,
+  ProjectTimelineTaskBarModel right,
+) {
+  final leftDate = left.startDateTime ?? left.dueDateTime;
+  final rightDate = right.startDateTime ?? right.dueDateTime;
   if (leftDate == null && rightDate == null) {
     return left.title.toLowerCase().compareTo(right.title.toLowerCase());
   }
   if (leftDate == null) return 1;
   if (rightDate == null) return -1;
   return leftDate.compareTo(rightDate);
-}
-
-DateTime? _taskTimelineDate(TaskModel task) {
-  return DateTime.tryParse(task.createdAt)?.toLocal();
 }
 
 String _shortDate(DateTime date) {

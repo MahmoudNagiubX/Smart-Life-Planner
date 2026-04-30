@@ -96,6 +96,24 @@ async def get_tasks_in_date_range(
     return list(result.scalars().all())
 
 
+async def get_project_timeline_tasks(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    project_id: uuid.UUID,
+) -> list[Task]:
+    result = await db.execute(
+        select(Task)
+        .where(
+            Task.user_id == user_id,
+            Task.project_id == project_id,
+            Task.is_deleted == False,
+        )
+        .options(selectinload(Task.dependencies))
+        .order_by(Task.manual_order.asc(), Task.due_at.asc(), Task.created_at.asc())
+    )
+    return list(result.scalars().all())
+
+
 async def get_task_by_id(db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:
     result = await db.execute(
         select(Task)

@@ -61,6 +61,14 @@ class Task(Base):
     dependents: Mapped[list["TaskDependency"]] = relationship("TaskDependency", foreign_keys="TaskDependency.depends_on_task_id", back_populates="prerequisite")
     completion_events: Mapped[list["TaskCompletionEvent"]] = relationship("TaskCompletionEvent", back_populates="task", cascade="all, delete-orphan")
 
+    @property
+    def start_date(self) -> datetime | None:
+        return self.earliest_start_at
+
+    @property
+    def estimated_duration_minutes(self) -> int | None:
+        return self.estimated_minutes
+
 
 class TaskSubtask(Base):
     __tablename__ = "task_subtasks"

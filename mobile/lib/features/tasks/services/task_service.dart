@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../models/project_timeline_model.dart';
 import '../models/task_model.dart';
 
 class TaskService {
@@ -152,6 +153,11 @@ class TaskService {
     return (response.data as List<dynamic>)
         .map((p) => TaskProject.fromJson(p as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<ProjectTimelineModel> getProjectTimeline(String projectId) async {
+    final response = await _apiClient.dio.get('/projects/$projectId/timeline');
+    return ProjectTimelineModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<TaskProject> createProject(String title, {String? colorCode}) async {
