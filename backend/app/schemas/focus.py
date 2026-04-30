@@ -51,6 +51,7 @@ class FocusAnalyticsResponse(BaseModel):
     current_streak_days: int
     longest_streak_days: int
     average_session_minutes: int
+    completion_rate_percent: int
     report_summary: str
 
 

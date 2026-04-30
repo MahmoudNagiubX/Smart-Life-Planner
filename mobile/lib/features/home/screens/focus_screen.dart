@@ -453,13 +453,20 @@ class _AnalyticsGrid extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _StatCard(
-                label: 'Average',
-                value: '${analytics.averageSessionMinutes}m',
+                label: 'Completion',
+                value: '${analytics.completionRatePercent}%',
                 sub: '${analytics.completedSessions} completed',
                 color: AppColors.prayerGold,
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        _StatCard(
+          label: 'Average session',
+          value: '${analytics.averageSessionMinutes}m',
+          sub: 'Based on completed focus sessions',
+          color: AppColors.primary,
         ),
       ],
     );

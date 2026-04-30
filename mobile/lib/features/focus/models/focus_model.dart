@@ -42,6 +42,7 @@ class FocusAnalytics {
   final int currentStreakDays;
   final int longestStreakDays;
   final int averageSessionMinutes;
+  final int completionRatePercent;
   final String reportSummary;
 
   FocusAnalytics({
@@ -53,6 +54,7 @@ class FocusAnalytics {
     required this.currentStreakDays,
     required this.longestStreakDays,
     required this.averageSessionMinutes,
+    required this.completionRatePercent,
     required this.reportSummary,
   });
 
@@ -66,6 +68,7 @@ class FocusAnalytics {
       currentStreakDays: json['current_streak_days'] as int? ?? 0,
       longestStreakDays: json['longest_streak_days'] as int? ?? 0,
       averageSessionMinutes: json['average_session_minutes'] as int? ?? 0,
+      completionRatePercent: json['completion_rate_percent'] as int? ?? 0,
       reportSummary:
           json['report_summary'] as String? ??
           'No completed focus sessions today yet.',
