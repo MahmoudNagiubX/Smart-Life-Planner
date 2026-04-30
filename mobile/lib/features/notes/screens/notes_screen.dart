@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
@@ -9,8 +10,11 @@ import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../voice/screens/voice_note_sheet.dart';
 import '../models/app_template_library.dart';
-import '../providers/note_provider.dart';
 import '../models/note_model.dart';
+import '../models/smart_note_processing_model.dart';
+import '../providers/note_provider.dart';
+import '../providers/smart_note_processing_provider.dart';
+import '../services/note_ocr_service.dart';
 import 'create_note_sheet.dart';
 
 class NotesScreen extends ConsumerStatefulWidget {
@@ -940,148 +944,370 @@ Future<void> _showSmartNoteMenu(BuildContext context, {NoteModel? note}) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (context) => _SmartNotePlaceholderSheet(note: note),
+    builder: (context) => _SmartNoteToolsSheet(note: note),
   );
 }
 
-class _SmartNotePlaceholderSheet extends StatelessWidget {
+class _SmartNoteToolsSheet extends ConsumerWidget {
   final NoteModel? note;
 
-  const _SmartNotePlaceholderSheet({this.note});
+  const _SmartNoteToolsSheet({this.note});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(smartNoteProcessingProvider);
+    final activeNote = note;
+    final ocrAttachment = activeNote == null
+        ? null
+        : firstLocalOcrAttachment(activeNote.attachments);
+    final isOcrForThisNote =
+        activeNote != null &&
+        state.jobType == SmartNoteJobType.ocr &&
+        state.noteId == activeNote.id;
+    final isOcrProcessing = isOcrForThisNote && state.isProcessing;
+    final canRunOcr = activeNote != null && ocrAttachment != null;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textSecondary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.textSecondary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                const Icon(
-                  Icons.auto_awesome_outlined,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    note == null ? 'Smart Note Tools' : 'Smart Tools',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_outlined,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      activeNote == null ? 'Smart Note Tools' : 'Smart Tools',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
+                  ),
+                ],
+              ),
+              if (activeNote != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  activeNote.title ?? 'Untitled note',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
-            ),
-            if (note != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 18),
+              _SmartToolTile(
+                icon: Icons.document_scanner_outlined,
+                title: 'OCR from images',
+                description: canRunOcr
+                    ? 'Read text from the first attached local image.'
+                    : 'Open a saved note with a local image attachment.',
+                statusLabel: canRunOcr ? 'Run' : 'Needs image',
+                enabled: canRunOcr && !isOcrProcessing,
+                onTap: activeNote == null
+                    ? null
+                    : () => ref
+                          .read(smartNoteProcessingProvider.notifier)
+                          .runOcr(activeNote),
+              ),
+              if (isOcrProcessing) ...[
+                const SizedBox(height: 4),
+                const LinearProgressIndicator(),
+                const SizedBox(height: 10),
+                Text(
+                  'Reading image text on this device...',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+              if (isOcrForThisNote && state.isFailure) ...[
+                const SizedBox(height: 10),
+                _SmartNoteError(message: state.errorMessage ?? 'OCR failed.'),
+              ],
+              if (isOcrForThisNote && state.hasPreview) ...[
+                const SizedBox(height: 12),
+                _OcrPreviewCard(
+                  note: activeNote,
+                  previewText: state.previewText ?? '',
+                ),
+              ],
+              const _SmartToolTile(
+                icon: Icons.draw_outlined,
+                title: 'Handwriting support',
+                description: 'Best-effort handwriting extraction comes next.',
+                statusLabel: 'Next',
+              ),
+              const _SmartToolTile(
+                icon: Icons.summarize_outlined,
+                title: 'AI note summary',
+                description: 'Create a short editable summary in a later step.',
+                statusLabel: 'Next',
+              ),
+              const _SmartToolTile(
+                icon: Icons.playlist_add_check_outlined,
+                title: 'AI action extraction',
+                description: 'Preview possible tasks before creating anything.',
+                statusLabel: 'Next',
+              ),
+              const SizedBox(height: 12),
               Text(
-                note!.title ?? 'Untitled note',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                'OCR never changes the note until you choose an action.',
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
               ),
             ],
-            const SizedBox(height: 18),
-            const _SmartPlaceholderTile(
-              icon: Icons.document_scanner_outlined,
-              title: 'OCR from images',
-              description: 'Extract text from attached images.',
-            ),
-            const _SmartPlaceholderTile(
-              icon: Icons.draw_outlined,
-              title: 'Handwriting support',
-              description: 'Read handwritten notes and sketches.',
-            ),
-            const _SmartPlaceholderTile(
-              icon: Icons.summarize_outlined,
-              title: 'AI note summary',
-              description: 'Create a short editable summary.',
-            ),
-            const _SmartPlaceholderTile(
-              icon: Icons.playlist_add_check_outlined,
-              title: 'AI action extraction',
-              description:
-                  'Find possible tasks without creating them silently.',
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Future features. Current note editing stays unchanged.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SmartPlaceholderTile extends StatelessWidget {
+class _OcrPreviewCard extends ConsumerWidget {
+  final NoteModel note;
+  final String previewText;
+
+  const _OcrPreviewCard({required this.note, required this.previewText});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.text_snippet_outlined, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Extracted text preview',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 180),
+            child: SingleChildScrollView(
+              child: SelectableText(
+                previewText,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: () => _applyOcrText(
+                  context,
+                  ref,
+                  note,
+                  _appendOcrText(note.content, previewText),
+                ),
+                icon: const Icon(Icons.add_outlined),
+                label: const Text('Append'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final confirmed = await confirmDestructiveAction(
+                    context: context,
+                    title: 'Replace note content?',
+                    message:
+                        'This will replace the current note body with the OCR text.',
+                    confirmLabel: 'Replace',
+                  );
+                  if (!confirmed || !context.mounted) return;
+                  await _applyOcrText(context, ref, note, previewText);
+                },
+                icon: const Icon(Icons.swap_horiz_outlined),
+                label: const Text('Replace'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: previewText));
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Extracted text copied.')),
+                  );
+                },
+                icon: const Icon(Icons.copy_outlined),
+                label: const Text('Copy'),
+              ),
+              TextButton(
+                onPressed: () =>
+                    ref.read(smartNoteProcessingProvider.notifier).reset(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _applyOcrText(
+    BuildContext context,
+    WidgetRef ref,
+    NoteModel note,
+    String content,
+  ) async {
+    await ref
+        .read(notesProvider.notifier)
+        .updateNote(
+          noteId: note.id,
+          title: note.title,
+          content: content,
+          taskId: note.taskId,
+          noteType: note.noteType,
+          tags: note.tags,
+          checklistItems: note.checklistItems,
+          structuredBlocks: note.structuredBlocks,
+          attachments: note.attachments,
+          reminderAt: note.reminderAt,
+          sourceType: note.sourceType,
+          colorKey: note.colorKey,
+        );
+    ref
+        .read(smartNoteProcessingProvider.notifier)
+        .markSuccess(jobType: SmartNoteJobType.ocr, noteId: note.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('OCR text saved to note.')));
+    Navigator.of(context).pop();
+  }
+}
+
+String _appendOcrText(String currentContent, String extractedText) {
+  final current = currentContent.trimRight();
+  final extracted = extractedText.trim();
+  if (current.isEmpty) return extracted;
+  return '$current\n\n$extracted';
+}
+
+class _SmartNoteError extends StatelessWidget {
+  final String message;
+
+  const _SmartNoteError({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.24)),
+      ),
+      child: Text(
+        message,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: AppColors.error,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _SmartToolTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
+  final String statusLabel;
+  final bool enabled;
+  final VoidCallback? onTap;
 
-  const _SmartPlaceholderTile({
+  const _SmartToolTile({
     required this.icon,
     required this.title,
     required this.description,
+    this.statusLabel = 'Future',
+    this.enabled = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final foreground = enabled ? AppColors.primary : AppColors.textSecondary;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color,
+      child: Material(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: enabled ? onTap : null,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: AppColors.textSecondary.withValues(alpha: 0.18),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.textSecondary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    description,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: foreground.withValues(alpha: enabled ? 0.36 : 0.18),
               ),
             ),
-            const SizedBox(width: 8),
-            const Chip(label: Text('Future')),
-          ],
+            child: Row(
+              children: [
+                Icon(icon, color: foreground),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        description,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Chip(label: Text(statusLabel)),
+              ],
+            ),
+          ),
         ),
       ),
     );
