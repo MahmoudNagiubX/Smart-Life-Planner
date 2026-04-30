@@ -6,7 +6,11 @@ import pytest
 from pydantic import ValidationError
 
 from app.schemas.task import TaskCreate, TaskUpdate
-from app.services.project_timeline_service import build_project_timeline
+from app.services.project_timeline_service import (
+    TimelineDateValidationError,
+    build_project_timeline,
+    validate_timeline_date_update,
+)
 
 
 def test_task_schema_accepts_timeline_alias_fields():
@@ -89,3 +93,60 @@ def test_project_timeline_marks_overdue_and_dependency_conflicts():
     assert bars_by_id[blocked_id].conflict is True
     assert bars_by_id[blocked_id].dependency_ids == [prerequisite_id]
     assert timeline.dependencies[0].depends_on_task_id == prerequisite_id
+
+
+def test_timeline_date_update_rejects_dependency_start_violation():
+    task_id = uuid.uuid4()
+    prerequisite_id = uuid.uuid4()
+    project_id = uuid.uuid4()
+    prerequisite_due = datetime(2026, 5, 2, 12, tzinfo=timezone.utc)
+    invalid_start = datetime(2026, 5, 2, 10, tzinfo=timezone.utc)
+    task = SimpleNamespace(
+        id=task_id,
+        project_id=project_id,
+        earliest_start_at=datetime(2026, 5, 3, 9, tzinfo=timezone.utc),
+        due_at=datetime(2026, 5, 3, 12, tzinfo=timezone.utc),
+        dependencies=[
+            SimpleNamespace(
+                task_id=task_id,
+                depends_on_task_id=prerequisite_id,
+                dependency_type="finish_to_start",
+                prerequisite=SimpleNamespace(id=prerequisite_id, due_at=prerequisite_due),
+            )
+        ],
+        dependents=[],
+    )
+
+    with pytest.raises(TimelineDateValidationError):
+        validate_timeline_date_update(task, {"earliest_start_at": invalid_start})
+
+
+def test_timeline_date_update_rejects_dependent_due_violation():
+    task_id = uuid.uuid4()
+    dependent_id = uuid.uuid4()
+    project_id = uuid.uuid4()
+    dependent_start = datetime(2026, 5, 2, 9, tzinfo=timezone.utc)
+    invalid_due = datetime(2026, 5, 2, 11, tzinfo=timezone.utc)
+    task = SimpleNamespace(
+        id=task_id,
+        project_id=project_id,
+        earliest_start_at=datetime(2026, 5, 1, 9, tzinfo=timezone.utc),
+        due_at=datetime(2026, 5, 1, 12, tzinfo=timezone.utc),
+        dependencies=[],
+        dependents=[
+            SimpleNamespace(
+                task_id=dependent_id,
+                depends_on_task_id=task_id,
+                dependency_type="finish_to_start",
+                task=SimpleNamespace(
+                    id=dependent_id,
+                    earliest_start_at=dependent_start,
+                    due_at=datetime(2026, 5, 3, 12, tzinfo=timezone.utc),
+                    estimated_minutes=120,
+                ),
+            )
+        ],
+    )
+
+    with pytest.raises(TimelineDateValidationError):
+        validate_timeline_date_update(task, {"due_at": invalid_due})

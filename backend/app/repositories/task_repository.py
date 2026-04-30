@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from app.models.task import Task, TaskCompletionEvent, TaskProject, TaskSubtask
+from app.models.task import Task, TaskCompletionEvent, TaskDependency, TaskProject, TaskSubtask
 from app.repositories.reminder_repository import (
     invalidate_task_reminders,
     resync_task_due_preset_reminders,
@@ -118,7 +118,11 @@ async def get_task_by_id(db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUI
     result = await db.execute(
         select(Task)
         .where(Task.id == task_id, Task.user_id == user_id, Task.is_deleted == False)
-        .options(selectinload(Task.subtasks))
+        .options(
+            selectinload(Task.subtasks),
+            selectinload(Task.dependencies).selectinload(TaskDependency.prerequisite),
+            selectinload(Task.dependents).selectinload(TaskDependency.task),
+        )
     )
     return result.scalar_one_or_none()
 

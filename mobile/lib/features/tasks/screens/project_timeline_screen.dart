@@ -78,6 +78,7 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
                                 bar: bar,
                                 isFirst: index == 0,
                                 isLast: index == sortedBars.length - 1,
+                                onDateChanged: _confirmAndSaveDateChange,
                               );
                             },
                           ),
@@ -86,6 +87,103 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
                     ),
             ),
     );
+  }
+
+  Future<void> _confirmAndSaveDateChange(
+    ProjectTimelineTaskBarModel bar,
+    _TimelineDateField field,
+    DateTime newValue,
+  ) async {
+    final state = ref.read(projectTimelineProvider(widget.projectId));
+    final validationError = _validateTimelineDateChange(
+      state: state,
+      bar: bar,
+      field: field,
+      newValue: newValue,
+    );
+    if (validationError != null) {
+      _showTimelineMessage(validationError);
+      return;
+    }
+
+    final oldValue = field == _TimelineDateField.start
+        ? bar.startDateTime
+        : bar.dueDateTime;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save timeline change?'),
+        content: Text(
+          '${bar.title}\n'
+          '${_fieldLabel(field)}: ${_dateOrUnset(oldValue)} -> ${_dateOrUnset(newValue)}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final error = await ref
+        .read(projectTimelineProvider(widget.projectId).notifier)
+        .updateTimelineTaskDates(
+          taskId: bar.taskId,
+          startDate: field == _TimelineDateField.start ? newValue : null,
+          dueDate: field == _TimelineDateField.due ? newValue : null,
+        );
+
+    if (!mounted) return;
+    _showTimelineMessage(error ?? 'Timeline updated');
+  }
+
+  String? _validateTimelineDateChange({
+    required ProjectTimelineState state,
+    required ProjectTimelineTaskBarModel bar,
+    required _TimelineDateField field,
+    required DateTime newValue,
+  }) {
+    final newStart = field == _TimelineDateField.start
+        ? newValue
+        : bar.startDateTime;
+    final newDue = field == _TimelineDateField.due ? newValue : bar.dueDateTime;
+    if (newStart != null && newDue != null && newStart.isAfter(newDue)) {
+      return 'Start date cannot be after due date.';
+    }
+
+    final barsById = {for (final item in state.taskBars) item.taskId: item};
+    if (newStart != null) {
+      for (final dependencyId in bar.dependencyIds) {
+        final dependency = barsById[dependencyId];
+        final dependencyDue = dependency?.dueDateTime;
+        if (dependencyDue != null && dependencyDue.isAfter(newStart)) {
+          return 'Task cannot start before a blocking dependency is due.';
+        }
+      }
+    }
+    if (newDue != null) {
+      for (final dependency in state.dependencies) {
+        if (dependency.dependsOnTaskId != bar.taskId) continue;
+        final dependent = barsById[dependency.taskId];
+        final dependentStart = dependent?.startDateTime;
+        if (dependentStart != null && newDue.isAfter(dependentStart)) {
+          return 'Due date cannot move after a dependent task starts.';
+        }
+      }
+    }
+    return null;
+  }
+
+  void _showTimelineMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -168,12 +266,19 @@ class _TimelineTaskRow extends StatelessWidget {
   final ProjectTimelineTaskBarModel bar;
   final bool isFirst;
   final bool isLast;
+  final Future<void> Function(
+    ProjectTimelineTaskBarModel bar,
+    _TimelineDateField field,
+    DateTime newValue,
+  )
+  onDateChanged;
 
   const _TimelineTaskRow({
     super.key,
     required this.bar,
     required this.isFirst,
     required this.isLast,
+    required this.onDateChanged,
   });
 
   @override
@@ -243,15 +348,26 @@ class _TimelineTaskRow extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _TimelineMetricChip(
+                        _TimelineDateAdjustChip(
                           icon: Icons.play_arrow_outlined,
                           label:
                               'Start ${timelineDate == null ? 'unset' : _shortDate(timelineDate)}',
+                          value: timelineDate,
+                          fallback: dueAt,
+                          onDateChanged: (value) => onDateChanged(
+                            bar,
+                            _TimelineDateField.start,
+                            value,
+                          ),
                         ),
-                        _TimelineMetricChip(
+                        _TimelineDateAdjustChip(
                           icon: Icons.flag_outlined,
                           label:
                               'Due ${dueAt == null ? 'unset' : _shortDate(dueAt)}',
+                          value: dueAt,
+                          fallback: timelineDate,
+                          onDateChanged: (value) =>
+                              onDateChanged(bar, _TimelineDateField.due, value),
                         ),
                         _TimelineMetricChip(
                           icon: Icons.timer_outlined,
@@ -324,6 +440,56 @@ class _TimelineMetricChip extends StatelessWidget {
   }
 }
 
+class _TimelineDateAdjustChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final DateTime? value;
+  final DateTime? fallback;
+  final ValueChanged<DateTime> onDateChanged;
+
+  const _TimelineDateAdjustChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.fallback,
+    required this.onDateChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Tap to pick a date. Drag left or right to shift one day.',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _pickDate(context),
+        onHorizontalDragEnd: (details) {
+          final velocity = details.primaryVelocity ?? 0;
+          if (velocity.abs() < 150) return;
+          final physicalDirection = velocity > 0 ? 1 : -1;
+          final isRtl = Directionality.of(context) == TextDirection.rtl;
+          final dayDelta = isRtl ? -physicalDirection : physicalDirection;
+          onDateChanged(_baseDate.add(Duration(days: dayDelta)));
+        },
+        child: _TimelineMetricChip(icon: icon, label: label),
+      ),
+    );
+  }
+
+  DateTime get _baseDate => value ?? fallback ?? DateTime.now();
+
+  Future<void> _pickDate(BuildContext context) async {
+    final base = _baseDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(base.year, base.month, base.day),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    onDateChanged(_copyDatePreservingTime(base, picked));
+  }
+}
+
 int _compareTimelineBars(
   ProjectTimelineTaskBarModel left,
   ProjectTimelineTaskBarModel right,
@@ -336,6 +502,32 @@ int _compareTimelineBars(
   if (leftDate == null) return 1;
   if (rightDate == null) return -1;
   return leftDate.compareTo(rightDate);
+}
+
+enum _TimelineDateField { start, due }
+
+String _fieldLabel(_TimelineDateField field) {
+  return switch (field) {
+    _TimelineDateField.start => 'Start',
+    _TimelineDateField.due => 'Due',
+  };
+}
+
+String _dateOrUnset(DateTime? date) {
+  return date == null ? 'unset' : _shortDateWithYear(date);
+}
+
+DateTime _copyDatePreservingTime(DateTime source, DateTime pickedDate) {
+  return DateTime(
+    pickedDate.year,
+    pickedDate.month,
+    pickedDate.day,
+    source.hour,
+    source.minute,
+    source.second,
+    source.millisecond,
+    source.microsecond,
+  );
 }
 
 String _shortDate(DateTime date) {
@@ -354,6 +546,10 @@ String _shortDate(DateTime date) {
     'Dec',
   ];
   return '${months[date.month - 1]} ${date.day}';
+}
+
+String _shortDateWithYear(DateTime date) {
+  return '${_shortDate(date)} ${date.year}';
 }
 
 Color _statusColor(String status) {

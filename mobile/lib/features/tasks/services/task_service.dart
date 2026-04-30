@@ -66,6 +66,7 @@ class TaskService {
     String? description,
     String priority = 'medium',
     String? projectId,
+    String? startDate,
     String? dueAt,
     String? reminderAt,
     String? category,
@@ -75,6 +76,7 @@ class TaskService {
     final data = <String, dynamic>{'title': title, 'priority': priority};
     if (description != null) data['description'] = description;
     if (projectId != null) data['project_id'] = projectId;
+    if (startDate != null) data['start_date'] = startDate;
     if (dueAt != null) data['due_at'] = dueAt;
     if (reminderAt != null) data['reminder_at'] = reminderAt;
     if (category != null) data['category'] = category;
@@ -96,6 +98,7 @@ class TaskService {
     String? description,
     String? priority,
     String? projectId,
+    String? startDate,
     String? dueAt,
     String? reminderAt,
     String? category,
@@ -110,6 +113,7 @@ class TaskService {
     if (description != null) data['description'] = description;
     if (priority != null) data['priority'] = priority;
     if (projectId != null) data['project_id'] = projectId;
+    if (startDate != null) data['start_date'] = startDate;
     if (clearDueAt) {
       data['due_at'] = null;
     } else if (dueAt != null) {

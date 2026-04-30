@@ -8,6 +8,10 @@ from app.schemas.task import (
 )
 
 
+class TimelineDateValidationError(ValueError):
+    pass
+
+
 def build_project_timeline(project, tasks: Iterable, now: datetime | None = None) -> ProjectTimelineResponse:
     current_time = _aware_utc(now or datetime.now(timezone.utc))
     task_list = list(tasks)
@@ -57,6 +61,32 @@ def build_project_timeline(project, tasks: Iterable, now: datetime | None = None
     bars.sort(key=_bar_sort_key)
     dependencies.sort(key=lambda item: (str(item.task_id), str(item.depends_on_task_id)))
     return ProjectTimelineResponse(project=project, task_bars=bars, dependencies=dependencies)
+
+
+def validate_timeline_date_update(task, data: dict) -> None:
+    start_date = _aware_utc(data.get("earliest_start_at", getattr(task, "earliest_start_at", None)))
+    due_date = _aware_utc(data.get("due_at", getattr(task, "due_at", None)))
+
+    if start_date is not None and due_date is not None and start_date > due_date:
+        raise TimelineDateValidationError("Start date cannot be after due date")
+
+    if start_date is not None:
+        for dependency in getattr(task, "dependencies", []) or []:
+            prerequisite = getattr(dependency, "prerequisite", None)
+            prerequisite_due = _aware_utc(getattr(prerequisite, "due_at", None))
+            if prerequisite_due is not None and prerequisite_due > start_date:
+                raise TimelineDateValidationError(
+                    "Task cannot start before a blocking dependency is due"
+                )
+
+    if due_date is not None:
+        for dependency in getattr(task, "dependents", []) or []:
+            dependent = getattr(dependency, "task", None)
+            dependent_start = _timeline_start(dependent) if dependent is not None else None
+            if dependent_start is not None and due_date > dependent_start:
+                raise TimelineDateValidationError(
+                    "Task due date cannot move after a dependent task starts"
+                )
 
 
 def _timeline_start(task) -> datetime | None:

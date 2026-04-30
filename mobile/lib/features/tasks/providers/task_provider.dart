@@ -140,6 +140,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
     String? description,
     String? priority,
     String? projectId,
+    DateTime? startDate,
     DateTime? dueAt,
     DateTime? reminderAt,
     String? category,
@@ -157,6 +158,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
         description: description,
         priority: priority,
         projectId: projectId,
+        startDate: startDate?.toUtc().toIso8601String(),
         dueAt: dueAt?.toUtc().toIso8601String(),
         reminderAt: reminderAt?.toUtc().toIso8601String(),
         category: category,
@@ -565,6 +567,28 @@ class ProjectTimelineNotifier extends StateNotifier<ProjectTimelineState> {
       return true;
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<String?> updateTimelineTaskDates({
+    required String taskId,
+    DateTime? startDate,
+    DateTime? dueDate,
+  }) async {
+    try {
+      await _ref
+          .read(taskServiceProvider)
+          .updateTask(
+            taskId: taskId,
+            startDate: startDate?.toUtc().toIso8601String(),
+            dueAt: dueDate?.toUtc().toIso8601String(),
+          );
+      await load();
+      return null;
+    } on DioException catch (e) {
+      return friendlyApiError(e, 'Failed to update timeline dates');
+    } catch (_) {
+      return 'Failed to update timeline dates';
     }
   }
 }
