@@ -109,6 +109,10 @@ flutter:
 
   assets:
     - assets/audio/athan_soft.wav
+    - assets/audio/focus_cafe.wav
+    - assets/audio/focus_rain.wav
+    - assets/audio/focus_silence.wav
+    - assets/audio/focus_white_noise.wav
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

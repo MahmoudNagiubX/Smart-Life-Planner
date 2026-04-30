@@ -5,10 +5,21 @@ import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
 import '../models/focus_model.dart';
+import '../services/focus_ambient_sound_service.dart';
 import '../services/focus_service.dart';
 
 final focusServiceProvider = Provider<FocusService>((ref) {
   return FocusService(ref.watch(apiClientProvider));
+});
+
+final focusAmbientSoundServiceProvider = Provider<FocusAmbientSoundService>((
+  ref,
+) {
+  final service = FocusAmbientSoundService();
+  ref.onDispose(() {
+    unawaited(service.dispose());
+  });
+  return service;
 });
 
 class FocusState {
@@ -141,6 +152,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
               fireAt: endsAt,
             );
         _startTimer();
+        await _syncAmbientSoundForSession(session);
       }
     }
   }
@@ -180,8 +192,11 @@ class FocusNotifier extends StateNotifier<FocusState> {
   }
 
   void setAmbientSoundKey(String key) {
-    state = state.copyWith(ambientSoundKey: key);
+    state = state.copyWith(
+      ambientSoundKey: FocusAmbientSoundService.normalizeKey(key),
+    );
     _queueSettingsSave();
+    unawaited(_syncAmbientSoundForSession(state.activeSession));
   }
 
   void setDistractionFreeMode(bool value) {
@@ -234,6 +249,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
         remainingSeconds: plannedMinutes * 60,
       );
       _startTimer();
+      await _syncAmbientSoundForSession(session);
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -246,6 +262,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
     final session = state.activeSession;
     if (session == null) return;
     _timer?.cancel();
+    await _stopAmbientSound();
 
     if (cancelNotification) {
       // Cancel the scheduled notification only when the user finishes manually.
@@ -288,6 +305,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
     final session = state.activeSession;
     if (session == null) return;
     _timer?.cancel();
+    await _stopAmbientSound();
 
     // Cancel the scheduled notification
     await _ref
@@ -316,6 +334,19 @@ class FocusNotifier extends StateNotifier<FocusState> {
 
   bool _isBreakSession(String sessionType) {
     return sessionType == 'short_break' || sessionType == 'long_break';
+  }
+
+  Future<void> _syncAmbientSoundForSession(FocusSession? session) async {
+    final soundService = _ref.read(focusAmbientSoundServiceProvider);
+    if (session == null || _isBreakSession(session.sessionType)) {
+      await soundService.stop();
+      return;
+    }
+    await soundService.play(state.ambientSoundKey);
+  }
+
+  Future<void> _stopAmbientSound() {
+    return _ref.read(focusAmbientSoundServiceProvider).stop();
   }
 
   bool _shouldStartLongBreak(FocusSession completed) {
@@ -377,6 +408,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
   void dispose() {
     _timer?.cancel();
     _settingsSaveDebounce?.cancel();
+    unawaited(_stopAmbientSound());
     super.dispose();
   }
 }
