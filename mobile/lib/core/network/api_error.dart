@@ -7,6 +7,7 @@ String friendlyApiError(Object error, String fallback) {
 
   final statusCode = error.response?.statusCode;
   final detail = _detailFromData(error.response?.data);
+  final structuredMessage = _structuredMessageFromData(error.response?.data);
 
   if (_isConnectionProblem(error)) {
     return 'Network connection failed. Check your connection and try again.';
@@ -33,7 +34,7 @@ String friendlyApiError(Object error, String fallback) {
     return 'Something went wrong on our side. Please try again.';
   }
 
-  return _knownSafeMessage(detail) ?? fallback;
+  return _knownSafeMessage(detail) ?? structuredMessage ?? fallback;
 }
 
 bool _isConnectionProblem(DioException error) {
@@ -49,6 +50,12 @@ String? _detailFromData(dynamic data) {
     if (detail is String && detail.isNotEmpty) {
       return detail;
     }
+    if (detail is Map) {
+      final message = detail['message'];
+      if (message is String && message.isNotEmpty) {
+        return message;
+      }
+    }
     final message = data['message'];
     if (message is String && message.isNotEmpty) {
       return message;
@@ -56,6 +63,24 @@ String? _detailFromData(dynamic data) {
   }
   if (data is String && data.isNotEmpty && !data.trim().startsWith('{')) {
     return data;
+  }
+  return null;
+}
+
+String? _structuredMessageFromData(dynamic data) {
+  if (data is! Map) {
+    return null;
+  }
+  final detail = data['detail'];
+  if (detail is Map) {
+    final code = detail['code'];
+    final message = detail['message'];
+    if (code is String &&
+        code.startsWith('smart_note_') &&
+        message is String &&
+        message.isNotEmpty) {
+      return message;
+    }
   }
   return null;
 }

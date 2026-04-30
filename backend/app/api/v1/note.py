@@ -32,6 +32,7 @@ from app.services.note_summary_service import (
     fallback_note_summary,
     normalize_note_summary_result,
 )
+from app.services.smart_note_errors import smart_note_error
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 
@@ -99,9 +100,10 @@ async def summarize_existing_note(
 
     note_text = build_note_summary_source(note)
     if not note_text:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Note has no readable content to summarize",
+        raise smart_note_error(
+            "smart_note_empty_content",
+            "Add note content before summarizing.",
+            manual_fallback="Write a manual summary in the note editor.",
         )
 
     if not settings.GROQ_API_KEY:
@@ -132,9 +134,10 @@ async def extract_existing_note_actions(
 
     note_text = build_note_summary_source(note)
     if not note_text:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Note has no readable content to extract actions from",
+        raise smart_note_error(
+            "smart_note_empty_content",
+            "Add note content before extracting actions.",
+            manual_fallback="Create a task manually from the Tasks screen.",
         )
 
     today = date.today()

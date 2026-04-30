@@ -1079,6 +1079,16 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
                           .read(smartNoteProcessingProvider.notifier)
                           .runHandwriting(activeNote),
               ),
+              if (activeNote != null && !canRunImageExtraction) ...[
+                const SizedBox(height: 4),
+                _SmartNoteFailureCard(
+                  message:
+                      'No local image attachment was found. Attach an image or add the text manually.',
+                  manualLabel: 'Edit note',
+                  onManualFallback: () =>
+                      _openManualNoteEditor(context, ref, activeNote),
+                ),
+              ],
               if (isHandwritingProcessing) ...[
                 const SizedBox(height: 4),
                 const LinearProgressIndicator(),
@@ -1092,8 +1102,22 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
               ],
               if (isImageExtractionForThisNote && state.isFailure) ...[
                 const SizedBox(height: 10),
-                _SmartNoteError(
+                _SmartNoteFailureCard(
                   message: state.errorMessage ?? 'Text extraction failed.',
+                  onRetry: () {
+                    if (state.jobType == SmartNoteJobType.handwriting) {
+                      ref
+                          .read(smartNoteProcessingProvider.notifier)
+                          .runHandwriting(activeNote);
+                    } else {
+                      ref
+                          .read(smartNoteProcessingProvider.notifier)
+                          .runOcr(activeNote);
+                    }
+                  },
+                  manualLabel: 'Edit note',
+                  onManualFallback: () =>
+                      _openManualNoteEditor(context, ref, activeNote),
                 ),
               ],
               if (isImageExtractionForThisNote && state.hasPreview) ...[
@@ -1130,8 +1154,13 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
               ],
               if (isSummaryForThisNote && state.isFailure) ...[
                 const SizedBox(height: 10),
-                _SmartNoteError(
+                _SmartNoteFailureCard(
                   message: state.errorMessage ?? 'Summary failed.',
+                  onRetry: () =>
+                      _showSummaryStylePicker(context, ref, activeNote),
+                  manualLabel: 'Write summary',
+                  onManualFallback: () =>
+                      _openManualNoteEditor(context, ref, activeNote),
                 ),
               ],
               if (isSummaryForThisNote && state.hasPreview) ...[
@@ -1169,8 +1198,14 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
               ],
               if (isActionExtractionForThisNote && state.isFailure) ...[
                 const SizedBox(height: 10),
-                _SmartNoteError(
+                _SmartNoteFailureCard(
                   message: state.errorMessage ?? 'Action extraction failed.',
+                  onRetry: () => ref
+                      .read(smartNoteProcessingProvider.notifier)
+                      .runActionExtraction(activeNote),
+                  manualLabel: 'Edit note',
+                  onManualFallback: () =>
+                      _openManualNoteEditor(context, ref, activeNote),
                 ),
               ],
               if (isActionExtractionForThisNote && state.hasPreview) ...[
@@ -1228,6 +1263,24 @@ Future<void> _showSummaryStylePicker(
   await ref.read(smartNoteProcessingProvider.notifier).runSummary(note, style);
 }
 
+Future<void> _openManualNoteEditor(
+  BuildContext context,
+  WidgetRef ref,
+  NoteModel note,
+) async {
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => CreateNoteSheet(initialNote: note),
+  );
+  if (!context.mounted) return;
+  await ref.read(notesProvider.notifier).loadNotes();
+}
+
 class _SummaryPreviewCard extends ConsumerStatefulWidget {
   final NoteModel note;
   final String previewText;
@@ -1273,6 +1326,7 @@ class _SummaryPreviewCardState extends ConsumerState<_SummaryPreviewCard> {
     final confidence = widget.previewJson?['confidence']?.toString() ?? 'low';
     final fallbackUsed = widget.previewJson?['fallback_used'] == true;
     final safetyNotes = widget.previewJson?['safety_notes']?.toString();
+    final lowConfidence = confidence == 'low';
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1300,14 +1354,19 @@ class _SummaryPreviewCardState extends ConsumerState<_SummaryPreviewCard> {
             ],
           ),
           if (fallbackUsed ||
+              lowConfidence ||
               (safetyNotes != null && safetyNotes.isNotEmpty)) ...[
             const SizedBox(height: 10),
             _SmartNoteNotice(
               message: fallbackUsed
                   ? safetyNotes ??
                         'Fallback summary created. Review before inserting.'
-                  : safetyNotes!,
-              color: fallbackUsed ? AppColors.warning : AppColors.primary,
+                  : safetyNotes?.isNotEmpty == true
+                  ? safetyNotes!
+                  : 'Low confidence summary. Review carefully before inserting.',
+              color: fallbackUsed || lowConfidence
+                  ? AppColors.warning
+                  : AppColors.primary,
             ),
           ],
           const SizedBox(height: 10),
@@ -1462,6 +1521,7 @@ class _ActionExtractionPreviewCardState
     );
     final hasSelected = _items.any((item) => item.isSelected);
     final hasInvalidDates = _items.any((item) => item.hasInvalidDates);
+    final hasLowConfidence = _items.any((item) => item.confidence == 'low');
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1498,6 +1558,14 @@ class _ActionExtractionPreviewCardState
                 'Review, edit, or reject each suggestion before creating anything.',
             color: result.fallbackUsed ? AppColors.warning : AppColors.primary,
           ),
+          if (hasLowConfidence) ...[
+            const SizedBox(height: 10),
+            const _SmartNoteNotice(
+              message:
+                  'Some suggestions have low confidence. Edit or reject them before creating.',
+              color: AppColors.warning,
+            ),
+          ],
           const SizedBox(height: 12),
           for (var index = 0; index < _items.length; index++) ...[
             _EditableActionSuggestionTile(
@@ -2137,6 +2205,63 @@ class _SmartNoteError extends StatelessWidget {
           color: AppColors.error,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+}
+
+class _SmartNoteFailureCard extends StatelessWidget {
+  final String message;
+  final VoidCallback? onRetry;
+  final String manualLabel;
+  final VoidCallback onManualFallback;
+
+  const _SmartNoteFailureCard({
+    required this.message,
+    this.onRetry,
+    required this.manualLabel,
+    required this.onManualFallback,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.error,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (onRetry != null)
+                OutlinedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_outlined),
+                  label: const Text('Try again'),
+                ),
+              TextButton.icon(
+                onPressed: onManualFallback,
+                icon: const Icon(Icons.edit_outlined),
+                label: Text(manualLabel),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

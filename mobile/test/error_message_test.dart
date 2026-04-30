@@ -57,4 +57,22 @@ void main() {
 
     expect(message, 'An account with this email already exists.');
   });
+
+  test('friendly API errors read structured safe detail message', () {
+    final message = friendlyApiError(
+      dioError(
+        statusCode: 400,
+        data: {
+          'detail': {
+            'code': 'smart_note_empty_content',
+            'message': 'Add note content before summarizing.',
+            'manual_fallback': 'Write a manual summary in the note editor.',
+          },
+        },
+      ),
+      'Failed to summarize note',
+    );
+
+    expect(message, 'Add note content before summarizing.');
+  });
 }
