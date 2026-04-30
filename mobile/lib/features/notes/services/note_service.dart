@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../models/note_action_extraction_model.dart';
 import '../models/note_model.dart';
 import '../models/note_summary_model.dart';
 
@@ -149,5 +150,16 @@ class NoteService {
       data: {'summary_style': style.apiKey},
     );
     return NoteSummaryResult.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<NoteActionExtractionResult> extractNoteActions({
+    required String noteId,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/notes/$noteId/extract-actions',
+    );
+    return NoteActionExtractionResult.fromJson(
+      response.data as Map<String, dynamic>,
+    );
   }
 }

@@ -8,8 +8,10 @@ import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
+import '../../tasks/providers/task_provider.dart';
 import '../../voice/screens/voice_note_sheet.dart';
 import '../models/app_template_library.dart';
+import '../models/note_action_extraction_model.dart';
 import '../models/note_model.dart';
 import '../models/note_summary_model.dart';
 import '../models/smart_note_processing_model.dart';
@@ -976,12 +978,19 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
         activeNote != null &&
         state.jobType == SmartNoteJobType.summary &&
         state.noteId == activeNote.id;
+    final isActionExtractionForThisNote =
+        activeNote != null &&
+        state.jobType == SmartNoteJobType.actionExtraction &&
+        state.noteId == activeNote.id;
     final isOcrProcessing = isOcrForThisNote && state.isProcessing;
     final isHandwritingProcessing =
         isHandwritingForThisNote && state.isProcessing;
     final isSummaryProcessing = isSummaryForThisNote && state.isProcessing;
+    final isActionExtractionProcessing =
+        isActionExtractionForThisNote && state.isProcessing;
     final canSummarize =
         activeNote != null && activeNote.content.trim().isNotEmpty;
+    final canExtractActions = canSummarize;
 
     return SafeArea(
       child: Padding(
@@ -1133,12 +1142,44 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
                   previewJson: state.previewJson,
                 ),
               ],
-              const _SmartToolTile(
+              _SmartToolTile(
                 icon: Icons.playlist_add_check_outlined,
                 title: 'AI action extraction',
-                description: 'Preview possible tasks before creating anything.',
-                statusLabel: 'Next',
+                description: canExtractActions
+                    ? 'Preview possible tasks before creating anything.'
+                    : 'Add note content before extracting actions.',
+                statusLabel: canExtractActions ? 'Run' : 'Needs text',
+                enabled: canExtractActions && !isActionExtractionProcessing,
+                onTap: activeNote == null
+                    ? null
+                    : () => ref
+                          .read(smartNoteProcessingProvider.notifier)
+                          .runActionExtraction(activeNote),
               ),
+              if (isActionExtractionProcessing) ...[
+                const SizedBox(height: 4),
+                const LinearProgressIndicator(),
+                const SizedBox(height: 10),
+                Text(
+                  'Finding possible actions...',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+              if (isActionExtractionForThisNote && state.isFailure) ...[
+                const SizedBox(height: 10),
+                _SmartNoteError(
+                  message: state.errorMessage ?? 'Action extraction failed.',
+                ),
+              ],
+              if (isActionExtractionForThisNote && state.hasPreview) ...[
+                const SizedBox(height: 12),
+                _ActionExtractionPreviewCard(
+                  note: activeNote,
+                  previewJson: state.previewJson,
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 'Text extraction never changes the note until you choose an action.',
@@ -1368,6 +1409,412 @@ class _SummaryPreviewCardState extends ConsumerState<_SummaryPreviewCard> {
     ).showSnackBar(const SnackBar(content: Text('Summary inserted.')));
     Navigator.of(context).pop();
   }
+}
+
+class _ActionExtractionPreviewCard extends ConsumerStatefulWidget {
+  final NoteModel note;
+  final Map<String, dynamic>? previewJson;
+
+  const _ActionExtractionPreviewCard({
+    required this.note,
+    required this.previewJson,
+  });
+
+  @override
+  ConsumerState<_ActionExtractionPreviewCard> createState() =>
+      _ActionExtractionPreviewCardState();
+}
+
+class _ActionExtractionPreviewCardState
+    extends ConsumerState<_ActionExtractionPreviewCard> {
+  late List<_EditableActionSuggestion> _items;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _items = _buildEditableItems(widget.previewJson);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ActionExtractionPreviewCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.previewJson != widget.previewJson) {
+      for (final item in _items) {
+        item.dispose();
+      }
+      _items = _buildEditableItems(widget.previewJson);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final item in _items) {
+      item.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final result = NoteActionExtractionResult.fromJson(
+      widget.previewJson ?? {},
+    );
+    final hasSelected = _items.any((item) => item.isSelected);
+    final hasInvalidDates = _items.any((item) => item.hasInvalidDates);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.playlist_add_check_outlined,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Action suggestions',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Chip(label: Text('${_items.length} found')),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _SmartNoteNotice(
+            message:
+                result.safetyNotes ??
+                'Review, edit, or reject each suggestion before creating anything.',
+            color: result.fallbackUsed ? AppColors.warning : AppColors.primary,
+          ),
+          const SizedBox(height: 12),
+          for (var index = 0; index < _items.length; index++) ...[
+            _EditableActionSuggestionTile(
+              item: _items[index],
+              onChanged: () => setState(() {}),
+            ),
+            if (index != _items.length - 1) const SizedBox(height: 10),
+          ],
+          if (hasInvalidDates) ...[
+            const SizedBox(height: 10),
+            const _SmartNoteError(
+              message: 'Use ISO date/time format or clear invalid date fields.',
+            ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: !_isSaving && hasSelected && !hasInvalidDates
+                    ? _confirmSelectedActions
+                    : null,
+                icon: const Icon(Icons.check_outlined),
+                label: Text(_isSaving ? 'Creating...' : 'Create selected'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _isSaving
+                    ? null
+                    : () => ref
+                          .read(smartNoteProcessingProvider.notifier)
+                          .runActionExtraction(widget.note),
+                icon: const Icon(Icons.refresh_outlined),
+                label: const Text('Regenerate'),
+              ),
+              TextButton(
+                onPressed: _isSaving
+                    ? null
+                    : () => ref
+                          .read(smartNoteProcessingProvider.notifier)
+                          .reset(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmSelectedActions() async {
+    final selected = _items.where((item) => item.isSelected).toList();
+    if (selected.isEmpty) return;
+
+    setState(() => _isSaving = true);
+    var createdTasks = 0;
+    var addedChecklistItems = 0;
+    var failed = false;
+
+    for (final item in selected) {
+      final title = item.titleController.text.trim();
+      if (title.isEmpty) continue;
+      if (item.itemType == 'checklist_item') {
+        addedChecklistItems++;
+        continue;
+      }
+
+      final created = await ref
+          .read(tasksProvider.notifier)
+          .createTask(
+            title: title,
+            priority: 'medium',
+            dueAt: _parseActionDate(item.dueDateController.text),
+            reminderAt: _parseActionDate(item.reminderTimeController.text),
+            category: _categoryForActionType(item.itemType),
+          );
+      if (created) {
+        createdTasks++;
+      } else {
+        failed = true;
+      }
+    }
+
+    if (addedChecklistItems > 0) {
+      final checklistItems = [
+        ...widget.note.checklistItems,
+        for (final item in selected.where(
+          (item) => item.itemType == 'checklist_item',
+        ))
+          ChecklistItemModel(
+            id: 'smart_${DateTime.now().microsecondsSinceEpoch}_${item.hashCode}',
+            text: item.titleController.text.trim(),
+            isCompleted: false,
+          ),
+      ];
+      await ref
+          .read(notesProvider.notifier)
+          .updateNote(
+            noteId: widget.note.id,
+            title: widget.note.title,
+            content: widget.note.content,
+            taskId: widget.note.taskId,
+            noteType: widget.note.noteType,
+            tags: widget.note.tags,
+            checklistItems: checklistItems,
+            structuredBlocks: widget.note.structuredBlocks,
+            attachments: widget.note.attachments,
+            reminderAt: widget.note.reminderAt,
+            sourceType: widget.note.sourceType,
+            colorKey: widget.note.colorKey,
+          );
+    }
+
+    ref
+        .read(smartNoteProcessingProvider.notifier)
+        .markSuccess(
+          jobType: SmartNoteJobType.actionExtraction,
+          noteId: widget.note.id,
+        );
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+    final message = failed
+        ? 'Some suggestions could not be created.'
+        : 'Created $createdTasks task(s), added $addedChecklistItems checklist item(s).';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+    if (!failed) Navigator.of(context).pop();
+  }
+}
+
+class _EditableActionSuggestionTile extends StatelessWidget {
+  final _EditableActionSuggestion item;
+  final VoidCallback onChanged;
+
+  const _EditableActionSuggestionTile({
+    required this.item,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.textSecondary.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Checkbox(
+                value: item.isSelected,
+                onChanged: (value) {
+                  item.isSelected = value ?? false;
+                  onChanged();
+                },
+              ),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: item.itemType,
+                  decoration: const InputDecoration(labelText: 'Type'),
+                  items: const [
+                    DropdownMenuItem(value: 'task', child: Text('Task')),
+                    DropdownMenuItem(
+                      value: 'reminder',
+                      child: Text('Reminder'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'checklist_item',
+                      child: Text('Checklist item'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'calendar_suggestion',
+                      child: Text('Calendar suggestion'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'focus_suggestion',
+                      child: Text('Focus suggestion'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    item.itemType = value ?? 'task';
+                    onChanged();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Chip(label: Text(item.confidence)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: item.titleController,
+            onChanged: (_) => onChanged(),
+            decoration: const InputDecoration(
+              labelText: 'Title',
+              prefixIcon: Icon(Icons.edit_outlined),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: item.dueDateController,
+            onChanged: (_) => onChanged(),
+            decoration: InputDecoration(
+              labelText: 'Due date',
+              hintText: 'YYYY-MM-DDTHH:MM:SS',
+              prefixIcon: const Icon(Icons.event_outlined),
+              errorText: _invalidActionDate(item.dueDateController.text)
+                  ? 'Invalid date'
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: item.reminderTimeController,
+            onChanged: (_) => onChanged(),
+            decoration: InputDecoration(
+              labelText: 'Reminder time',
+              hintText: 'YYYY-MM-DDTHH:MM:SS',
+              prefixIcon: const Icon(Icons.notifications_outlined),
+              errorText: _invalidActionDate(item.reminderTimeController.text)
+                  ? 'Invalid date'
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              item.reason,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EditableActionSuggestion {
+  String itemType;
+  bool isSelected;
+  final String confidence;
+  final String reason;
+  final TextEditingController titleController;
+  final TextEditingController dueDateController;
+  final TextEditingController reminderTimeController;
+
+  _EditableActionSuggestion({
+    required this.itemType,
+    required this.isSelected,
+    required this.confidence,
+    required this.reason,
+    required String title,
+    String? dueDate,
+    String? reminderTime,
+  }) : titleController = TextEditingController(text: title),
+       dueDateController = TextEditingController(text: dueDate ?? ''),
+       reminderTimeController = TextEditingController(text: reminderTime ?? '');
+
+  bool get hasInvalidDates {
+    return _invalidActionDate(dueDateController.text) ||
+        _invalidActionDate(reminderTimeController.text);
+  }
+
+  void dispose() {
+    titleController.dispose();
+    dueDateController.dispose();
+    reminderTimeController.dispose();
+  }
+}
+
+List<_EditableActionSuggestion> _buildEditableItems(
+  Map<String, dynamic>? previewJson,
+) {
+  final result = NoteActionExtractionResult.fromJson(previewJson ?? {});
+  return result.extractedItems
+      .map(
+        (item) => _EditableActionSuggestion(
+          itemType: item.itemType,
+          isSelected: item.requiresConfirmation,
+          confidence: item.confidence,
+          reason: item.reason,
+          title: item.title,
+          dueDate: item.dueDate,
+          reminderTime: item.reminderTime,
+        ),
+      )
+      .toList();
+}
+
+bool _invalidActionDate(String value) {
+  final text = value.trim();
+  return text.isNotEmpty && DateTime.tryParse(text) == null;
+}
+
+DateTime? _parseActionDate(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return null;
+  return DateTime.tryParse(text);
+}
+
+String _categoryForActionType(String itemType) {
+  return switch (itemType) {
+    'reminder' => 'smart_note_reminder',
+    'calendar_suggestion' => 'smart_note_calendar',
+    'focus_suggestion' => 'smart_note_focus',
+    _ => 'smart_note',
+  };
 }
 
 class _TextExtractionPreviewCard extends ConsumerStatefulWidget {

@@ -87,6 +87,36 @@ NOTE_SUMMARY_STYLE_INSTRUCTIONS = {
     "action_focused": "Summarize decisions, next actions, and follow-ups only.",
 }
 
+NOTE_ACTION_EXTRACTION_PROMPT = """
+You extract possible user-confirmed actions from private notes.
+
+Return ONLY a valid JSON object with this shape:
+{{
+  "extracted_items": [
+    {{
+      "item_type": "task | reminder | checklist_item | calendar_suggestion | focus_suggestion",
+      "title": "short editable title",
+      "due_date": "ISO 8601 datetime or null",
+      "reminder_time": "ISO 8601 datetime or null",
+      "confidence": "high | medium | low",
+      "reason": "short reason",
+      "requires_confirmation": true
+    }}
+  ],
+  "safety_notes": "short note or null"
+}}
+
+Rules:
+- Today is {today}.
+- Never create, modify, or delete anything. Only suggest.
+- Every extracted item MUST have requires_confirmation true.
+- Never invent dates or times that are not implied by the note.
+- Use reminder_time only when the note clearly implies a reminder.
+- Keep titles concise and free of unnecessary private context.
+- Return at most 8 extracted_items.
+- Return ONLY JSON, no markdown, no explanation, no backticks.
+"""
+
 
 def _get_client() -> AsyncGroq:
     global client
@@ -222,4 +252,29 @@ async def summarize_note_text(note_text: str, summary_style: str) -> dict:
         raise
     except Exception as e:
         _log_ai_failure("note_summary", e)
+        raise
+
+
+async def extract_note_actions(note_text: str, today: str) -> dict:
+    try:
+        response = await _get_client().chat.completions.create(
+            model=MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": NOTE_ACTION_EXTRACTION_PROMPT.format(today=today),
+                },
+                {"role": "user", "content": note_text[:12000]},
+            ],
+            temperature=0.1,
+            max_tokens=900,
+        )
+        raw = response.choices[0].message.content.strip()
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        _log_ai_failure("note_action_extraction_json_decode", e)
+        raise
+    except Exception as e:
+        _log_ai_failure("note_action_extraction", e)
         raise

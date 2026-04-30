@@ -31,6 +31,13 @@ ALLOWED_NOTE_SUMMARY_STYLES = {
     "study_notes",
     "action_focused",
 }
+ALLOWED_NOTE_ACTION_ITEM_TYPES = {
+    "task",
+    "reminder",
+    "checklist_item",
+    "calendar_suggestion",
+    "focus_suggestion",
+}
 
 
 def _normalize_tags(tags: list[str] | None) -> list[str] | None:
@@ -408,6 +415,69 @@ class NoteSummaryResponse(BaseModel):
         if clean not in {"high", "medium", "low"}:
             raise ValueError("confidence must be high, medium, or low")
         return clean
+
+
+class NoteActionExtractionItem(BaseModel):
+    item_type: str
+    title: str = Field(..., max_length=160)
+    due_date: Optional[datetime] = None
+    reminder_time: Optional[datetime] = None
+    confidence: str
+    reason: str = Field(..., max_length=240)
+    requires_confirmation: bool = True
+
+    @field_validator("item_type")
+    @classmethod
+    def item_type_valid(cls, value: str) -> str:
+        clean = value.strip().lower()
+        if clean not in ALLOWED_NOTE_ACTION_ITEM_TYPES:
+            raise ValueError("Unsupported action item type")
+        return clean
+
+    @field_validator("title")
+    @classmethod
+    def action_title_valid(cls, value: str) -> str:
+        clean = value.strip()
+        if not clean:
+            raise ValueError("Action title cannot be empty")
+        return clean
+
+    @field_validator("confidence")
+    @classmethod
+    def action_confidence_valid(cls, value: str) -> str:
+        clean = value.strip().lower()
+        if clean not in {"high", "medium", "low"}:
+            raise ValueError("confidence must be high, medium, or low")
+        return clean
+
+    @field_validator("reason")
+    @classmethod
+    def reason_valid(cls, value: str) -> str:
+        clean = value.strip()
+        if not clean:
+            raise ValueError("Reason cannot be empty")
+        return clean
+
+    @field_validator("requires_confirmation")
+    @classmethod
+    def confirmation_required(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("Smart note action items require confirmation")
+        return value
+
+
+class NoteActionExtractionResponse(BaseModel):
+    extracted_items: list[NoteActionExtractionItem]
+    requires_confirmation: bool = True
+    fallback_used: bool = False
+    safety_notes: Optional[str] = None
+
+    @field_validator("requires_confirmation")
+    @classmethod
+    def response_confirmation_required(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("Smart note action extraction requires confirmation")
+        return value
 
 
 class SmartNoteJobCreate(BaseModel):

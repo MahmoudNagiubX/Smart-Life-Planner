@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,7 @@ from app.api.v1.auth import get_current_user
 from app.core.config import settings
 from app.schemas.note import (
     NoteCreate,
+    NoteActionExtractionResponse,
     NoteSummaryRequest,
     NoteSummaryResponse,
     NoteUpdate,
@@ -20,7 +22,11 @@ from app.repositories.note_repository import (
     delete_note,
 )
 from app.repositories.task_repository import get_task_by_id
-from app.services.ai_service import summarize_note_text
+from app.services.ai_service import extract_note_actions, summarize_note_text
+from app.services.note_action_extraction_service import (
+    fallback_note_action_extraction,
+    normalize_note_action_extraction,
+)
 from app.services.note_summary_service import (
     build_note_summary_source,
     fallback_note_summary,
@@ -109,6 +115,42 @@ async def summarize_existing_note(
     except Exception:
         return NoteSummaryResponse(
             **fallback_note_summary(note_text, payload.summary_style)
+        )
+
+
+@router.post("/{note_id}/extract-actions", response_model=NoteActionExtractionResponse)
+async def extract_existing_note_actions(
+    note_id: uuid.UUID,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    note = await get_note_by_id(db, note_id, current_user.id)
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
+
+    note_text = build_note_summary_source(note)
+    if not note_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Note has no readable content to extract actions from",
+        )
+
+    today = date.today()
+    if not settings.GROQ_API_KEY:
+        return NoteActionExtractionResponse(
+            **fallback_note_action_extraction(note_text, today)
+        )
+
+    try:
+        result = await extract_note_actions(note_text, today.isoformat())
+        return NoteActionExtractionResponse(
+            **normalize_note_action_extraction(result)
+        )
+    except Exception:
+        return NoteActionExtractionResponse(
+            **fallback_note_action_extraction(note_text, today)
         )
 
 

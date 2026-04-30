@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_error.dart';
+import '../models/note_action_extraction_model.dart';
 import '../models/note_model.dart';
 import '../models/note_summary_model.dart';
 import '../models/smart_note_processing_model.dart';
@@ -99,6 +100,55 @@ class SmartNoteProcessingNotifier
     }
   }
 
+  Future<void> runActionExtraction(NoteModel note) async {
+    if (note.content.trim().isEmpty) {
+      state = SmartNoteProcessingState.fail(
+        jobType: SmartNoteJobType.actionExtraction,
+        noteId: note.id,
+        errorMessage: 'Add note content before extracting actions.',
+      );
+      return;
+    }
+
+    state = SmartNoteProcessingState.processing(
+      jobType: SmartNoteJobType.actionExtraction,
+      noteId: note.id,
+    );
+
+    try {
+      final result = await _ref
+          .read(noteServiceProvider)
+          .extractNoteActions(noteId: note.id);
+      if (result.extractedItems.isEmpty) {
+        state = SmartNoteProcessingState.fail(
+          jobType: SmartNoteJobType.actionExtraction,
+          noteId: note.id,
+          errorMessage: 'No clear actions were found. Add one manually.',
+        );
+        return;
+      }
+
+      state = SmartNoteProcessingState.preview(
+        jobType: SmartNoteJobType.actionExtraction,
+        noteId: note.id,
+        previewText: _actionPreviewText(result),
+        previewJson: result.toJson(),
+      );
+    } on DioException catch (e) {
+      state = SmartNoteProcessingState.fail(
+        jobType: SmartNoteJobType.actionExtraction,
+        noteId: note.id,
+        errorMessage: friendlyApiError(e, 'Failed to extract actions'),
+      );
+    } catch (_) {
+      state = SmartNoteProcessingState.fail(
+        jobType: SmartNoteJobType.actionExtraction,
+        noteId: note.id,
+        errorMessage: 'Failed to extract actions. Please try again.',
+      );
+    }
+  }
+
   Future<void> _runImageTextExtraction({
     required NoteModel note,
     required SmartNoteJobType jobType,
@@ -176,6 +226,10 @@ class SmartNoteProcessingNotifier
   void reset() {
     state = const SmartNoteProcessingState();
   }
+}
+
+String _actionPreviewText(NoteActionExtractionResult result) {
+  return result.extractedItems.map((item) => item.title).join('\n');
 }
 
 final smartNoteProcessingProvider =
