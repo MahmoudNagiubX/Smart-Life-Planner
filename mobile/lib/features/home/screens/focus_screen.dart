@@ -21,6 +21,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(focusProvider.notifier).loadAnalytics();
+      ref.read(focusProvider.notifier).loadRecommendation();
       if (ref.read(tasksProvider).tasks.isEmpty) {
         ref.read(tasksProvider.notifier).loadTasks();
       }
@@ -76,6 +77,58 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   Future<void> _handleBlockedPop() async {
     if (await _confirmLeaveDistractionMode() && mounted) {
       context.go(AppRoutes.home);
+    }
+  }
+
+  Future<void> _showTaskChooser(List<TaskModel> tasks) async {
+    var sourceTasks = tasks;
+    if (sourceTasks.isEmpty) {
+      await ref.read(tasksProvider.notifier).loadTasks();
+      if (!mounted) return;
+      sourceTasks = ref.read(tasksProvider).tasks;
+    }
+
+    final candidates = sourceTasks
+        .where((task) => task.status != 'completed' && !task.isDeleted)
+        .toList();
+    if (candidates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No pending tasks available.')),
+      );
+      return;
+    }
+
+    final selected = await showModalBottomSheet<TaskModel>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView.separated(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            itemCount: candidates.length,
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final task = candidates[index];
+              final estimate = task.estimatedMinutes == null
+                  ? 'Default focus block'
+                  : '${task.estimatedMinutes}m estimate';
+              return ListTile(
+                leading: const Icon(Icons.task_alt),
+                title: Text(task.title),
+                subtitle: Text('${task.priority} priority - $estimate'),
+                onTap: () => Navigator.of(context).pop(task),
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    if (selected != null && mounted) {
+      await ref
+          .read(focusProvider.notifier)
+          .startFocusSession(taskId: selected.id);
     }
   }
 
@@ -321,6 +374,18 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                 ),
               ),
               if (!distractionActive) ...[
+                if (!hasActive) ...[
+                  const SizedBox(height: 24),
+                  _FocusRecommendationCard(
+                    state: state,
+                    onAccept: () => ref
+                        .read(focusProvider.notifier)
+                        .startRecommendedFocus(),
+                    onChooseAnother: () => _showTaskChooser(tasksState.tasks),
+                    onRefresh: () =>
+                        ref.read(focusProvider.notifier).loadRecommendation(),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 _FocusSettings(state: state),
                 const SizedBox(height: 24),
@@ -405,6 +470,161 @@ class _ActivePomodoroProgress extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FocusRecommendationCard extends StatelessWidget {
+  final FocusState state;
+  final VoidCallback onAccept;
+  final VoidCallback onChooseAnother;
+  final VoidCallback onRefresh;
+
+  const _FocusRecommendationCard({
+    required this.state,
+    required this.onAccept,
+    required this.onChooseAnother,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final recommendation = state.recommendation;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Recommended Focus',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Refresh recommendation',
+                onPressed: state.isRecommendationLoading ? null : onRefresh,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (state.isRecommendationLoading) ...[
+            const LinearProgressIndicator(minHeight: 4),
+            const SizedBox(height: 10),
+            Text(
+              'Choosing the best focus task...',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+          ] else if (state.recommendationError != null) ...[
+            Text(
+              state.recommendationError!,
+              style: const TextStyle(color: AppColors.error),
+            ),
+          ] else if (recommendation == null) ...[
+            Text(
+              'No recommendation loaded yet.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            ),
+          ] else ...[
+            Text(
+              recommendation.title ?? 'No pending task',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              recommendation.explanation,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _RecommendationChip(
+                  label: '${recommendation.recommendedDurationMinutes} min',
+                  icon: Icons.timer_outlined,
+                ),
+                _RecommendationChip(
+                  label: '${recommendation.confidence} confidence',
+                  icon: Icons.insights_outlined,
+                ),
+                _RecommendationChip(
+                  label: recommendation.fallbackUsed
+                      ? 'Rules fallback'
+                      : 'AI explained',
+                  icon: recommendation.fallbackUsed
+                      ? Icons.rule
+                      : Icons.auto_awesome,
+                ),
+              ],
+            ),
+            if (recommendation.reasons.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                recommendation.reasons.take(3).join(' - '),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (recommendation.hasTask)
+                  FilledButton.icon(
+                    onPressed: onAccept,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Accept'),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: onChooseAnother,
+                  icon: const Icon(Icons.swap_horiz),
+                  label: const Text('Choose task'),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendationChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+
+  const _RecommendationChip({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      avatar: Icon(icon, size: 16),
+      label: Text(label),
+      visualDensity: VisualDensity.compact,
     );
   }
 }

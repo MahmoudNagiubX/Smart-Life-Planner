@@ -26,9 +26,12 @@ final focusAmbientSoundServiceProvider = Provider<FocusAmbientSoundService>((
 class FocusState {
   final FocusSession? activeSession;
   final FocusAnalytics? analytics;
+  final FocusRecommendation? recommendation;
   final List<FocusSession> sessions;
   final bool isLoading;
+  final bool isRecommendationLoading;
   final String? error;
+  final String? recommendationError;
   final int remainingSeconds;
   final int focusMinutes;
   final int shortBreakMinutes;
@@ -42,9 +45,12 @@ class FocusState {
   const FocusState({
     this.activeSession,
     this.analytics,
+    this.recommendation,
     this.sessions = const [],
     this.isLoading = false,
+    this.isRecommendationLoading = false,
     this.error,
+    this.recommendationError,
     this.remainingSeconds = 0,
     this.focusMinutes = 25,
     this.shortBreakMinutes = 5,
@@ -59,9 +65,12 @@ class FocusState {
   FocusState copyWith({
     FocusSession? activeSession,
     FocusAnalytics? analytics,
+    FocusRecommendation? recommendation,
     List<FocusSession>? sessions,
     bool? isLoading,
+    bool? isRecommendationLoading,
     String? error,
+    String? recommendationError,
     int? remainingSeconds,
     int? focusMinutes,
     int? shortBreakMinutes,
@@ -76,9 +85,13 @@ class FocusState {
     return FocusState(
       activeSession: clearSession ? null : activeSession ?? this.activeSession,
       analytics: analytics ?? this.analytics,
+      recommendation: recommendation ?? this.recommendation,
       sessions: sessions ?? this.sessions,
       isLoading: isLoading ?? this.isLoading,
+      isRecommendationLoading:
+          isRecommendationLoading ?? this.isRecommendationLoading,
       error: error,
+      recommendationError: recommendationError,
       remainingSeconds: remainingSeconds ?? this.remainingSeconds,
       focusMinutes: focusMinutes ?? this.focusMinutes,
       shortBreakMinutes: shortBreakMinutes ?? this.shortBreakMinutes,
@@ -105,6 +118,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
   Future<void> _init() async {
     await loadSettings();
     await loadAnalytics();
+    await loadRecommendation();
     await _checkActiveSession();
   }
 
@@ -167,6 +181,36 @@ class FocusNotifier extends StateNotifier<FocusState> {
     } catch (_) {}
   }
 
+  Future<void> loadRecommendation() async {
+    state = state.copyWith(
+      isRecommendationLoading: true,
+      recommendationError: null,
+    );
+    try {
+      final recommendation = await _ref
+          .read(focusServiceProvider)
+          .getRecommendation();
+      state = state.copyWith(
+        recommendation: recommendation,
+        isRecommendationLoading: false,
+        recommendationError: null,
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isRecommendationLoading: false,
+        recommendationError: friendlyApiError(
+          e,
+          'Failed to load focus recommendation',
+        ),
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isRecommendationLoading: false,
+        recommendationError: 'Failed to load focus recommendation',
+      );
+    }
+  }
+
   void setFocusMinutes(int minutes) {
     state = state.copyWith(focusMinutes: minutes.clamp(5, 120));
     _queueSettingsSave();
@@ -210,6 +254,16 @@ class FocusNotifier extends StateNotifier<FocusState> {
       plannedMinutes: state.focusMinutes,
       sessionType: 'pomodoro',
       taskId: taskId,
+    );
+  }
+
+  Future<void> startRecommendedFocus() async {
+    final recommendation = state.recommendation;
+    if (recommendation == null || !recommendation.hasTask) return;
+    await startSession(
+      plannedMinutes: recommendation.recommendedDurationMinutes,
+      sessionType: 'pomodoro',
+      taskId: recommendation.taskId,
     );
   }
 
@@ -285,6 +339,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
         await _ref.read(tasksProvider.notifier).loadTasks();
       }
       await loadAnalytics();
+      await loadRecommendation();
       if (shouldContinue) {
         if (_isBreakSession(completed.sessionType)) {
           await startFocusSession();
@@ -321,6 +376,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
       await service.cancelSession(session.id);
       state = state.copyWith(clearSession: true, remainingSeconds: 0);
       await loadAnalytics();
+      await loadRecommendation();
     } catch (_) {}
   }
 

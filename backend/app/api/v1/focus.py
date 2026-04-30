@@ -5,11 +5,13 @@ from app.core.dependencies import get_db
 from app.api.v1.auth import get_current_user
 from app.schemas.focus import (
     FocusAnalyticsResponse,
+    FocusRecommendationResponse,
     FocusSettingsResponse,
     FocusSettingsUpdate,
     FocusSessionCreate,
     FocusSessionResponse,
 )
+from app.core.config import settings
 from app.repositories.focus_repository import (
     cancel_session,
     complete_session,
@@ -21,7 +23,12 @@ from app.repositories.focus_repository import (
     get_sessions,
     update_focus_settings,
 )
-from app.repositories.task_repository import get_task_by_id
+from app.repositories.task_repository import get_task_by_id, get_tasks
+from app.services.ai_service import explain_focus_recommendation
+from app.services.focus_recommendation import (
+    apply_ai_focus_explanation,
+    build_focus_recommendation,
+)
 
 router = APIRouter(prefix="/focus", tags=["focus"])
 
@@ -159,3 +166,36 @@ async def focus_analytics(
     db: AsyncSession = Depends(get_db),
 ):
     return await get_focus_analytics(db, current_user.id)
+
+
+@router.get("/recommendation", response_model=FocusRecommendationResponse)
+async def focus_recommendation(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    focus_settings = await get_focus_settings(db, current_user.id)
+    default_duration = (
+        focus_settings.default_focus_minutes if focus_settings else 25
+    )
+    tasks = await get_tasks(db, current_user.id, status="pending")
+    recommendation = build_focus_recommendation(
+        tasks,
+        default_duration_minutes=default_duration,
+    )
+
+    if recommendation["task_id"] and settings.GROQ_API_KEY:
+        try:
+            explanation = await explain_focus_recommendation(
+                recommendation["title"] or "Recommended task",
+                recommendation["reasons"],
+                recommendation["recommended_duration_minutes"],
+            )
+            recommendation = apply_ai_focus_explanation(
+                recommendation,
+                explanation,
+            )
+        except Exception:
+            # The deterministic recommendation remains the source of truth.
+            pass
+
+    return recommendation

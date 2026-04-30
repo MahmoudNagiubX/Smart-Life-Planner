@@ -55,6 +55,16 @@ class FocusAnalyticsResponse(BaseModel):
     report_summary: str
 
 
+class FocusRecommendationResponse(BaseModel):
+    task_id: Optional[uuid.UUID] = None
+    title: Optional[str] = None
+    recommended_duration_minutes: int
+    reasons: list[str]
+    confidence: str
+    fallback_used: bool
+    explanation: str
+
+
 class FocusSettingsResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID

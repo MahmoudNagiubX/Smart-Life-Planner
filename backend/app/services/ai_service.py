@@ -117,6 +117,17 @@ Rules:
 - Return ONLY JSON, no markdown, no explanation, no backticks.
 """
 
+FOCUS_RECOMMENDATION_EXPLANATION_PROMPT = """
+You explain a focus-task recommendation for a productivity app.
+
+Return ONLY one short sentence, max 24 words.
+
+Rules:
+- Do not change the selected task.
+- Do not mention private details beyond the task title and provided reasons.
+- Be practical and calm.
+"""
+
 
 def _get_client() -> AsyncGroq:
     global client
@@ -277,4 +288,36 @@ async def extract_note_actions(note_text: str, today: str) -> dict:
         raise
     except Exception as e:
         _log_ai_failure("note_action_extraction", e)
+        raise
+
+
+async def explain_focus_recommendation(
+    title: str,
+    reasons: list[str],
+    duration_minutes: int,
+) -> str:
+    try:
+        context = json.dumps(
+            {
+                "title": title,
+                "reasons": reasons[:5],
+                "duration_minutes": duration_minutes,
+            },
+            default=str,
+        )
+        response = await _get_client().chat.completions.create(
+            model=MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": FOCUS_RECOMMENDATION_EXPLANATION_PROMPT,
+                },
+                {"role": "user", "content": context},
+            ],
+            temperature=0.2,
+            max_tokens=80,
+        )
+        return response.choices[0].message.content.strip().strip('"')
+    except Exception as e:
+        _log_ai_failure("focus_recommendation_explanation", e)
         raise

@@ -120,3 +120,42 @@ class FocusSettings {
     };
   }
 }
+
+class FocusRecommendation {
+  final String? taskId;
+  final String? title;
+  final int recommendedDurationMinutes;
+  final List<String> reasons;
+  final String confidence;
+  final bool fallbackUsed;
+  final String explanation;
+
+  const FocusRecommendation({
+    this.taskId,
+    this.title,
+    required this.recommendedDurationMinutes,
+    required this.reasons,
+    required this.confidence,
+    required this.fallbackUsed,
+    required this.explanation,
+  });
+
+  bool get hasTask => taskId != null && title != null;
+
+  factory FocusRecommendation.fromJson(Map<String, dynamic> json) {
+    return FocusRecommendation(
+      taskId: json['task_id'] as String?,
+      title: json['title'] as String?,
+      recommendedDurationMinutes:
+          json['recommended_duration_minutes'] as int? ?? 25,
+      reasons: (json['reasons'] as List<dynamic>? ?? const [])
+          .map((reason) => reason.toString())
+          .toList(),
+      confidence: json['confidence'] as String? ?? 'low',
+      fallbackUsed: json['fallback_used'] as bool? ?? true,
+      explanation:
+          json['explanation'] as String? ??
+          'No focus recommendation is available right now.',
+    );
+  }
+}
