@@ -11,6 +11,7 @@ import '../../../core/widgets/app_loading_state.dart';
 import '../../voice/screens/voice_note_sheet.dart';
 import '../models/app_template_library.dart';
 import '../models/note_model.dart';
+import '../models/note_summary_model.dart';
 import '../models/smart_note_processing_model.dart';
 import '../providers/note_provider.dart';
 import '../providers/smart_note_processing_provider.dart';
@@ -971,9 +972,16 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
         state.noteId == activeNote.id;
     final isImageExtractionForThisNote =
         isOcrForThisNote || isHandwritingForThisNote;
+    final isSummaryForThisNote =
+        activeNote != null &&
+        state.jobType == SmartNoteJobType.summary &&
+        state.noteId == activeNote.id;
     final isOcrProcessing = isOcrForThisNote && state.isProcessing;
     final isHandwritingProcessing =
         isHandwritingForThisNote && state.isProcessing;
+    final isSummaryProcessing = isSummaryForThisNote && state.isProcessing;
+    final canSummarize =
+        activeNote != null && activeNote.content.trim().isNotEmpty;
 
     return SafeArea(
       child: Padding(
@@ -1088,12 +1096,43 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
                   previewJson: state.previewJson,
                 ),
               ],
-              const _SmartToolTile(
+              _SmartToolTile(
                 icon: Icons.summarize_outlined,
                 title: 'AI note summary',
-                description: 'Create a short editable summary in a later step.',
-                statusLabel: 'Next',
+                description: canSummarize
+                    ? 'Create an editable summary preview.'
+                    : 'Add note content before summarizing.',
+                statusLabel: canSummarize ? 'Choose' : 'Needs text',
+                enabled: canSummarize && !isSummaryProcessing,
+                onTap: activeNote == null
+                    ? null
+                    : () => _showSummaryStylePicker(context, ref, activeNote),
               ),
+              if (isSummaryProcessing) ...[
+                const SizedBox(height: 4),
+                const LinearProgressIndicator(),
+                const SizedBox(height: 10),
+                Text(
+                  'Creating summary preview...',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+              if (isSummaryForThisNote && state.isFailure) ...[
+                const SizedBox(height: 10),
+                _SmartNoteError(
+                  message: state.errorMessage ?? 'Summary failed.',
+                ),
+              ],
+              if (isSummaryForThisNote && state.hasPreview) ...[
+                const SizedBox(height: 12),
+                _SummaryPreviewCard(
+                  note: activeNote,
+                  previewText: state.previewText ?? '',
+                  previewJson: state.previewJson,
+                ),
+              ],
               const _SmartToolTile(
                 icon: Icons.playlist_add_check_outlined,
                 title: 'AI action extraction',
@@ -1112,6 +1151,222 @@ class _SmartNoteToolsSheet extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> _showSummaryStylePicker(
+  BuildContext context,
+  WidgetRef ref,
+  NoteModel note,
+) async {
+  final style = await showDialog<NoteSummaryStyle>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Summary style'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final style in NoteSummaryStyle.values)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(style.label),
+              subtitle: Text(style.description),
+              onTap: () => Navigator.of(context).pop(style),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+      ],
+    ),
+  );
+  if (style == null || !context.mounted) return;
+  await ref.read(smartNoteProcessingProvider.notifier).runSummary(note, style);
+}
+
+class _SummaryPreviewCard extends ConsumerStatefulWidget {
+  final NoteModel note;
+  final String previewText;
+  final Map<String, dynamic>? previewJson;
+
+  const _SummaryPreviewCard({
+    required this.note,
+    required this.previewText,
+    required this.previewJson,
+  });
+
+  @override
+  ConsumerState<_SummaryPreviewCard> createState() =>
+      _SummaryPreviewCardState();
+}
+
+class _SummaryPreviewCardState extends ConsumerState<_SummaryPreviewCard> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.previewText);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SummaryPreviewCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.previewText != widget.previewText) {
+      _controller.text = widget.previewText;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _summaryStyleFromPreview(widget.previewJson);
+    final confidence = widget.previewJson?['confidence']?.toString() ?? 'low';
+    final fallbackUsed = widget.previewJson?['fallback_used'] == true;
+    final safetyNotes = widget.previewJson?['safety_notes']?.toString();
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.summarize_outlined, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${style.label} summary preview',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Chip(label: Text(confidence)),
+            ],
+          ),
+          if (fallbackUsed ||
+              (safetyNotes != null && safetyNotes.isNotEmpty)) ...[
+            const SizedBox(height: 10),
+            _SmartNoteNotice(
+              message: fallbackUsed
+                  ? safetyNotes ??
+                        'Fallback summary created. Review before inserting.'
+                  : safetyNotes!,
+              color: fallbackUsed ? AppColors.warning : AppColors.primary,
+            ),
+          ],
+          const SizedBox(height: 10),
+          TextField(
+            controller: _controller,
+            minLines: 4,
+            maxLines: 8,
+            decoration: InputDecoration(
+              hintText: 'Review and edit summary before inserting.',
+              filled: true,
+              fillColor: Theme.of(context).cardTheme.color,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _controller,
+            builder: (context, value, _) {
+              final editedSummary = value.text.trim();
+              final hasSummary = editedSummary.isNotEmpty;
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    onPressed: hasSummary
+                        ? () =>
+                              _insertSummary(context, ref, style, editedSummary)
+                        : null,
+                    icon: const Icon(Icons.add_outlined),
+                    label: const Text('Insert'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: hasSummary
+                        ? () async {
+                            await Clipboard.setData(
+                              ClipboardData(text: editedSummary),
+                            );
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Summary copied.')),
+                            );
+                          }
+                        : null,
+                    icon: const Icon(Icons.copy_outlined),
+                    label: const Text('Copy'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => ref
+                        .read(smartNoteProcessingProvider.notifier)
+                        .runSummary(widget.note, style),
+                    icon: const Icon(Icons.refresh_outlined),
+                    label: const Text('Regenerate'),
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        ref.read(smartNoteProcessingProvider.notifier).reset(),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _insertSummary(
+    BuildContext context,
+    WidgetRef ref,
+    NoteSummaryStyle style,
+    String summary,
+  ) async {
+    await ref
+        .read(notesProvider.notifier)
+        .updateNote(
+          noteId: widget.note.id,
+          title: widget.note.title,
+          content: _appendSummaryText(widget.note.content, style, summary),
+          taskId: widget.note.taskId,
+          noteType: widget.note.noteType,
+          tags: widget.note.tags,
+          checklistItems: widget.note.checklistItems,
+          structuredBlocks: widget.note.structuredBlocks,
+          attachments: widget.note.attachments,
+          reminderAt: widget.note.reminderAt,
+          sourceType: widget.note.sourceType,
+          colorKey: widget.note.colorKey,
+        );
+    ref
+        .read(smartNoteProcessingProvider.notifier)
+        .markSuccess(jobType: SmartNoteJobType.summary, noteId: widget.note.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Summary inserted.')));
+    Navigator.of(context).pop();
   }
 }
 
@@ -1338,6 +1593,51 @@ class _HandwritingConfidenceNotice extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SmartNoteNotice extends StatelessWidget {
+  final String message;
+  final Color color;
+
+  const _SmartNoteNotice({required this.message, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        message,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+NoteSummaryStyle _summaryStyleFromPreview(Map<String, dynamic>? previewJson) {
+  return noteSummaryStyleFromApi(
+    previewJson?['summary_style']?.toString() ?? 'short',
+  );
+}
+
+String _appendSummaryText(
+  String currentContent,
+  NoteSummaryStyle style,
+  String summary,
+) {
+  final current = currentContent.trimRight();
+  final reviewedSummary = summary.trim();
+  final block = 'Summary (${style.label})\n$reviewedSummary';
+  if (current.isEmpty) return block;
+  return '$current\n\n$block';
 }
 
 String _textExtractionPreviewTitle(SmartNoteJobType jobType) {

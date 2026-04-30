@@ -1,7 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 
+import '../../../core/network/api_error.dart';
 import '../models/note_model.dart';
+import '../models/note_summary_model.dart';
 import '../models/smart_note_processing_model.dart';
+import '../providers/note_provider.dart';
 import '../services/note_ocr_service.dart';
 
 final noteOcrServiceProvider = Provider<NoteOcrService>((ref) {
@@ -39,6 +43,60 @@ class SmartNoteProcessingNotifier
       failureMessage: 'Handwriting extraction failed. Try a clearer image.',
       sourceMode: 'handwriting_best_effort',
     );
+  }
+
+  Future<void> runSummary(NoteModel note, NoteSummaryStyle style) async {
+    if (note.content.trim().isEmpty) {
+      state = SmartNoteProcessingState.fail(
+        jobType: SmartNoteJobType.summary,
+        noteId: note.id,
+        errorMessage: 'Add note content before summarizing.',
+      );
+      return;
+    }
+
+    state = SmartNoteProcessingState.processing(
+      jobType: SmartNoteJobType.summary,
+      noteId: note.id,
+    );
+
+    try {
+      final result = await _ref
+          .read(noteServiceProvider)
+          .summarizeNote(noteId: note.id, style: style);
+      if (result.summary.trim().isEmpty) {
+        state = SmartNoteProcessingState.fail(
+          jobType: SmartNoteJobType.summary,
+          noteId: note.id,
+          errorMessage: 'The summary was empty. Try a different style.',
+        );
+        return;
+      }
+
+      state = SmartNoteProcessingState.preview(
+        jobType: SmartNoteJobType.summary,
+        noteId: note.id,
+        previewText: result.summary,
+        previewJson: {
+          'summary_style': style.apiKey,
+          'confidence': result.confidence,
+          'fallback_used': result.fallbackUsed,
+          'safety_notes': result.safetyNotes,
+        },
+      );
+    } on DioException catch (e) {
+      state = SmartNoteProcessingState.fail(
+        jobType: SmartNoteJobType.summary,
+        noteId: note.id,
+        errorMessage: friendlyApiError(e, 'Failed to summarize note'),
+      );
+    } catch (_) {
+      state = SmartNoteProcessingState.fail(
+        jobType: SmartNoteJobType.summary,
+        noteId: note.id,
+        errorMessage: 'Failed to summarize note. Please try again.',
+      );
+    }
   }
 
   Future<void> _runImageTextExtraction({

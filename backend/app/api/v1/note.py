@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_db
 from app.api.v1.auth import get_current_user
-from app.schemas.note import NoteCreate, NoteUpdate, NoteResponse
+from app.core.config import settings
+from app.schemas.note import (
+    NoteCreate,
+    NoteSummaryRequest,
+    NoteSummaryResponse,
+    NoteUpdate,
+    NoteResponse,
+)
 from app.repositories.note_repository import (
     get_notes,
     get_note_by_id,
@@ -13,6 +20,12 @@ from app.repositories.note_repository import (
     delete_note,
 )
 from app.repositories.task_repository import get_task_by_id
+from app.services.ai_service import summarize_note_text
+from app.services.note_summary_service import (
+    build_note_summary_source,
+    fallback_note_summary,
+    normalize_note_summary_result,
+)
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 
@@ -63,6 +76,40 @@ async def get_note(
             status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
         )
     return note
+
+
+@router.post("/{note_id}/summarize", response_model=NoteSummaryResponse)
+async def summarize_existing_note(
+    note_id: uuid.UUID,
+    payload: NoteSummaryRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    note = await get_note_by_id(db, note_id, current_user.id)
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
+
+    note_text = build_note_summary_source(note)
+    if not note_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Note has no readable content to summarize",
+        )
+
+    if not settings.GROQ_API_KEY:
+        return NoteSummaryResponse(
+            **fallback_note_summary(note_text, payload.summary_style)
+        )
+
+    try:
+        result = await summarize_note_text(note_text, payload.summary_style)
+        return NoteSummaryResponse(**normalize_note_summary_result(result))
+    except Exception:
+        return NoteSummaryResponse(
+            **fallback_note_summary(note_text, payload.summary_style)
+        )
 
 
 @router.patch("/{note_id}", response_model=NoteResponse)

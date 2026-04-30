@@ -63,6 +63,30 @@ Rules:
 - Return ONLY the JSON array, no markdown, no backticks
 """
 
+NOTE_SUMMARY_PROMPT = """
+You summarize private user notes for a productivity app.
+
+Return ONLY a valid JSON object with these fields:
+- summary: string
+- confidence: one of high, medium, low
+- safety_notes: string or null
+
+Style: {style_instruction}
+
+Rules:
+- Do not invent facts that are not in the note.
+- Keep sensitive details minimal.
+- If the note is unclear, say that the summary needs review.
+- Return ONLY the JSON object, no markdown, no explanation, no backticks.
+"""
+
+NOTE_SUMMARY_STYLE_INSTRUCTIONS = {
+    "short": "Write 1-2 concise sentences.",
+    "bullets": "Write 3-5 short bullet points using plain text dashes.",
+    "study_notes": "Create compact study notes with key ideas and review points.",
+    "action_focused": "Summarize decisions, next actions, and follow-ups only.",
+}
+
 
 def _get_client() -> AsyncGroq:
     global client
@@ -168,4 +192,34 @@ async def generate_daily_plan(tasks: list[dict], prayers: list[dict]) -> list[di
         return []
     except Exception as e:
         _log_ai_failure("daily_plan", e)
+        raise
+
+
+async def summarize_note_text(note_text: str, summary_style: str) -> dict:
+    try:
+        style_instruction = NOTE_SUMMARY_STYLE_INSTRUCTIONS.get(
+            summary_style, NOTE_SUMMARY_STYLE_INSTRUCTIONS["short"]
+        )
+        response = await _get_client().chat.completions.create(
+            model=MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": NOTE_SUMMARY_PROMPT.format(
+                        style_instruction=style_instruction
+                    ),
+                },
+                {"role": "user", "content": note_text[:12000]},
+            ],
+            temperature=0.2,
+            max_tokens=500,
+        )
+        raw = response.choices[0].message.content.strip()
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        _log_ai_failure("note_summary_json_decode", e)
+        raise
+    except Exception as e:
+        _log_ai_failure("note_summary", e)
         raise

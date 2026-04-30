@@ -25,6 +25,12 @@ ALLOWED_SMART_NOTE_JOB_STATUSES = {
     "completed",
     "failed",
 }
+ALLOWED_NOTE_SUMMARY_STYLES = {
+    "short",
+    "bullets",
+    "study_notes",
+    "action_focused",
+}
 
 
 def _normalize_tags(tags: list[str] | None) -> list[str] | None:
@@ -367,6 +373,41 @@ class NoteResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class NoteSummaryRequest(BaseModel):
+    summary_style: str = "short"
+
+    @field_validator("summary_style")
+    @classmethod
+    def summary_style_valid(cls, value: str) -> str:
+        clean = value.strip().lower()
+        if clean not in ALLOWED_NOTE_SUMMARY_STYLES:
+            raise ValueError("Unsupported note summary style")
+        return clean
+
+
+class NoteSummaryResponse(BaseModel):
+    summary: str = Field(..., max_length=4000)
+    confidence: str
+    fallback_used: bool = False
+    safety_notes: Optional[str] = None
+
+    @field_validator("summary")
+    @classmethod
+    def summary_not_empty(cls, value: str) -> str:
+        clean = value.strip()
+        if not clean:
+            raise ValueError("Summary cannot be empty")
+        return clean
+
+    @field_validator("confidence")
+    @classmethod
+    def confidence_valid(cls, value: str) -> str:
+        clean = value.strip().lower()
+        if clean not in {"high", "medium", "low"}:
+            raise ValueError("confidence must be high, medium, or low")
+        return clean
 
 
 class SmartNoteJobCreate(BaseModel):

@@ -1,5 +1,6 @@
 import '../../../core/network/api_client.dart';
 import '../models/note_model.dart';
+import '../models/note_summary_model.dart';
 
 class NoteService {
   final ApiClient _apiClient;
@@ -137,5 +138,16 @@ class NoteService {
 
   Future<void> deleteNote(String noteId) async {
     await _apiClient.dio.delete('/notes/$noteId');
+  }
+
+  Future<NoteSummaryResult> summarizeNote({
+    required String noteId,
+    required NoteSummaryStyle style,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/notes/$noteId/summarize',
+      data: {'summary_style': style.apiKey},
+    );
+    return NoteSummaryResult.fromJson(response.data as Map<String, dynamic>);
   }
 }
