@@ -27,11 +27,14 @@ class FocusState {
   final FocusSession? activeSession;
   final FocusAnalytics? analytics;
   final FocusRecommendation? recommendation;
+  final FocusReadiness? readiness;
   final List<FocusSession> sessions;
   final bool isLoading;
   final bool isRecommendationLoading;
+  final bool isReadinessLoading;
   final String? error;
   final String? recommendationError;
+  final String? readinessError;
   final int remainingSeconds;
   final int focusMinutes;
   final int shortBreakMinutes;
@@ -46,11 +49,14 @@ class FocusState {
     this.activeSession,
     this.analytics,
     this.recommendation,
+    this.readiness,
     this.sessions = const [],
     this.isLoading = false,
     this.isRecommendationLoading = false,
+    this.isReadinessLoading = false,
     this.error,
     this.recommendationError,
+    this.readinessError,
     this.remainingSeconds = 0,
     this.focusMinutes = 25,
     this.shortBreakMinutes = 5,
@@ -66,11 +72,14 @@ class FocusState {
     FocusSession? activeSession,
     FocusAnalytics? analytics,
     FocusRecommendation? recommendation,
+    FocusReadiness? readiness,
     List<FocusSession>? sessions,
     bool? isLoading,
     bool? isRecommendationLoading,
+    bool? isReadinessLoading,
     String? error,
     String? recommendationError,
+    String? readinessError,
     int? remainingSeconds,
     int? focusMinutes,
     int? shortBreakMinutes,
@@ -86,12 +95,15 @@ class FocusState {
       activeSession: clearSession ? null : activeSession ?? this.activeSession,
       analytics: analytics ?? this.analytics,
       recommendation: recommendation ?? this.recommendation,
+      readiness: readiness ?? this.readiness,
       sessions: sessions ?? this.sessions,
       isLoading: isLoading ?? this.isLoading,
       isRecommendationLoading:
           isRecommendationLoading ?? this.isRecommendationLoading,
+      isReadinessLoading: isReadinessLoading ?? this.isReadinessLoading,
       error: error,
       recommendationError: recommendationError,
+      readinessError: readinessError,
       remainingSeconds: remainingSeconds ?? this.remainingSeconds,
       focusMinutes: focusMinutes ?? this.focusMinutes,
       shortBreakMinutes: shortBreakMinutes ?? this.shortBreakMinutes,
@@ -119,6 +131,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
     await loadSettings();
     await loadAnalytics();
     await loadRecommendation();
+    await loadReadiness();
     await _checkActiveSession();
   }
 
@@ -207,6 +220,28 @@ class FocusNotifier extends StateNotifier<FocusState> {
       state = state.copyWith(
         isRecommendationLoading: false,
         recommendationError: 'Failed to load focus recommendation',
+      );
+    }
+  }
+
+  Future<void> loadReadiness() async {
+    state = state.copyWith(isReadinessLoading: true, readinessError: null);
+    try {
+      final readiness = await _ref.read(focusServiceProvider).getReadiness();
+      state = state.copyWith(
+        readiness: readiness,
+        isReadinessLoading: false,
+        readinessError: null,
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isReadinessLoading: false,
+        readinessError: friendlyApiError(e, 'Failed to load focus readiness'),
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isReadinessLoading: false,
+        readinessError: 'Failed to load focus readiness',
       );
     }
   }
@@ -340,6 +375,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
       }
       await loadAnalytics();
       await loadRecommendation();
+      await loadReadiness();
       if (shouldContinue) {
         if (_isBreakSession(completed.sessionType)) {
           await startFocusSession();
@@ -377,6 +413,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
       state = state.copyWith(clearSession: true, remainingSeconds: 0);
       await loadAnalytics();
       await loadRecommendation();
+      await loadReadiness();
     } catch (_) {}
   }
 

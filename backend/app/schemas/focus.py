@@ -65,6 +65,13 @@ class FocusRecommendationResponse(BaseModel):
     explanation: str
 
 
+class FocusReadinessResponse(BaseModel):
+    predicted_focus_readiness: str
+    readiness_score: int
+    reasons: list[str]
+    signals: dict
+
+
 class FocusSettingsResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID

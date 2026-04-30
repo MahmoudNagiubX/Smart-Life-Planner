@@ -159,3 +159,31 @@ class FocusRecommendation {
     );
   }
 }
+
+class FocusReadiness {
+  final String predictedFocusReadiness;
+  final int readinessScore;
+  final List<String> reasons;
+  final Map<String, dynamic> signals;
+
+  const FocusReadiness({
+    required this.predictedFocusReadiness,
+    required this.readinessScore,
+    required this.reasons,
+    required this.signals,
+  });
+
+  factory FocusReadiness.fromJson(Map<String, dynamic> json) {
+    return FocusReadiness(
+      predictedFocusReadiness:
+          json['predicted_focus_readiness'] as String? ?? 'low',
+      readinessScore: json['readiness_score'] as int? ?? 0,
+      reasons: (json['reasons'] as List<dynamic>? ?? const [])
+          .map((reason) => reason.toString())
+          .toList(),
+      signals: Map<String, dynamic>.from(
+        json['signals'] as Map<String, dynamic>? ?? const {},
+      ),
+    );
+  }
+}

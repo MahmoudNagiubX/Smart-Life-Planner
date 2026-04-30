@@ -22,6 +22,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(focusProvider.notifier).loadAnalytics();
       ref.read(focusProvider.notifier).loadRecommendation();
+      ref.read(focusProvider.notifier).loadReadiness();
       if (ref.read(tasksProvider).tasks.isEmpty) {
         ref.read(tasksProvider.notifier).loadTasks();
       }
@@ -178,6 +179,14 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
             children: [
               if (state.analytics != null && !distractionActive) ...[
                 _AnalyticsGrid(analytics: state.analytics!),
+                const SizedBox(height: 24),
+              ],
+              if (!distractionActive) ...[
+                _FocusReadinessCard(
+                  state: state,
+                  onRefresh: () =>
+                      ref.read(focusProvider.notifier).loadReadiness(),
+                ),
                 const SizedBox(height: 24),
               ],
               AnimatedOpacity(
@@ -606,6 +615,124 @@ class _FocusRecommendationCard extends StatelessWidget {
                 ),
               ],
             ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FocusReadinessCard extends StatelessWidget {
+  final FocusState state;
+  final VoidCallback onRefresh;
+
+  const _FocusReadinessCard({required this.state, required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    final readiness = state.readiness;
+    final label = readiness?.predictedFocusReadiness ?? 'unknown';
+    final color = switch (label) {
+      'high' => AppColors.success,
+      'medium' => AppColors.warning,
+      _ => AppColors.textSecondary,
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.psychology_alt_outlined, color: color),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Focus Readiness',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Refresh readiness',
+                onPressed: state.isReadinessLoading ? null : onRefresh,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (state.isReadinessLoading) ...[
+            const LinearProgressIndicator(minHeight: 4),
+            const SizedBox(height: 10),
+            Text(
+              'Checking recent focus signals...',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+          ] else if (state.readinessError != null) ...[
+            Text(
+              state.readinessError!,
+              style: const TextStyle(color: AppColors.error),
+            ),
+          ] else if (readiness == null) ...[
+            Text(
+              'Readiness prediction is not loaded yet.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: LinearProgressIndicator(
+                    value: readiness.readinessScore / 100,
+                    minHeight: 6,
+                    backgroundColor: color.withValues(alpha: 0.18),
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text('${readiness.readinessScore}%'),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...readiness.reasons
+                .take(3)
+                .map(
+                  (reason) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('- '),
+                        Expanded(
+                          child: Text(
+                            reason,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
           ],
         ],
       ),

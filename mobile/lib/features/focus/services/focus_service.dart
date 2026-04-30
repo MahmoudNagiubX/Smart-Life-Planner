@@ -63,6 +63,11 @@ class FocusService {
     return FocusRecommendation.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<FocusReadiness> getReadiness() async {
+    final response = await _apiClient.dio.get('/focus/readiness');
+    return FocusReadiness.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<FocusSettings> getSettings() async {
     final response = await _apiClient.dio.get('/focus/settings');
     return FocusSettings.fromJson(response.data as Map<String, dynamic>);
