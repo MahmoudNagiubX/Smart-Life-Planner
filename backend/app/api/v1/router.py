@@ -3,6 +3,7 @@ from app.api.v1 import (
     ai,
     analytics,
     auth,
+    context,
     dashboard,
     dhikr,
     feedback,
@@ -24,6 +25,7 @@ router.include_router(settings.router)
 router.include_router(tasks.project_router)
 router.include_router(tasks.router)
 router.include_router(dashboard.router)
+router.include_router(context.router)
 router.include_router(dhikr.router)
 router.include_router(feedback.router)
 router.include_router(note.router)

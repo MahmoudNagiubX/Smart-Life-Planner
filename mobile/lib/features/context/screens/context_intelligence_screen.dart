@@ -1,14 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
+import '../../../core/widgets/app_loading_state.dart';
 import '../providers/context_intelligence_provider.dart';
 
-class ContextIntelligenceScreen extends ConsumerWidget {
+class ContextIntelligenceScreen extends ConsumerStatefulWidget {
   const ContextIntelligenceScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final snapshot = ref.watch(contextIntelligenceProvider).snapshot;
+  ConsumerState<ContextIntelligenceScreen> createState() =>
+      _ContextIntelligenceScreenState();
+}
+
+class _ContextIntelligenceScreenState
+    extends ConsumerState<ContextIntelligenceScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(contextIntelligenceProvider.notifier).loadSnapshot();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(contextIntelligenceProvider);
+    final snapshot = state.snapshot;
     final notifier = ref.read(contextIntelligenceProvider.notifier);
 
     return Scaffold(
@@ -17,63 +35,97 @@ class ContextIntelligenceScreen extends ConsumerWidget {
           'Context Intelligence',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          _SectionCard(
-            icon: Icons.battery_charging_full_outlined,
-            title: 'Energy Level',
-            subtitle: 'Manual signal for future recommendations.',
-            child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(
-                  value: 'low',
-                  label: Text('Low'),
-                  icon: Icon(Icons.battery_1_bar),
-                ),
-                ButtonSegment(
-                  value: 'medium',
-                  label: Text('Medium'),
-                  icon: Icon(Icons.battery_4_bar),
-                ),
-                ButtonSegment(
-                  value: 'high',
-                  label: Text('High'),
-                  icon: Icon(Icons.battery_full),
-                ),
-              ],
-              selected: {snapshot.energyLevel},
-              onSelectionChanged: (selected) {
-                notifier.setEnergyLevel(selected.first);
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          _RecommendationPreview(text: snapshot.recommendationExplanation),
-          const SizedBox(height: 12),
-          _PlaceholderCard(
-            icon: Icons.location_on_outlined,
-            title: 'Location Context',
-            value: snapshot.locationContext,
-          ),
-          _PlaceholderCard(
-            icon: Icons.devices_outlined,
-            title: 'Device Context',
-            value: snapshot.deviceContext,
-          ),
-          _PlaceholderCard(
-            icon: Icons.schedule_outlined,
-            title: 'Time Context',
-            value: snapshot.timeContext,
-          ),
-          _PlaceholderCard(
-            icon: Icons.wb_cloudy_outlined,
-            title: 'Weather Suggestions',
-            value: snapshot.weatherContext,
+        actions: [
+          IconButton(
+            tooltip: 'Refresh context',
+            onPressed: state.isSaving ? null : notifier.refreshTimeContext,
+            icon: const Icon(Icons.refresh),
           ),
         ],
       ),
+      body: state.isLoading
+          ? const AppLoadingState(message: 'Loading context snapshot...')
+          : state.error != null && snapshot.id.isEmpty
+          ? AppErrorState(
+              title: 'Context snapshot could not load',
+              message: state.error!,
+              onRetry: notifier.loadSnapshot,
+            )
+          : RefreshIndicator(
+              onRefresh: notifier.loadSnapshot,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                children: [
+                  _SectionCard(
+                    icon: Icons.battery_charging_full_outlined,
+                    title: 'Energy Level',
+                    subtitle:
+                        'Choose your current energy so recommendations can adapt.',
+                    child: SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                          value: 'low',
+                          label: Text('Low'),
+                          icon: Icon(Icons.battery_1_bar),
+                        ),
+                        ButtonSegment(
+                          value: 'medium',
+                          label: Text('Medium'),
+                          icon: Icon(Icons.battery_4_bar),
+                        ),
+                        ButtonSegment(
+                          value: 'high',
+                          label: Text('High'),
+                          icon: Icon(Icons.battery_full),
+                        ),
+                      ],
+                      selected: {snapshot.energyLevel},
+                      onSelectionChanged: state.isSaving
+                          ? null
+                          : (selected) =>
+                                notifier.setEnergyLevel(selected.first),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (state.error != null) ...[
+                    Text(
+                      state.error!,
+                      style: const TextStyle(color: AppColors.error),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  _RecommendationPreview(
+                    text: snapshot.recommendationExplanation,
+                  ),
+                  const SizedBox(height: 12),
+                  _ContextCard(
+                    icon: Icons.schedule_outlined,
+                    title: 'Time Context',
+                    value: snapshot.timeContext,
+                    detail: 'Timezone: ${snapshot.timezone}',
+                  ),
+                  _ContextCard(
+                    icon: Icons.location_on_outlined,
+                    title: 'Location Context',
+                    value: snapshot.locationContext,
+                    detail: 'Coarse context only',
+                  ),
+                  _ContextCard(
+                    icon: Icons.devices_outlined,
+                    title: 'Device Context',
+                    value: snapshot.deviceContext,
+                    detail: 'Optional manual/device summary',
+                  ),
+                  _ContextCard(
+                    icon: Icons.wb_cloudy_outlined,
+                    title: 'Weather Context',
+                    value: snapshot.weatherContext,
+                    detail: 'Optional summary, no live weather yet',
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -161,15 +213,17 @@ class _RecommendationPreview extends StatelessWidget {
   }
 }
 
-class _PlaceholderCard extends StatelessWidget {
+class _ContextCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String value;
+  final String detail;
 
-  const _PlaceholderCard({
+  const _ContextCard({
     required this.icon,
     required this.title,
     required this.value,
+    required this.detail,
   });
 
   @override
@@ -200,15 +254,20 @@ class _PlaceholderCard extends StatelessWidget {
                     color: AppColors.textSecondary,
                   ),
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),
-          const Text(
-            'Planned',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
+          const Icon(
+            Icons.check_circle_outline,
+            size: 18,
+            color: AppColors.success,
           ),
         ],
       ),
