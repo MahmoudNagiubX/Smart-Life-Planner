@@ -157,6 +157,28 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
     }
   }
 
+  Future<void> setPrayerStatus(String prayerName, String status) async {
+    final data = state.data;
+    if (data == null) return;
+    try {
+      final service = _ref.read(prayerServiceProvider);
+      await service.setPrayerStatus(prayerName, data.date, status);
+      if (status == 'prayed_on_time' || status == 'prayed_late') {
+        await _ref.read(notificationSchedulerProvider).cancelPrayerReminder(prayerName);
+        await _ref.read(reminderServiceProvider).dismissTargetReminders(
+          targetType: 'prayer',
+          reminderType: 'prayer',
+          recurrenceRule: _prayerReminderRule(prayerName, data.date),
+        );
+      }
+      await loadTodayPrayers();
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to set prayer status'),
+      );
+    }
+  }
+
   Future<void> _dismissPrayerReminders(DailyPrayers data) async {
     final service = _ref.read(reminderServiceProvider);
     for (final prayer in data.prayers) {

@@ -7,6 +7,8 @@ from app.schemas.prayer import (
     DailyPrayerResponse,
     PrayerResponse,
     PrayerLogResponse,
+    PrayerStatusUpdate,
+    PrayerWeeklySummaryResponse,
     QuranGoalSummaryResponse,
     QuranGoalUpsert,
     QuranProgressUpdate,
@@ -20,7 +22,9 @@ from app.repositories.prayer_repository import (
     upsert_prayer_log,
     mark_prayer_complete,
     mark_prayer_incomplete,
+    mark_prayer_status,
     get_prayer_history,
+    get_prayer_weekly_summary,
     get_quran_goal,
     delete_quran_goal,
     get_quran_progress_for_date,
@@ -150,18 +154,22 @@ async def get_today_prayers(
 
     prayers_response = []
     completed_count = 0
+    missed_count = 0
 
     for name in PRAYER_NAMES:
         scheduled_at = times.get(name)
         log = await upsert_prayer_log(db, current_user.id, name, today, scheduled_at)
         if log.completed:
             completed_count += 1
+        if log.status == "missed":
+            missed_count += 1
         prayers_response.append(
             PrayerResponse(
                 prayer_name=name,
                 scheduled_at=log.scheduled_at,
                 completed=log.completed,
                 completed_at=log.completed_at,
+                status=log.status,
             )
         )
 
@@ -170,6 +178,7 @@ async def get_today_prayers(
         prayers=prayers_response,
         completed_count=completed_count,
         total_count=len(PRAYER_NAMES),
+        missed_count=missed_count,
     )
 
 
@@ -309,6 +318,34 @@ async def uncomplete_prayer(
     return await mark_prayer_incomplete(db, log)
 
 
+@router.patch("/{prayer_name}/{prayer_date}/status", response_model=PrayerLogResponse)
+async def update_prayer_status(
+    prayer_name: str,
+    prayer_date: date,
+    payload: PrayerStatusUpdate,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if prayer_name not in PRAYER_NAMES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid prayer name. Must be one of {PRAYER_NAMES}",
+        )
+    log = await get_prayer_log(db, current_user.id, prayer_name, prayer_date)
+    if not log:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prayer log not found. Call /today first to generate logs.",
+        )
+    try:
+        return await mark_prayer_status(db, log, payload.status)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
 @router.get("/history", response_model=list[PrayerLogResponse])
 async def prayer_history(
     date_from: date = Query(default=None),
@@ -320,3 +357,14 @@ async def prayer_history(
     date_from = date_from or (today - timedelta(days=7))
     date_to = date_to or today
     return await get_prayer_history(db, current_user.id, date_from, date_to)
+
+
+@router.get("/history/weekly", response_model=PrayerWeeklySummaryResponse)
+async def weekly_prayer_history_summary(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    today = date.today()
+    # Go back 6 days to get a 7-day window ending today
+    week_start = today - timedelta(days=6)
+    return await get_prayer_weekly_summary(db, current_user.id, week_start, today)

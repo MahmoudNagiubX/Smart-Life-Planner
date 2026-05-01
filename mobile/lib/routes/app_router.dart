@@ -28,7 +28,9 @@ import '../features/analytics/screens/analytics_screen.dart';
 import '../features/context/screens/context_intelligence_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
+import '../features/prayer/screens/prayer_screen.dart';
 import '../features/prayer/screens/prayer_settings_screen.dart';
+import '../features/prayer/screens/prayer_history_screen.dart';
 import '../features/prayer/screens/quran_goal_screen.dart';
 import '../features/prayer/screens/qibla_screen.dart';
 import '../features/prayer/screens/ramadan_mode_screen.dart';
@@ -210,14 +212,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.prayerHistory,
-            builder: (context, state) => const DeferredScopeScreen(
-              title: 'Prayer History',
-              icon: Icons.calendar_month,
-              description:
-                  'Prayer history and missed-prayer tracking are deferred until the real logging flow is implemented.',
-              availableNow:
-                  'Use the Prayer tab for today’s prayer times and daily tracking.',
-            ),
+            builder: (context, state) => const PrayerHistoryScreen(),
           ),
           GoRoute(
             path: AppRoutes.quranGoal,

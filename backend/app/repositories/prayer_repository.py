@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime, date, timezone
+from collections import defaultdict
+from datetime import datetime, date, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.prayer import (
@@ -10,6 +11,8 @@ from app.models.prayer import (
 )
 from app.services.reminder_invalidation import invalidate_target_reminders
 
+
+# ── Prayer Log helpers ───────────────────────────────────────────────────────
 
 async def get_prayer_logs_for_date(
     db: AsyncSession,
@@ -69,6 +72,8 @@ async def mark_prayer_complete(
     log.completed = True
     log.completed_at = datetime.now(timezone.utc)
     log.completion_source = "manual"
+    if log.status not in ("prayed_on_time", "prayed_late"):
+        log.status = "prayed_on_time"
     await db.commit()
     await db.refresh(log)
     return log
@@ -81,6 +86,38 @@ async def mark_prayer_incomplete(
     log.completed = False
     log.completed_at = None
     log.completion_source = None
+    log.status = None
+    await db.commit()
+    await db.refresh(log)
+    return log
+
+
+VALID_PRAYER_STATUSES = {"prayed_on_time", "prayed_late", "missed", "excused"}
+
+
+async def mark_prayer_status(
+    db: AsyncSession,
+    log: PrayerLog,
+    status: str,
+) -> PrayerLog:
+    """Set an explicit status on a prayer log.
+
+    For 'missed' or 'excused': marks completed=False and clears timestamps.
+    For 'prayed_on_time' or 'prayed_late': marks completed=True with now.
+    """
+    if status not in VALID_PRAYER_STATUSES:
+        raise ValueError(f"Invalid prayer status: {status}")
+    log.status = status
+    if status in ("prayed_on_time", "prayed_late"):
+        log.completed = True
+        if log.completed_at is None:
+            log.completed_at = datetime.now(timezone.utc)
+        log.completion_source = "manual"
+    else:
+        # missed / excused
+        log.completed = False
+        log.completed_at = None
+        log.completion_source = None
     await db.commit()
     await db.refresh(log)
     return log
@@ -101,6 +138,68 @@ async def get_prayer_history(
     )
     return list(result.scalars().all())
 
+
+async def get_prayer_weekly_summary(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    week_start: date,
+    week_end: date,
+) -> dict:
+    """Aggregate prayer status counts per day across a date range.
+
+    Returns a dict with keys:
+      - days: list of per-day dicts (prayer_date, total, completed, missed, late, excused)
+      - total_missed, total_completed, total_prayers, today_missed
+    """
+    logs = await get_prayer_history(db, user_id, week_start, week_end)
+
+    by_date: dict[date, list[PrayerLog]] = defaultdict(list)
+    for log in logs:
+        by_date[log.prayer_date].append(log)
+
+    today = date.today()
+    days = []
+    total_missed = 0
+    total_completed = 0
+    total_prayers = 0
+    today_missed = 0
+
+    for offset in range((week_end - week_start).days + 1):
+        current = week_start + timedelta(days=offset)
+        day_logs = by_date.get(current, [])
+        completed = sum(1 for l in day_logs if l.completed)
+        missed = sum(1 for l in day_logs if l.status == "missed")
+        late = sum(1 for l in day_logs if l.status == "prayed_late")
+        excused = sum(1 for l in day_logs if l.status == "excused")
+        total = len(day_logs)
+        days.append(
+            {
+                "prayer_date": current,
+                "total": total,
+                "completed": completed,
+                "missed": missed,
+                "late": late,
+                "excused": excused,
+            }
+        )
+        total_missed += missed
+        total_completed += completed
+        total_prayers += total
+        if current == today:
+            today_missed = missed
+
+    return {
+        "week_start": week_start,
+        "week_end": week_end,
+        "total_missed": total_missed,
+        "total_completed": total_completed,
+        "total_prayers": total_prayers,
+        "today_missed": today_missed,
+        "days": days,
+    }
+
+
+# ── Quran Goal helpers ───────────────────────────────────────────────────────
 
 async def get_quran_goal(
     db: AsyncSession,
@@ -203,6 +302,8 @@ async def get_quran_progress_range(
     )
     return list(result.scalars().all())
 
+
+# ── Ramadan Fasting Log helpers ──────────────────────────────────────────────
 
 async def get_ramadan_fasting_log(
     db: AsyncSession,

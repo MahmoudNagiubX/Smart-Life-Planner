@@ -18,4 +18,16 @@ class PrayerService {
   Future<void> uncompletePrayer(String prayerName, String date) async {
     await _apiClient.dio.patch('/prayers/$prayerName/$date/uncomplete');
   }
+
+  Future<void> setPrayerStatus(String prayerName, String date, String status) async {
+    await _apiClient.dio.patch(
+      '/prayers/$prayerName/$date/status',
+      data: {'status': status},
+    );
+  }
+
+  Future<PrayerWeeklySummary> getWeeklySummary() async {
+    final response = await _apiClient.dio.get('/prayers/history/weekly');
+    return PrayerWeeklySummary.fromJson(response.data as Map<String, dynamic>);
+  }
 }

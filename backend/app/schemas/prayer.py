@@ -4,11 +4,16 @@ from typing import Optional
 from pydantic import BaseModel, Field, computed_field
 
 
+# ── Prayer status values ────────────────────────────────────────────────────
+VALID_PRAYER_STATUSES = {"prayed_on_time", "prayed_late", "missed", "excused"}
+
+
 class PrayerResponse(BaseModel):
     prayer_name: str
     scheduled_at: Optional[datetime]
     completed: bool
     completed_at: Optional[datetime]
+    status: Optional[str] = None
 
 
 class DailyPrayerResponse(BaseModel):
@@ -16,6 +21,7 @@ class DailyPrayerResponse(BaseModel):
     prayers: list[PrayerResponse]
     completed_count: int
     total_count: int
+    missed_count: int = 0
 
 
 class PrayerLogResponse(BaseModel):
@@ -26,11 +32,40 @@ class PrayerLogResponse(BaseModel):
     scheduled_at: Optional[datetime]
     completed: bool
     completed_at: Optional[datetime]
+    status: Optional[str]
     created_at: datetime
 
     model_config = {"from_attributes": True}
 
 
+class PrayerStatusUpdate(BaseModel):
+    status: str = Field(
+        ...,
+        description="One of: prayed_on_time, prayed_late, missed, excused",
+    )
+
+
+# ── Weekly missed-prayer summary ────────────────────────────────────────────
+class PrayerDaySummary(BaseModel):
+    prayer_date: date
+    total: int
+    completed: int
+    missed: int
+    late: int
+    excused: int
+
+
+class PrayerWeeklySummaryResponse(BaseModel):
+    week_start: date
+    week_end: date
+    total_missed: int
+    total_completed: int
+    total_prayers: int
+    today_missed: int
+    days: list[PrayerDaySummary]
+
+
+# ── Quran schemas ────────────────────────────────────────────────────────────
 class QuranGoalUpsert(BaseModel):
     daily_page_target: int = Field(ge=1, le=604)
 
@@ -91,6 +126,7 @@ class QuranGoalSummaryResponse(BaseModel):
     weekly_summary: list[QuranWeeklyProgressItem]
 
 
+# ── Ramadan schemas ──────────────────────────────────────────────────────────
 class RamadanFastingLogUpdate(BaseModel):
     fasted: bool
     note: Optional[str] = Field(default=None, max_length=500)

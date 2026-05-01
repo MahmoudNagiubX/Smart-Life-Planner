@@ -37,6 +37,8 @@ class PrayerLog(Base):
         DateTime(timezone=True), nullable=True
     )
     completion_source: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # status: prayed_on_time | prayed_late | missed | excused | None (unknown)
+    status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, nullable=False
     )
