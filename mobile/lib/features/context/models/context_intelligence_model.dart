@@ -74,3 +74,65 @@ class ContextIntelligenceSnapshot {
     };
   }
 }
+
+class TimeContextRecommendation {
+  final String taskType;
+  final String title;
+  final String reason;
+  final String suggestedEnergy;
+  final bool preferenceMatch;
+
+  const TimeContextRecommendation({
+    required this.taskType,
+    required this.title,
+    required this.reason,
+    required this.suggestedEnergy,
+    required this.preferenceMatch,
+  });
+
+  factory TimeContextRecommendation.fromJson(Map<String, dynamic> json) {
+    return TimeContextRecommendation(
+      taskType: json['task_type'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      reason: json['reason'] as String? ?? '',
+      suggestedEnergy: json['suggested_energy'] as String? ?? 'medium',
+      preferenceMatch: json['preference_match'] as bool? ?? false,
+    );
+  }
+}
+
+class TimeContextRecommendationResult {
+  final String localTimeBlock;
+  final String energyLevel;
+  final List<String> goalTags;
+  final List<TimeContextRecommendation> recommendations;
+  final String explanation;
+
+  const TimeContextRecommendationResult({
+    required this.localTimeBlock,
+    required this.energyLevel,
+    required this.goalTags,
+    required this.recommendations,
+    required this.explanation,
+  });
+
+  factory TimeContextRecommendationResult.fromJson(Map<String, dynamic> json) {
+    final rawRecommendations =
+        json['recommendations'] as List<dynamic>? ?? const [];
+    return TimeContextRecommendationResult(
+      localTimeBlock: json['local_time_block'] as String? ?? 'morning',
+      energyLevel: json['energy_level'] as String? ?? 'medium',
+      goalTags: (json['goal_tags'] as List<dynamic>? ?? const [])
+          .map((item) => item.toString())
+          .toList(),
+      recommendations: rawRecommendations
+          .map(
+            (item) => TimeContextRecommendation.fromJson(
+              item as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+      explanation: json['explanation'] as String? ?? '',
+    );
+  }
+}

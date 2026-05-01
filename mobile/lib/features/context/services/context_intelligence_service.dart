@@ -24,4 +24,20 @@ class ContextIntelligenceService {
       response.data as Map<String, dynamic>,
     );
   }
+
+  Future<TimeContextRecommendationResult> getRecommendations({
+    String? timeBlock,
+  }) async {
+    final queryParameters = <String, dynamic>{};
+    if (timeBlock != null) {
+      queryParameters['time_block'] = timeBlock;
+    }
+    final response = await _apiClient.dio.get(
+      '/context/recommendations',
+      queryParameters: queryParameters,
+    );
+    return TimeContextRecommendationResult.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
 }

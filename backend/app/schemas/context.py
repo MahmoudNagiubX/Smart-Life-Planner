@@ -61,3 +61,19 @@ class ContextSnapshotResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TimeContextRecommendationItem(BaseModel):
+    task_type: str
+    title: str
+    reason: str
+    suggested_energy: str
+    preference_match: bool = False
+
+
+class TimeContextRecommendationResponse(BaseModel):
+    local_time_block: str
+    energy_level: str
+    goal_tags: list[str]
+    recommendations: list[TimeContextRecommendationItem]
+    explanation: str

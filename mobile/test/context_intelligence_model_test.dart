@@ -34,4 +34,26 @@ void main() {
     expect(payload['coarse_location_context'], 'Cairo, Egypt');
     expect(payload.containsKey('weather_summary'), isFalse);
   });
+
+  test('TimeContextRecommendationResult parses backend recommendations', () {
+    final result = TimeContextRecommendationResult.fromJson({
+      'local_time_block': 'morning',
+      'energy_level': 'high',
+      'goal_tags': ['study'],
+      'explanation': 'Morning recommendations use your goals.',
+      'recommendations': [
+        {
+          'task_type': 'deep_work_study',
+          'title': 'Deep work or study',
+          'reason': 'Morning is best for focus.',
+          'suggested_energy': 'high',
+          'preference_match': false,
+        },
+      ],
+    });
+
+    expect(result.localTimeBlock, 'morning');
+    expect(result.goalTags, contains('study'));
+    expect(result.recommendations.single.taskType, 'deep_work_study');
+  });
 }

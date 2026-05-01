@@ -12,12 +12,16 @@ final contextIntelligenceServiceProvider = Provider<ContextIntelligenceService>(
 
 class ContextIntelligenceState {
   final ContextIntelligenceSnapshot snapshot;
+  final TimeContextRecommendationResult? recommendations;
+  final String? previewTimeBlock;
   final bool isLoading;
   final bool isSaving;
   final String? error;
 
   const ContextIntelligenceState({
     this.snapshot = const ContextIntelligenceSnapshot(),
+    this.recommendations,
+    this.previewTimeBlock,
     this.isLoading = false,
     this.isSaving = false,
     this.error,
@@ -25,12 +29,19 @@ class ContextIntelligenceState {
 
   ContextIntelligenceState copyWith({
     ContextIntelligenceSnapshot? snapshot,
+    TimeContextRecommendationResult? recommendations,
+    String? previewTimeBlock,
+    bool clearPreviewTimeBlock = false,
     bool? isLoading,
     bool? isSaving,
     String? error,
   }) {
     return ContextIntelligenceState(
       snapshot: snapshot ?? this.snapshot,
+      recommendations: recommendations ?? this.recommendations,
+      previewTimeBlock: clearPreviewTimeBlock
+          ? null
+          : previewTimeBlock ?? this.previewTimeBlock,
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       error: error,
@@ -51,7 +62,14 @@ class ContextIntelligenceNotifier
       final snapshot = await _ref
           .read(contextIntelligenceServiceProvider)
           .getSnapshot();
-      state = state.copyWith(snapshot: snapshot, isLoading: false);
+      final recommendations = await _ref
+          .read(contextIntelligenceServiceProvider)
+          .getRecommendations(timeBlock: state.previewTimeBlock);
+      state = state.copyWith(
+        snapshot: snapshot,
+        recommendations: recommendations,
+        isLoading: false,
+      );
     } on DioException catch (error) {
       state = state.copyWith(
         isLoading: false,
@@ -74,7 +92,14 @@ class ContextIntelligenceNotifier
           .createSnapshot(
             state.snapshot.toCreatePayload(nextEnergyLevel: energyLevel),
           );
-      state = state.copyWith(snapshot: snapshot, isSaving: false);
+      final recommendations = await _ref
+          .read(contextIntelligenceServiceProvider)
+          .getRecommendations(timeBlock: state.previewTimeBlock);
+      state = state.copyWith(
+        snapshot: snapshot,
+        recommendations: recommendations,
+        isSaving: false,
+      );
     } on DioException catch (error) {
       state = state.copyWith(
         isSaving: false,
@@ -94,7 +119,14 @@ class ContextIntelligenceNotifier
       final snapshot = await _ref
           .read(contextIntelligenceServiceProvider)
           .createSnapshot(state.snapshot.toCreatePayload());
-      state = state.copyWith(snapshot: snapshot, isSaving: false);
+      final recommendations = await _ref
+          .read(contextIntelligenceServiceProvider)
+          .getRecommendations(timeBlock: state.previewTimeBlock);
+      state = state.copyWith(
+        snapshot: snapshot,
+        recommendations: recommendations,
+        isSaving: false,
+      );
     } on DioException catch (error) {
       state = state.copyWith(
         isSaving: false,
@@ -104,6 +136,35 @@ class ContextIntelligenceNotifier
       state = state.copyWith(
         isSaving: false,
         error: 'Failed to refresh context',
+      );
+    }
+  }
+
+  Future<void> previewTimeBlock(String? timeBlock) async {
+    if (timeBlock != null &&
+        !{'morning', 'afternoon', 'evening', 'night'}.contains(timeBlock)) {
+      return;
+    }
+    state = state.copyWith(
+      previewTimeBlock: timeBlock,
+      clearPreviewTimeBlock: timeBlock == null,
+      isSaving: true,
+      error: null,
+    );
+    try {
+      final recommendations = await _ref
+          .read(contextIntelligenceServiceProvider)
+          .getRecommendations(timeBlock: timeBlock);
+      state = state.copyWith(recommendations: recommendations, isSaving: false);
+    } on DioException catch (error) {
+      state = state.copyWith(
+        isSaving: false,
+        error: friendlyApiError(error, 'Failed to load recommendations'),
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isSaving: false,
+        error: 'Failed to load recommendations',
       );
     }
   }
