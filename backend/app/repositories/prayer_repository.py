@@ -325,6 +325,8 @@ async def upsert_ramadan_fasting_log(
     fasting_date: date,
     fasted: bool,
     note: str | None,
+    fast_type: str = "ramadan",
+    makeup_for_date: date | None = None,
 ) -> RamadanFastingLog:
     log = await get_ramadan_fasting_log(db, user_id, fasting_date)
     if not log:
@@ -332,11 +334,15 @@ async def upsert_ramadan_fasting_log(
             user_id=user_id,
             fasting_date=fasting_date,
             fasted=fasted,
+            fast_type=fast_type,
+            makeup_for_date=makeup_for_date,
             note=note,
         )
         db.add(log)
     else:
         log.fasted = fasted
+        log.fast_type = fast_type
+        log.makeup_for_date = makeup_for_date
         log.note = note
     await db.commit()
     await db.refresh(log)

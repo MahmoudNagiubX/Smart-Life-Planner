@@ -15,9 +15,14 @@ class RamadanFastingService {
 
   Future<RamadanFastingSummary> updateToday({
     required bool fasted,
+    String fastType = 'ramadan',
+    String? makeupForDate,
     String? note,
   }) async {
-    final data = <String, dynamic>{'fasted': fasted};
+    final data = <String, dynamic>{'fasted': fasted, 'fast_type': fastType};
+    if (makeupForDate != null) {
+      data['makeup_for_date'] = makeupForDate;
+    }
     if (note != null) {
       data['note'] = note;
     }

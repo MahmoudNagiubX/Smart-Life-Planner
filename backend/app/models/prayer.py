@@ -127,6 +127,8 @@ class RamadanFastingLog(Base):
     )
     fasting_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     fasted: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    fast_type: Mapped[str] = mapped_column(String(30), default="ramadan", nullable=False)
+    makeup_for_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, nullable=False

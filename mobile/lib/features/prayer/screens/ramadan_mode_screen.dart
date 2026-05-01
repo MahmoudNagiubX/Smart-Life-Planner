@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../models/prayer_model.dart';
+import '../models/ramadan_fasting_model.dart';
 import '../models/ramadan_settings_model.dart';
 import '../providers/ramadan_fasting_provider.dart';
 import '../providers/prayer_provider.dart';
@@ -60,8 +61,31 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
     }
   }
 
-  Future<void> _updateFastingLog(bool fasted) async {
-    await ref.read(ramadanFastingProvider.notifier).updateToday(fasted: fasted);
+  Future<void> _updateFastingLog(
+    bool fasted, {
+    String fastType = 'ramadan',
+    String? makeupForDate,
+    String? note,
+  }) async {
+    await ref
+        .read(ramadanFastingProvider.notifier)
+        .updateToday(
+          fasted: fasted,
+          fastType: fastType,
+          makeupForDate: makeupForDate,
+          note: note,
+        );
+  }
+
+  Future<void> _openFastingLogSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _FastingLogEditorSheet(
+        current: ref.read(ramadanFastingProvider).summary?.today,
+      ),
+    );
   }
 
   @override
@@ -102,6 +126,7 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
                     state: fastingState,
                     onMarkFasted: () => _updateFastingLog(true),
                     onMarkNotFasted: () => _updateFastingLog(false),
+                    onEditDetails: _openFastingLogSheet,
                   ),
                   const SizedBox(height: 16),
                   _RamadanModeToggle(
@@ -342,12 +367,14 @@ class _FastingLogCard extends StatelessWidget {
   final RamadanFastingState state;
   final VoidCallback onMarkFasted;
   final VoidCallback onMarkNotFasted;
+  final VoidCallback onEditDetails;
 
   const _FastingLogCard({
     required this.settings,
     required this.state,
     required this.onMarkFasted,
     required this.onMarkNotFasted,
+    required this.onEditDetails,
   });
 
   @override
@@ -359,7 +386,7 @@ class _FastingLogCard extends StatelessWidget {
     final statusText = today == null
         ? 'No fasting status recorded for today.'
         : today.fasted
-        ? 'Marked as fasted today.'
+        ? 'Marked as ${_fastTypeLabel(today.fastType).toLowerCase()} fast today.'
         : 'Marked as not fasted today.';
     final monthText = summary == null
         ? 'Monthly fasting count will appear after loading.'
@@ -393,6 +420,20 @@ class _FastingLogCard extends StatelessWidget {
                 height: 1.45,
               ),
             ),
+            if (today?.note != null || today?.makeupForDate != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                [
+                  if (today?.makeupForDate != null)
+                    'Makeup for ${today!.makeupForDate}',
+                  if (today?.note != null) today!.note!,
+                ].join(' - '),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
             Row(
               children: [
@@ -422,6 +463,17 @@ class _FastingLogCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: trackerEnabled && !state.isSaving
+                    ? onEditDetails
+                    : null,
+                icon: const Icon(Icons.edit_note_outlined),
+                label: const Text('Edit fasting details'),
+              ),
+            ),
             if (state.isSaving) ...[
               const SizedBox(height: 12),
               const LinearProgressIndicator(color: AppColors.prayerGold),
@@ -430,6 +482,156 @@ class _FastingLogCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _FastingLogEditorSheet extends ConsumerStatefulWidget {
+  final RamadanFastingLog? current;
+
+  const _FastingLogEditorSheet({this.current});
+
+  @override
+  ConsumerState<_FastingLogEditorSheet> createState() =>
+      _FastingLogEditorSheetState();
+}
+
+class _FastingLogEditorSheetState
+    extends ConsumerState<_FastingLogEditorSheet> {
+  late bool _fasted;
+  late String _fastType;
+  late final TextEditingController _noteController;
+  DateTime? _makeupForDate;
+
+  @override
+  void initState() {
+    super.initState();
+    final current = widget.current;
+    _fasted = current?.fasted ?? true;
+    _fastType = current?.fastType ?? 'ramadan';
+    _noteController = TextEditingController(text: current?.note ?? '');
+    _makeupForDate = current?.makeupForDate == null
+        ? null
+        : DateTime.tryParse(current!.makeupForDate!);
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(ramadanFastingProvider);
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 8, 20, bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Fasting details',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Fasted today'),
+              value: _fasted,
+              onChanged: (value) => setState(() => _fasted = value),
+            ),
+            DropdownButtonFormField<String>(
+              initialValue: _fastType,
+              decoration: const InputDecoration(labelText: 'Fast type'),
+              items: const [
+                DropdownMenuItem(value: 'ramadan', child: Text('Ramadan')),
+                DropdownMenuItem(value: 'voluntary', child: Text('Voluntary')),
+                DropdownMenuItem(value: 'makeup', child: Text('Makeup')),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _fastType = value;
+                  if (_fastType != 'makeup') _makeupForDate = null;
+                });
+              },
+            ),
+            if (_fastType == 'makeup') ...[
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.event_repeat_outlined),
+                title: const Text('Makeup for date'),
+                subtitle: Text(
+                  _makeupForDate == null
+                      ? 'Optional'
+                      : _dateText(_makeupForDate!),
+                ),
+                onTap: _pickMakeupDate,
+              ),
+            ],
+            const SizedBox(height: 8),
+            TextField(
+              controller: _noteController,
+              decoration: const InputDecoration(
+                labelText: 'Note',
+                hintText: 'Optional reflection or makeup note',
+              ),
+              minLines: 1,
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: state.isSaving ? null : _save,
+                icon: state.isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: const Text('Save fasting log'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickMakeupDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      firstDate: DateTime(now.year - 5),
+      lastDate: now,
+      initialDate: _makeupForDate ?? now,
+    );
+    if (picked != null) {
+      setState(() => _makeupForDate = picked);
+    }
+  }
+
+  Future<void> _save() async {
+    final note = _noteController.text.trim();
+    await ref
+        .read(ramadanFastingProvider.notifier)
+        .updateToday(
+          fasted: _fasted,
+          fastType: _fastType,
+          makeupForDate: _fastType == 'makeup' && _makeupForDate != null
+              ? _dateText(_makeupForDate!)
+              : null,
+          note: note.isEmpty ? null : note,
+        );
+    if (mounted) Navigator.of(context).pop();
   }
 }
 
@@ -646,6 +848,20 @@ String _formatTime(DateTime time) {
   final hour = time.hour.toString().padLeft(2, '0');
   final minute = time.minute.toString().padLeft(2, '0');
   return '$hour:$minute';
+}
+
+String _dateText(DateTime date) {
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '${date.year}-$month-$day';
+}
+
+String _fastTypeLabel(String fastType) {
+  return switch (fastType) {
+    'voluntary' => 'Voluntary',
+    'makeup' => 'Makeup',
+    _ => 'Ramadan',
+  };
 }
 
 class _RamadanCard extends StatelessWidget {

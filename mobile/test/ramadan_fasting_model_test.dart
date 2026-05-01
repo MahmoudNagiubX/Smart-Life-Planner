@@ -25,6 +25,8 @@ void main() {
         'user_id': 'user-id',
         'fasting_date': '2026-04-30',
         'fasted': true,
+        'fast_type': 'makeup',
+        'makeup_for_date': '2026-04-05',
         'note': null,
         'created_at': '2026-04-30T08:00:00Z',
         'updated_at': '2026-04-30T08:00:00Z',
@@ -37,6 +39,8 @@ void main() {
     });
 
     expect(summary.today?.fasted, isTrue);
+    expect(summary.today?.fastType, 'makeup');
+    expect(summary.today?.makeupForDate, '2026-04-05');
     expect(summary.monthFastedCount, 12);
     expect(summary.monthNotFastedCount, 1);
     expect(summary.monthLoggedCount, 13);

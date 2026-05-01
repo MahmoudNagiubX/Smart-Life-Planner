@@ -58,12 +58,22 @@ class RamadanFastingNotifier extends StateNotifier<RamadanFastingState> {
     }
   }
 
-  Future<void> updateToday({required bool fasted, String? note}) async {
+  Future<void> updateToday({
+    required bool fasted,
+    String fastType = 'ramadan',
+    String? makeupForDate,
+    String? note,
+  }) async {
     state = state.copyWith(isSaving: true, error: null);
     try {
       final summary = await _ref
           .read(ramadanFastingServiceProvider)
-          .updateToday(fasted: fasted, note: note);
+          .updateToday(
+            fasted: fasted,
+            fastType: fastType,
+            makeupForDate: makeupForDate,
+            note: note,
+          );
       state = state.copyWith(summary: summary, isSaving: false);
     } on DioException catch (e) {
       state = state.copyWith(

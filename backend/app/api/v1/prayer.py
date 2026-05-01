@@ -272,6 +272,8 @@ async def update_today_ramadan_fasting_log(
         today,
         payload.fasted,
         payload.note.strip() if payload.note else None,
+        payload.fast_type,
+        payload.makeup_for_date,
     )
     return await _build_ramadan_daily_summary(db, current_user.id, today)
 

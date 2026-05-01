@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, date
 from typing import Optional
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 
 # ── Prayer status values ────────────────────────────────────────────────────
@@ -129,7 +129,17 @@ class QuranGoalSummaryResponse(BaseModel):
 # ── Ramadan schemas ──────────────────────────────────────────────────────────
 class RamadanFastingLogUpdate(BaseModel):
     fasted: bool
+    fast_type: str = "ramadan"
+    makeup_for_date: Optional[date] = None
     note: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("fast_type")
+    @classmethod
+    def fast_type_valid(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"ramadan", "voluntary", "makeup"}:
+            raise ValueError("Unsupported fast_type")
+        return normalized
 
 
 class RamadanFastingLogResponse(BaseModel):
@@ -137,6 +147,8 @@ class RamadanFastingLogResponse(BaseModel):
     user_id: uuid.UUID
     fasting_date: date
     fasted: bool
+    fast_type: str
+    makeup_for_date: Optional[date]
     note: Optional[str]
     created_at: datetime
     updated_at: datetime

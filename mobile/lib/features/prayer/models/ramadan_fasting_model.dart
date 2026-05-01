@@ -3,6 +3,8 @@ class RamadanFastingLog {
   final String userId;
   final String fastingDate;
   final bool fasted;
+  final String fastType;
+  final String? makeupForDate;
   final String? note;
   final String createdAt;
   final String updatedAt;
@@ -12,6 +14,8 @@ class RamadanFastingLog {
     required this.userId,
     required this.fastingDate,
     required this.fasted,
+    required this.fastType,
+    required this.makeupForDate,
     required this.note,
     required this.createdAt,
     required this.updatedAt,
@@ -23,6 +27,8 @@ class RamadanFastingLog {
       userId: json['user_id'] as String,
       fastingDate: json['fasting_date'] as String,
       fasted: json['fasted'] as bool,
+      fastType: json['fast_type'] as String? ?? 'ramadan',
+      makeupForDate: json['makeup_for_date'] as String?,
       note: json['note'] as String?,
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
