@@ -10,6 +10,8 @@ from app.schemas.ai import (
     DailyPlanRequest,
     DailyPlanResponse,
     DailyPlanItem,
+    GoalRoadmapRequest,
+    GoalRoadmapResponse,
     QuickCaptureClassifyRequest,
     QuickCaptureClassifyResponse,
 )
@@ -22,6 +24,7 @@ from app.services.ai_service import (
 )
 from app.services.ai_fallback import parse_task_fallback, parse_task_response
 from app.services.quick_capture_classifier import classify_quick_capture
+from app.services.goal_roadmap import generate_goal_roadmap
 from app.core.config import settings
 from app.core.logging import logger
 
@@ -177,3 +180,28 @@ async def daily_plan(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="AI daily plan failed. Please try again.",
         )
+
+
+@router.post("/goal-roadmap", response_model=GoalRoadmapResponse)
+async def goal_roadmap(
+    payload: GoalRoadmapRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = generate_goal_roadmap(
+        goal_title=payload.goal_title,
+        deadline=payload.deadline,
+        current_level=payload.current_level,
+        weekly_available_hours=payload.weekly_available_hours,
+        constraints=payload.constraints,
+    )
+    return GoalRoadmapResponse(
+        goal_title=payload.goal_title,
+        deadline=payload.deadline,
+        milestones=result["milestones"],
+        suggested_tasks=result["suggested_tasks"],
+        schedule_suggestion=result["schedule_suggestion"],
+        confidence=result["confidence"],
+        requires_confirmation=True,
+        fallback_used=result["fallback_used"],
+    )

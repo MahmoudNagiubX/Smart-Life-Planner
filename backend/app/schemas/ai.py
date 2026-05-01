@@ -1,5 +1,5 @@
-from datetime import datetime
-from pydantic import BaseModel, field_validator
+from datetime import date, datetime
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
 class ParseTaskRequest(BaseModel):
@@ -58,3 +58,54 @@ class QuickCaptureClassifyResponse(BaseModel):
     checklist_items: list[str] = []
     reminder_at: Optional[datetime] = None
     reason: str
+
+
+class GoalRoadmapRequest(BaseModel):
+    goal_title: str
+    deadline: Optional[date] = None
+    current_level: Optional[str] = Field(default=None, max_length=80)
+    weekly_available_hours: int = Field(ge=1, le=40)
+    constraints: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("goal_title")
+    @classmethod
+    def goal_title_not_empty(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("goal_title cannot be empty")
+        return cleaned
+
+    @field_validator("current_level", "constraints")
+    @classmethod
+    def optional_text_clean(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class GoalRoadmapMilestone(BaseModel):
+    index: int
+    title: str
+    description: str
+    target_week: int
+
+
+class GoalRoadmapTask(BaseModel):
+    milestone_index: int
+    title: str
+    description: str
+    priority: str
+    estimated_minutes: int
+    suggested_week: int
+
+
+class GoalRoadmapResponse(BaseModel):
+    goal_title: str
+    deadline: Optional[date]
+    milestones: list[GoalRoadmapMilestone]
+    suggested_tasks: list[GoalRoadmapTask]
+    schedule_suggestion: str
+    confidence: str
+    requires_confirmation: bool = True
+    fallback_used: bool = True
