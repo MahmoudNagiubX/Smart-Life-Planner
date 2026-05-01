@@ -51,4 +51,24 @@ class AiService {
     final response = await _apiClient.dio.post('/ai/goal-roadmap', data: data);
     return response.data as Map<String, dynamic>;
   }
+
+  Future<Map<String, dynamic>> generateStudyPlan({
+    required String subject,
+    required String examDate,
+    required List<String> topics,
+    required String difficulty,
+    required int availableDailyStudyMinutes,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/ai/study-plan',
+      data: {
+        'subject': subject,
+        'exam_date': examDate,
+        'topics': topics,
+        'difficulty': difficulty,
+        'available_daily_study_minutes': availableDailyStudyMinutes,
+      },
+    );
+    return response.data as Map<String, dynamic>;
+  }
 }

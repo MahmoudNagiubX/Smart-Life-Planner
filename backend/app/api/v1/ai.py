@@ -14,6 +14,8 @@ from app.schemas.ai import (
     GoalRoadmapResponse,
     QuickCaptureClassifyRequest,
     QuickCaptureClassifyResponse,
+    StudyPlanRequest,
+    StudyPlanResponse,
 )
 from app.repositories.task_repository import get_tasks
 from app.repositories.prayer_repository import get_prayer_logs_for_date
@@ -25,6 +27,7 @@ from app.services.ai_service import (
 from app.services.ai_fallback import parse_task_fallback, parse_task_response
 from app.services.quick_capture_classifier import classify_quick_capture
 from app.services.goal_roadmap import generate_goal_roadmap
+from app.services.study_plan import generate_study_plan
 from app.core.config import settings
 from app.core.logging import logger
 
@@ -204,4 +207,27 @@ async def goal_roadmap(
         confidence=result["confidence"],
         requires_confirmation=True,
         fallback_used=result["fallback_used"],
+    )
+
+
+@router.post("/study-plan", response_model=StudyPlanResponse)
+async def study_plan(
+    payload: StudyPlanRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = generate_study_plan(
+        subject=payload.subject,
+        exam_date=payload.exam_date,
+        topics=payload.topics,
+        difficulty=payload.difficulty,
+        daily_minutes=payload.available_daily_study_minutes,
+    )
+    return StudyPlanResponse(
+        subject=result["subject"],
+        exam_date=result["exam_date"],
+        daily_plan=result["daily_plan"],
+        confidence=result["confidence"],
+        overload_warning=result["overload_warning"],
+        requires_confirmation=True,
     )
