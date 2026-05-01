@@ -108,6 +108,7 @@ flutter:
   generate: true
 
   assets:
+    - assets/images/
     - assets/audio/athan_soft.wav
     - assets/audio/focus_cafe.wav
     - assets/audio/focus_rain.wav
