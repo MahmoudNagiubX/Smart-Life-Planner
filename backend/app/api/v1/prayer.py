@@ -15,6 +15,9 @@ from app.schemas.prayer import (
     QuranWeeklyProgressItem,
     RamadanDailySummaryResponse,
     RamadanFastingLogUpdate,
+    HijriDateResponse,
+    IslamicCalendarResponse,
+    IslamicCalendarEventResponse,
 )
 from app.repositories.prayer_repository import (
     get_prayer_logs_for_date,
@@ -37,6 +40,10 @@ from app.repositories.prayer_repository import (
 )
 from app.repositories.settings_repository import get_settings_by_user_id
 from app.services.prayer_calculator import calculate_prayer_times, PRAYER_NAMES
+from app.services.islamic_calendar import (
+    gregorian_to_hijri,
+    upcoming_islamic_events,
+)
 from app.services.quran_summary import (
     quran_completion_percent,
     quran_current_streak,
@@ -276,6 +283,44 @@ async def update_today_ramadan_fasting_log(
         payload.makeup_for_date,
     )
     return await _build_ramadan_daily_summary(db, current_user.id, today)
+
+
+@router.get("/islamic-calendar", response_model=IslamicCalendarResponse)
+async def get_islamic_calendar(
+    target_date: date | None = Query(default=None),
+    current_user=Depends(get_current_user),
+):
+    selected_date = target_date or date.today()
+    hijri = gregorian_to_hijri(selected_date)
+    events = upcoming_islamic_events(selected_date)
+    return IslamicCalendarResponse(
+        gregorian_date=selected_date,
+        hijri_date=HijriDateResponse(
+            year=hijri.year,
+            month=hijri.month,
+            day=hijri.day,
+            month_name=hijri.month_name,
+            label=hijri.label,
+            estimated=True,
+        ),
+        events=[
+            IslamicCalendarEventResponse(
+                key=event.key,
+                title=event.title,
+                hijri_month=event.hijri_month,
+                hijri_day=event.hijri_day,
+                gregorian_date=event.gregorian_date,
+                hijri_label=event.hijri_label,
+                estimated=event.estimated,
+                description=event.description,
+            )
+            for event in events
+        ],
+        calculation_note=(
+            "Dates are estimated using a civil Hijri calculation and may differ "
+            "from local moon-sighting announcements."
+        ),
+    )
 
 
 @router.patch("/{prayer_name}/{prayer_date}/complete", response_model=PrayerLogResponse)

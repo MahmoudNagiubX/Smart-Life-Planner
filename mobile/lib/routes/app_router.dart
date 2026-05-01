@@ -35,6 +35,7 @@ import '../features/prayer/screens/qibla_screen.dart';
 import '../features/prayer/screens/ramadan_mode_screen.dart';
 import '../features/prayer/screens/spiritual_upgrades_screen.dart';
 import '../features/prayer/screens/dhikr_reminders_screen.dart';
+import '../features/prayer/screens/islamic_calendar_screen.dart';
 import '../features/reminders/screens/notification_center_screen.dart';
 import '../features/reminders/screens/notification_settings_screen.dart';
 import '../features/settings/screens/app_settings_screen.dart';
@@ -229,6 +230,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.dhikrReminders,
             builder: (context, state) => const DhikrRemindersScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.islamicCalendar,
+            builder: (context, state) => const IslamicCalendarScreen(),
           ),
           GoRoute(
             path: AppRoutes.spiritualUpgrades,

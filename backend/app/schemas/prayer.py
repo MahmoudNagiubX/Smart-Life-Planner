@@ -164,3 +164,31 @@ class RamadanDailySummaryResponse(BaseModel):
     month_fasted_count: int
     month_not_fasted_count: int
     month_logged_count: int
+
+
+# Islamic calendar schemas
+class HijriDateResponse(BaseModel):
+    year: int
+    month: int
+    day: int
+    month_name: str
+    label: str
+    estimated: bool = True
+
+
+class IslamicCalendarEventResponse(BaseModel):
+    key: str
+    title: str
+    hijri_month: int
+    hijri_day: int
+    gregorian_date: date
+    hijri_label: str
+    estimated: bool
+    description: str
+
+
+class IslamicCalendarResponse(BaseModel):
+    gregorian_date: date
+    hijri_date: HijriDateResponse
+    events: list[IslamicCalendarEventResponse]
+    calculation_note: str

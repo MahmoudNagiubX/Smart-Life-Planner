@@ -188,6 +188,8 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                         onQibla: () => context.push(AppRoutes.qibla),
                         onRamadan: () => context.push(AppRoutes.ramadan),
                         onDhikr: () => context.push(AppRoutes.dhikrReminders),
+                        onCalendar: () =>
+                            context.push(AppRoutes.islamicCalendar),
                         onQuranGoal: () => context.push(AppRoutes.quranGoal),
                         onHistory: () => context.push(AppRoutes.prayerHistory),
                       ),
@@ -500,6 +502,7 @@ class _PrayerToolsGrid extends StatelessWidget {
   final VoidCallback onQibla;
   final VoidCallback onRamadan;
   final VoidCallback onDhikr;
+  final VoidCallback onCalendar;
   final VoidCallback onQuranGoal;
   final VoidCallback onHistory;
 
@@ -507,6 +510,7 @@ class _PrayerToolsGrid extends StatelessWidget {
     required this.onQibla,
     required this.onRamadan,
     required this.onDhikr,
+    required this.onCalendar,
     required this.onQuranGoal,
     required this.onHistory,
   });
@@ -525,6 +529,11 @@ class _PrayerToolsGrid extends StatelessWidget {
         icon: Icons.notifications_active_outlined,
         label: 'Dhikr',
         onTap: onDhikr,
+      ),
+      _PrayerTool(
+        icon: Icons.calendar_month_outlined,
+        label: 'Calendar',
+        onTap: onCalendar,
       ),
       _PrayerTool(
         icon: Icons.menu_book_outlined,
