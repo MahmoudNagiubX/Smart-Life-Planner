@@ -28,13 +28,13 @@ import '../features/analytics/screens/analytics_screen.dart';
 import '../features/context/screens/context_intelligence_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
-import '../features/prayer/screens/prayer_screen.dart';
 import '../features/prayer/screens/prayer_settings_screen.dart';
 import '../features/prayer/screens/prayer_history_screen.dart';
 import '../features/prayer/screens/quran_goal_screen.dart';
 import '../features/prayer/screens/qibla_screen.dart';
 import '../features/prayer/screens/ramadan_mode_screen.dart';
 import '../features/prayer/screens/spiritual_upgrades_screen.dart';
+import '../features/prayer/screens/dhikr_reminders_screen.dart';
 import '../features/reminders/screens/notification_center_screen.dart';
 import '../features/reminders/screens/notification_settings_screen.dart';
 import '../features/settings/screens/app_settings_screen.dart';
@@ -225,6 +225,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.ramadan,
             builder: (context, state) => const RamadanModeScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.dhikrReminders,
+            builder: (context, state) => const DhikrRemindersScreen(),
           ),
           GoRoute(
             path: AppRoutes.spiritualUpgrades,

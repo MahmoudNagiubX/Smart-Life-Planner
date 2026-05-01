@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.auth import get_current_user
 from app.core.dependencies import get_db
 from app.repositories.focus_repository import get_session_by_id
+from app.repositories.dhikr_repository import get_dhikr_reminder_by_id
 from app.repositories.habit_repository import get_habit_by_id
 from app.repositories.note_repository import get_note_by_id
 from app.repositories.prayer_repository import get_quran_goal
@@ -214,6 +215,11 @@ async def _validate_target_ownership(
     elif payload.target_type == "focus":
         target_exists = (
             await get_session_by_id(db, payload.target_id, user_id) is not None
+        )
+    elif payload.target_type == "dhikr":
+        target_exists = (
+            await get_dhikr_reminder_by_id(db, payload.target_id, user_id)
+            is not None
         )
 
     if not target_exists:

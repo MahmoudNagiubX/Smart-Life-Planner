@@ -5,6 +5,7 @@ from app.models.habit import Habit, HabitLog
 from app.models.focus import FocusSession
 from app.models.prayer import PrayerLog, QuranGoal, QuranProgress, RamadanFastingLog
 from app.models.reminder import Reminder
+from app.models.dhikr import DhikrReminder
 from app.models.scheduling import DailySchedule, ScheduleBlock
 from app.models.verification import EmailVerification, PasswordReset
 from app.models.feedback import FeedbackMessage

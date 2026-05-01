@@ -17,8 +17,9 @@ VALID_TARGET_TYPES = {
     "bedtime",
     "ai_suggestion",
     "location",
+    "dhikr",
 }
-TARGET_TYPES_REQUIRING_ID = {"task", "habit", "note", "quran_goal", "focus"}
+TARGET_TYPES_REQUIRING_ID = {"task", "habit", "note", "quran_goal", "focus", "dhikr"}
 VALID_REMINDER_TYPES = {
     "task_due",
     "habit",
@@ -30,6 +31,7 @@ VALID_REMINDER_TYPES = {
     "bedtime",
     "ai_suggestion",
     "location",
+    "dhikr",
 }
 VALID_REMINDER_STATUSES = {
     "scheduled",

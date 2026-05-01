@@ -19,6 +19,7 @@ PREFERENCE_TARGET_TYPES = {
     "bedtime": {"bedtime"},
     "ai_suggestion": {"ai_suggestion"},
     "location": {"location"},
+    "dhikr": {"dhikr"},
 }
 
 

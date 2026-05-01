@@ -293,6 +293,29 @@ class NotificationScheduler {
     await cancelHabitReminder(habitId);
   }
 
+  Future<void> scheduleDhikrReminder({
+    required String dhikrId,
+    required String title,
+    String? phrase,
+    required DateTime reminderAt,
+  }) async {
+    if (reminderAt.isBefore(DateTime.now())) return;
+
+    await _service.scheduleNotification(
+      id: NotificationIds.dhikrReminder(dhikrId),
+      title: title,
+      body: phrase == null || phrase.trim().isEmpty
+          ? 'A gentle moment for dhikr.'
+          : phrase,
+      scheduledAt: reminderAt,
+      payload: 'dhikr:$dhikrId',
+    );
+  }
+
+  Future<void> cancelDhikrReminder(String dhikrId) async {
+    await _service.cancelNotification(NotificationIds.dhikrReminder(dhikrId));
+  }
+
   Future<void> cancelAllLocalNotifications() async {
     await _service.cancelAll();
   }

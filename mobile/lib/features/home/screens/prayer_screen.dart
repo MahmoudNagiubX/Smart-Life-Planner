@@ -187,6 +187,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                       _PrayerToolsGrid(
                         onQibla: () => context.push(AppRoutes.qibla),
                         onRamadan: () => context.push(AppRoutes.ramadan),
+                        onDhikr: () => context.push(AppRoutes.dhikrReminders),
                         onQuranGoal: () => context.push(AppRoutes.quranGoal),
                         onHistory: () => context.push(AppRoutes.prayerHistory),
                       ),
@@ -225,7 +226,11 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
     );
   }
 
-  void _showPrayerStatusSheet(BuildContext context, WidgetRef ref, PrayerTime prayer) {
+  void _showPrayerStatusSheet(
+    BuildContext context,
+    WidgetRef ref,
+    PrayerTime prayer,
+  ) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -239,21 +244,28 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 8,
+                  ),
                   child: Text(
                     'Mark ${_prayerDisplayName(prayer.prayerName)} Status',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.check_circle_outline, color: Colors.green),
+                  leading: const Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green,
+                  ),
                   title: const Text('Prayed On Time'),
                   onTap: () {
-                    ref.read(prayerProvider.notifier).setPrayerStatus(prayer.prayerName, 'prayed_on_time');
+                    ref
+                        .read(prayerProvider.notifier)
+                        .setPrayerStatus(prayer.prayerName, 'prayed_on_time');
                     Navigator.pop(context);
                   },
                 ),
@@ -261,15 +273,22 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                   leading: const Icon(Icons.access_time, color: Colors.orange),
                   title: const Text('Prayed Late'),
                   onTap: () {
-                    ref.read(prayerProvider.notifier).setPrayerStatus(prayer.prayerName, 'prayed_late');
+                    ref
+                        .read(prayerProvider.notifier)
+                        .setPrayerStatus(prayer.prayerName, 'prayed_late');
                     Navigator.pop(context);
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+                  leading: const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.redAccent,
+                  ),
                   title: const Text('Missed'),
                   onTap: () {
-                    ref.read(prayerProvider.notifier).setPrayerStatus(prayer.prayerName, 'missed');
+                    ref
+                        .read(prayerProvider.notifier)
+                        .setPrayerStatus(prayer.prayerName, 'missed');
                     Navigator.pop(context);
                   },
                 ),
@@ -277,7 +296,9 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                   leading: const Icon(Icons.bed_outlined, color: Colors.grey),
                   title: const Text('Excused'),
                   onTap: () {
-                    ref.read(prayerProvider.notifier).setPrayerStatus(prayer.prayerName, 'excused');
+                    ref
+                        .read(prayerProvider.notifier)
+                        .setPrayerStatus(prayer.prayerName, 'excused');
                     Navigator.pop(context);
                   },
                 ),
@@ -319,68 +340,71 @@ class _PrayerCard extends StatelessWidget {
         color: isCompleted
             ? AppColors.prayerGold.withValues(alpha: 0.12)
             : isMissed
-                ? Colors.redAccent.withValues(alpha: 0.08)
-                : Theme.of(context).cardTheme.color,
+            ? Colors.redAccent.withValues(alpha: 0.08)
+            : Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCompleted
               ? AppColors.prayerGold.withValues(alpha: 0.4)
               : isMissed
-                  ? Colors.redAccent.withValues(alpha: 0.4)
-                  : Colors.transparent,
+              ? Colors.redAccent.withValues(alpha: 0.4)
+              : Colors.transparent,
         ),
       ),
       child: InkWell(
         onLongPress: onLongPress,
         child: Row(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 28)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: isCompleted
-                        ? AppColors.prayerGold
-                        : isMissed
-                            ? Colors.redAccent
-                            : null,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 28)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: isCompleted
+                          ? AppColors.prayerGold
+                          : isMissed
+                          ? Colors.redAccent
+                          : null,
+                    ),
                   ),
-                ),
-                Text(
-                  formattedTime,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                  Text(
+                    formattedTime,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          GestureDetector(
-            onTap: onToggle,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: isCompleted ? AppColors.prayerGold : Colors.transparent,
-                shape: BoxShape.circle,
-                border: Border.all(
+            GestureDetector(
+              onTap: onToggle,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
                   color: isCompleted
                       ? AppColors.prayerGold
-                      : AppColors.textSecondary,
-                  width: 2,
+                      : Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isCompleted
+                        ? AppColors.prayerGold
+                        : AppColors.textSecondary,
+                    width: 2,
+                  ),
                 ),
+                child: isCompleted
+                    ? const Icon(Icons.check, color: Colors.white, size: 18)
+                    : null,
               ),
-              child: isCompleted
-                  ? const Icon(Icons.check, color: Colors.white, size: 18)
-                  : null,
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -475,12 +499,14 @@ class _QuranProgressShortcut extends StatelessWidget {
 class _PrayerToolsGrid extends StatelessWidget {
   final VoidCallback onQibla;
   final VoidCallback onRamadan;
+  final VoidCallback onDhikr;
   final VoidCallback onQuranGoal;
   final VoidCallback onHistory;
 
   const _PrayerToolsGrid({
     required this.onQibla,
     required this.onRamadan,
+    required this.onDhikr,
     required this.onQuranGoal,
     required this.onHistory,
   });
@@ -489,15 +515,16 @@ class _PrayerToolsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final tools = [
       _PrayerTool(icon: Icons.explore_outlined, label: 'Qibla', onTap: onQibla),
-      _PrayerTool(
-        icon: Icons.history,
-        label: 'History',
-        onTap: onHistory,
-      ),
+      _PrayerTool(icon: Icons.history, label: 'History', onTap: onHistory),
       _PrayerTool(
         icon: Icons.nights_stay_outlined,
         label: 'Ramadan',
         onTap: onRamadan,
+      ),
+      _PrayerTool(
+        icon: Icons.notifications_active_outlined,
+        label: 'Dhikr',
+        onTap: onDhikr,
       ),
       _PrayerTool(
         icon: Icons.menu_book_outlined,
