@@ -693,6 +693,12 @@ Backend responsibilities:
 - notification management
 - API endpoints
 
+AI runtime approach:
+
+- LLM/NLP layer for natural language understanding and voice/task interpretation
+- deterministic scheduling layer for actual time-block placement and constraint-based planning
+- human-aware adaptive scheduling and automation layer for dependency-aware ranking, overload detection, and future-only replanning
+
 ---
 
 ## 2.4.3 Network Requirements
@@ -841,6 +847,20 @@ Capabilities:
 
 ---
 
+## 2.6.8 Adaptive Scheduling & Automation Engine
+
+Capabilities:
+
+- dependency-aware task readiness
+- weighted human-aware task ranking
+- next best action recommendation
+- overload detection
+- future-only replanning
+- explainable schedule decisions
+- event-driven automation
+
+---
+
 # 2.7 Constraints
 
 The system must operate under certain constraints.
@@ -933,6 +953,7 @@ The Smart Life Planner application includes the following core modules:
 10. Voice Recognition System  
 11. Analytics & Insights System  
 12. Notification & Reminder System  
+13. Adaptive Scheduling & Automation Engine  
 
 Each module includes multiple functional requirements.
 
@@ -1408,7 +1429,54 @@ Users shall receive notifications for prayer times.
 
 ---
 
-# 3.15 Step 3 Summary
+# 3.15 Adaptive Scheduling & Automation Engine
+
+This module adds the deeper execution intelligence layer of Smart Life Planner.
+
+### FR-51 Task Dependencies
+Users shall be able to define one or more prerequisite tasks for a task.
+
+### FR-52 Task Execution Metadata
+Tasks shall support execution metadata such as:
+- estimated duration
+- difficulty level
+- energy requirement
+- splittable flag
+- strict-time flag
+
+### FR-53 Human-Aware Daily Plan Generation
+The system shall generate a realistic daily plan using priority, urgency, dependency readiness, duration fit, prayer windows, routine preferences, and historical behavior.
+
+### FR-54 Explainable Next Best Action
+The system shall recommend the next best action and provide a short explanation of why it was selected.
+
+### FR-55 Overload Detection
+The system shall detect when the user’s day is not realistically schedulable and warn the user instead of producing an unrealistic plan.
+
+### FR-56 Future-Only Replanning
+When important scheduling events occur, the system shall replan only the future portion of the day.
+
+### FR-57 Automation Event Tracking
+The system shall record major automation events and resulting actions for auditability and debugging.
+
+### FR-58 Schedule Explanations
+The system shall provide explanation metadata for AI- or engine-generated schedule decisions.
+
+### FR-59 User Schedule Locking
+Users shall be able to lock a generated block or manually adjusted block to prevent silent overwriting.
+
+### FR-60 Deadline Risk Alerts
+The system shall detect tasks at high risk of missing their deadlines and surface warnings.
+
+### FR-61 Dependency-Unlock Suggestions
+When a blocked task becomes ready, the system may recommend it as a newly available next action.
+
+### FR-62 Automation Safety Boundaries
+Low-confidence automation actions shall require preview and confirmation before write execution when risk is non-trivial.
+
+---
+
+# 3.16 Step 3 Summary
 
 This section defines the **complete functional behavior of Smart Life Planner**.
 
@@ -1601,6 +1669,9 @@ The Home screen shall display:
 * focus summary
 * quick journal/reflection prompt
 * productivity summary
+* AI plan card
+* Next Best Action card
+* overload warning card when needed
 
 **Home Subsections**
 **1. Daily Overview Card**
@@ -1611,6 +1682,12 @@ Allows fast entry of:
 * task
 * note
 * reminder
+* estimated duration
+* difficulty
+* energy requirement
+* splittable flag
+* strict-time flag
+* dependency selection
 
 **3. Next Prayer Widget**
 Displays:
@@ -1669,6 +1746,8 @@ The Tasks screen shall display:
 * projects
 * task filters
 * priority indicators
+* dependency state indicators
+* deadline risk indicators
 
 **Tasks Main Sections**
 **1. Inbox**
@@ -1705,6 +1784,9 @@ Displays:
 * notes
 * linked project
 * linked habit if applicable
+* dependency status
+* schedule explanation
+* deadline risk state
 Actions:
 * edit
 * delete
@@ -1765,6 +1847,8 @@ Displays:
 * all past sessions
 * time spent
 * productivity trends
+* schedule adherence
+* overload frequency
 
 ### 3.5.10 Prayer Flow
 Prayer is a first-class top-level destination because it is a core differentiator of the app.
@@ -1869,6 +1953,9 @@ Includes:
 * timezone
 * work hours
 * prayer calculation settings
+* auto-replan preference
+* preferred deep-work windows
+* max daily planned minutes
 
 **3. Notifications Section**
 Includes:
@@ -2007,6 +2094,8 @@ The AI may provide:
 * task prioritization
 * habit reminder suggestions
 * prayer-aware time blocking
+* overload warnings
+* replan suggestions
 
 ### 3.5.16 App Navigation Graph
 The navigation graph is divided into three levels.
@@ -2534,6 +2623,9 @@ Sections:
 - focus summary
 - journal prompt
 - progress summary
+- AI plan card
+- Next Best Action card
+- overload warning card when needed
 
 ### Main Behaviors
 
@@ -2564,6 +2656,12 @@ Navigates to Journal screen.
 #### F. Open Focus Summary
 Navigates to Focus screen.
 
+#### G. Open Next Best Action
+Navigates to the linked task, plan preview, or replan suggestion flow.
+
+#### H. Open Overload Warning
+Navigates to a schedule review or replan preview screen when the day is overloaded.
+
 ### Empty State Behavior
 If the user has no tasks/habits yet:
 - show setup tips
@@ -2583,6 +2681,7 @@ Tabs or filter sections:
 - Upcoming
 - Projects
 - Completed
+- Blocked
 
 ### Main Behaviors
 
@@ -2858,6 +2957,12 @@ Fields:
 - project
 - recurrence
 - reminder
+- estimated duration
+- difficulty
+- energy requirement
+- splittable flag
+- strict-time flag
+- dependency selection
 - notes
 
 ### Main Behaviors
@@ -2887,6 +2992,10 @@ Show complete task information.
 - notes
 - project
 - linked focus sessions
+- dependency list
+- blocked/unblocked state
+- schedule explanation
+- deadline risk indicator
 
 ### Main Behaviors
 
@@ -3136,6 +3245,10 @@ Manage app-wide behavior.
 - work hours
 - notification defaults
 - privacy settings later
+- auto-replan toggle
+- preferred deep-work windows
+- max daily planned minutes
+- reminder aggressiveness
 
 ### Main Behaviors
 Changes are saved and applied immediately where possible.
@@ -3205,6 +3318,9 @@ Provide unified personal analytics.
 - prayer consistency
 - productivity score
 - trend summaries
+- schedule adherence
+- overload frequency
+- plan-versus-actual execution
 
 ### Main Behaviors
 User can:
@@ -3308,6 +3424,27 @@ to generate assistive recommendations.
 
 Important:
 The AI should suggest, not force, decisions in the MVP.
+
+### Mandatory Feedback Rule
+During AI planning or scheduling operations, the interface must always display visible processing feedback such as a loading, thinking, or in-progress state so the user clearly knows the request is being analyzed.
+
+### Perceived Performance Rule
+Because voice and AI pipelines can take multiple seconds, the client should reduce spinner fatigue through **optimistic-safe UI patterns** where appropriate.
+
+Examples:
+* show transcript preview immediately after speech recognition before deeper intent parsing completes
+* render skeleton cards or placeholder schedule blocks while the planning result is loading
+* acknowledge queued actions instantly when the action is safe to stage locally, then confirm final backend success afterwards
+* avoid fake completion states for destructive or high-risk writes until validation succeeds
+
+### Scheduling Execution Logic
+The planning flow shall follow this rule:
+
+1. the AI layer extracts structured planning parameters such as task intent, duration, priority, and timing constraints  
+2. the application logic evaluates valid time windows  
+3. the scheduling code places the time blocks into the most logical available slots  
+
+This keeps interpretation flexible while keeping scheduling behavior controlled and explainable.
 
 ---
 
@@ -3476,7 +3613,7 @@ The system shall respond quickly to user actions such as:
 ### NFR-3 Smooth UI Rendering
 The application UI should feel visually smooth during scrolling, animations, and navigation.
 
-Android guidance highlights smooth rendering and responsiveness as core mobile quality goals, including a 60 fps target for smooth rendering where feasible. :contentReference[oaicite:1]{index=1}
+Android guidance highlights smooth rendering and responsiveness as core mobile quality goals, including a 60 fps target for smooth rendering where feasible.
 
 **Target:**
 - avoid noticeable lag during common navigation and scrolling
@@ -3517,7 +3654,7 @@ The system shall minimize application crashes during common user flows such as:
 - prayer tracking
 - note editing
 
-Google Play quality guidance places strong emphasis on crash and ANR stability because these directly affect app quality and store visibility. :contentReference[oaicite:2]{index=2}
+Google Play quality guidance places strong emphasis on crash and ANR stability because these directly affect app quality and store visibility.
 
 **Target:**
 - production releases should maintain strong crash stability
@@ -3655,7 +3792,7 @@ Examples:
 
 Because Smart Life Planner stores personal schedules, habits, notes, prayer history, and account data, security is a major requirement.
 
-OWASP MASVS organizes mobile security around control areas including secure storage, cryptography, authentication, network communication, platform interaction, code quality, and privacy. :contentReference[oaicite:3]{index=3}
+OWASP MASVS organizes mobile security around control areas including secure storage, cryptography, authentication, network communication, platform interaction, code quality, and privacy.
 
 ---
 
@@ -3672,7 +3809,7 @@ Requirements:
 ### NFR-19 Secure Data in Transit
 All communication between mobile app and backend must use encrypted HTTPS/TLS connections.
 
-OWASP MASVS includes network communication as a core mobile security control area. :contentReference[oaicite:4]{index=4}
+OWASP MASVS includes network communication as a core mobile security control area.
 
 ---
 
@@ -3684,7 +3821,7 @@ Requirements:
 - highly sensitive data must not be written to logs
 - cached personal data should be limited to what is necessary
 
-OWASP MASVS specifically emphasizes secure storage, protection of sensitive data, and avoiding sensitive data exposure in logs or insecure locations. :contentReference[oaicite:5]{index=5}
+OWASP MASVS specifically emphasizes secure storage, protection of sensitive data, and avoiding sensitive data exposure in logs or insecure locations.
 
 ---
 
@@ -3724,7 +3861,7 @@ This prevents corrupted data and reduces security risk.
 
 The application stores personal behavioral data, so privacy must be treated seriously.
 
-OWASP MASVS includes privacy as a dedicated control area for mobile applications. :contentReference[oaicite:6]{index=6}
+OWASP MASVS includes privacy as a dedicated control area for mobile applications.
 
 ---
 
@@ -3883,7 +4020,7 @@ The application should display date and time information in a format appropriate
 
 ---
 
-## 4.13 Offline Support Requirements
+## 4.13 Offline Support & Sync
 
 Offline support is important for reliability and usability.
 
@@ -3903,9 +4040,13 @@ Examples:
 ### NFR-41 Sync Conflict Handling
 If offline changes conflict with newer server data, the system shall apply a defined resolution strategy.
 
-Initial MVP strategy:
-- prefer latest valid update for simple entities
-- preserve user input where conflict risks data loss
+Initial MVP sync rule:
+- use **Last Write Wins (LWW)** for simple entity conflicts
+- compare records using the `updated_at` timestamp
+- when two versions of the same item exist, the newest valid update becomes the stored version
+- preserve explicit user edits where extra merge protection is needed in future advanced flows
+
+This rule keeps the first synchronization model simple for multi-device usage while remaining implementation-friendly.
 
 ---
 
@@ -3913,7 +4054,7 @@ Initial MVP strategy:
 
 The system must be monitorable in production.
 
-Android and Google Play recommend tracking app quality through performance, stability, and related production signals such as crashes and ANRs. :contentReference[oaicite:7]{index=7}
+Android and Google Play recommend tracking app quality through performance, stability, and related production signals such as crashes and ANRs.
 
 ---
 
@@ -4287,6 +4428,23 @@ productivity statistics
 habit trends
 focus analysis
 prayer consistency
+schedule adherence
+overload analysis
+```
+
+---
+
+### Adaptive Scheduling & Automation Module
+
+Handles:
+```
+dependency-aware task readiness
+weighted human-aware task scoring
+daily plan generation
+next best action selection
+overload detection
+future-only replanning
+automation event processing
 ```
 
 ---
@@ -4362,9 +4520,20 @@ analytics_snapshots
 
 ---
 
-# 5.6 AI Services Layer
+# 5.6 AI Architecture
 
 AI features support intelligent productivity.
+
+Smart Life Planner uses a **hybrid AI architecture**:
+
+- an LLM or NLP layer handles natural language understanding, command interpretation, and structured extraction
+- a deterministic scheduling layer handles the actual planning math, constraint checks, and time-block placement
+- a human-aware adaptive scheduling and automation engine ranks tasks, resolves dependencies, detects overload, and triggers safe future-only replanning
+
+This separation is intentional.  
+The AI is responsible for understanding what the user means, while the application code is responsible for making the final schedule in a predictable and controllable way.
+
+The scheduling layer should be treated as a first-class subsystem called the **Human-Aware Adaptive Scheduling & Automation Engine (H-ASAE)**. This engine consumes structured task data, user preferences, prayer constraints, behavioral signals, and dependency state, then produces explainable schedule decisions, next-action recommendations, overload warnings, and future-only replanning outputs.
 
 ---
 
@@ -4421,7 +4590,9 @@ Custom NLP pipeline
 
 Initial MVP approach:
 
-**API-based NLP service**
+**Hybrid model**
+- API-based or local NLP for interpretation
+- deterministic constraint-based scheduling in application code
 
 ---
 
@@ -4687,7 +4858,7 @@ Event-based tables may also store:
 - ended_at
 - logged_at
 
-These timestamps should use **timestamp with time zone** (`timestamptz`) for correctness across regions and time zones. :contentReference[oaicite:1]{index=1}
+These timestamps should use **timestamp with time zone** (`timestamptz`) for correctness across regions and time zones.
 
 ---
 
@@ -4733,9 +4904,14 @@ The Smart Life Planner database includes the following core entities:
 11. quran_goals  
 12. quran_progress_logs  
 13. focus_sessions  
-14. ai_suggestions  
-15. notifications  
-16. analytics_snapshots  
+14. task_dependencies  
+15. daily_schedules  
+16. schedule_blocks  
+17. automation_events  
+18. automation_actions  
+19. ai_suggestions  
+20. notifications  
+21. analytics_snapshots  
 
 ---
 
@@ -4753,6 +4929,11 @@ The Smart Life Planner database includes the following core entities:
 - one user may have many projects
 - one project has many tasks
 - one task may have many subtasks
+- one task may depend on many tasks through task_dependencies
+- one user may have many daily schedules
+- one daily schedule may have many schedule blocks
+- one user may have many automation events
+- one automation event may have many automation actions
 - one task may have many focus sessions linked to it
 - one user may have one active Quran goal and many Quran progress records
 - one user may receive many notifications
@@ -4870,8 +5051,18 @@ Stores actionable items and reminders.
 | reminder_at | TIMESTAMPTZ | NULL | Reminder trigger |
 | recurrence_rule | TEXT | NULL | Repeat logic |
 | estimated_minutes | INTEGER | NULL | Optional effort estimate |
+| difficulty_level | VARCHAR(20) | NULL | easy / medium / hard |
+| energy_required | VARCHAR(20) | NULL | low / medium / high |
+| is_splittable | BOOLEAN | NOT NULL, DEFAULT FALSE | Whether task can be split across blocks |
+| is_strict_time | BOOLEAN | NOT NULL, DEFAULT FALSE | Whether task prefers or requires strict placement |
+| time_semantics | VARCHAR(20) | NOT NULL, DEFAULT 'absolute' | absolute / floating |
+| earliest_start_at | TIMESTAMPTZ | NULL | Optional earliest valid execution time |
+| latest_finish_at | TIMESTAMPTZ | NULL | Optional latest acceptable finish time |
+| auto_schedule_enabled | BOOLEAN | NOT NULL, DEFAULT TRUE | Whether engine may place task automatically |
+| schedule_flexibility | VARCHAR(20) | NULL | low / medium / high flexibility |
 | category | VARCHAR(80) | NULL | Optional category |
 | ai_parsed | BOOLEAN | NOT NULL, DEFAULT FALSE | Whether parsed by AI |
+| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Soft delete flag for historical preservation |
 | completed_at | TIMESTAMPTZ | NULL | Completion timestamp |
 | created_at | TIMESTAMPTZ | NOT NULL | Creation time |
 | updated_at | TIMESTAMPTZ | NOT NULL | Update time |
@@ -4883,7 +5074,12 @@ Stores actionable items and reminders.
 - index on `(reminder_at)` for reminder processing
 
 ## Notes
-- `due_at` and `reminder_at` use `timestamptz` because they represent real moments in time. :contentReference[oaicite:2]{index=2}
+- `due_at` and `reminder_at` use `timestamptz` because they represent real moments in time.
+- `time_semantics` defines whether the task should follow an **absolute** global moment or a **floating** local-time interpretation when the user changes timezone.
+- default rule: meetings, appointments, and externally fixed deadlines should use `absolute`; routine personal actions that should happen at local wall-clock time may use `floating` only when the product explicitly supports that behavior.
+
+### Execution Intelligence Note
+The task entity is also the primary scheduling input for the H-ASAE subsystem. Execution metadata such as duration, difficulty, energy requirement, flexibility, and dependency state must therefore be stored in the task model rather than being inferred only at runtime.
 
 ---
 
@@ -4891,6 +5087,31 @@ Stores actionable items and reminders.
 
 ## Purpose
 Stores subtasks linked to a parent task.
+
+---
+
+# 6.6.5A task_dependencies Table
+
+## Purpose
+Stores prerequisite relationships between tasks.
+
+## Columns
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| id | UUID | PK | Dependency record ID |
+| user_id | UUID | FK → users.id, NOT NULL | Owner user |
+| task_id | UUID | FK → tasks.id, NOT NULL | Blocked or dependent task |
+| depends_on_task_id | UUID | FK → tasks.id, NOT NULL | Prerequisite task |
+| dependency_type | VARCHAR(30) | NOT NULL, DEFAULT 'finish_to_start' | Dependency type |
+| created_at | TIMESTAMPTZ | NOT NULL | Creation time |
+
+## Constraints
+- unique `(task_id, depends_on_task_id)`
+- `task_id` must not equal `depends_on_task_id`
+
+## Notes
+- This table conceptually forms a directed graph over user tasks.
 
 ## Columns
 
@@ -4954,7 +5175,9 @@ Stores recurring habits defined by the user.
 | frequency_config | JSONB | NULL | Configuration for recurrence |
 | category | VARCHAR(80) | NULL | Habit category |
 | reminder_time | TIME | NULL | Optional reminder time |
+| time_semantics | VARCHAR(20) | NOT NULL, DEFAULT 'floating' | floating / absolute |
 | is_active | BOOLEAN | NOT NULL, DEFAULT TRUE | Active status |
+| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Soft delete flag for historical preservation |
 | current_streak | INTEGER | NOT NULL, DEFAULT 0 | Cached streak |
 | longest_streak | INTEGER | NOT NULL, DEFAULT 0 | Cached best streak |
 | created_at | TIMESTAMPTZ | NOT NULL | Creation time |
@@ -4962,6 +5185,7 @@ Stores recurring habits defined by the user.
 
 ## Notes
 - `frequency_config` allows flexible recurrence logic.
+- habits default to `floating` time semantics because they are usually local-routine behaviors that should occur at the user’s current local time rather than a fixed UTC instant.
 
 ---
 
@@ -5046,7 +5270,7 @@ Stores daily prayer completion tracking.
 
 ## Notes
 - Prayer times should be generated based on user settings and date.
-- Storing `scheduled_at` as `timestamptz` preserves the actual moment of prayer time in the user’s locale. :contentReference[oaicite:3]{index=3}
+- Storing `scheduled_at` as `timestamptz` preserves the actual moment of prayer time in the user’s locale.
 
 ---
 
@@ -5097,6 +5321,93 @@ Stores daily Quran reading progress.
 ## Purpose
 Stores deep work and Pomodoro sessions.
 
+---
+
+# 6.6.13A daily_schedules Table
+
+## Purpose
+Stores generated scheduling sessions for a specific date.
+
+## Columns
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| id | UUID | PK | Schedule ID |
+| user_id | UUID | FK → users.id, NOT NULL | Owner user |
+| schedule_date | DATE | NOT NULL | Date of generated plan |
+| status | VARCHAR(30) | NOT NULL, DEFAULT 'active' | active / archived / replaced |
+| generation_source | VARCHAR(30) | NOT NULL, DEFAULT 'engine' | engine / user / replan |
+| generated_at | TIMESTAMPTZ | NOT NULL | Generation time |
+| updated_at | TIMESTAMPTZ | NOT NULL | Last update time |
+
+---
+
+# 6.6.13B schedule_blocks Table
+
+## Purpose
+Stores actual generated or user-adjusted time blocks inside a daily schedule.
+
+## Columns
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| id | UUID | PK | Schedule block ID |
+| schedule_id | UUID | FK → daily_schedules.id, NOT NULL | Parent schedule |
+| user_id | UUID | FK → users.id, NOT NULL | Owner user |
+| task_id | UUID | FK → tasks.id, NULL | Linked task when block is task-based |
+| block_type | VARCHAR(30) | NOT NULL | task / prayer / habit / break / focus / reflection |
+| start_at | TIMESTAMPTZ | NOT NULL | Block start time |
+| end_at | TIMESTAMPTZ | NOT NULL | Block end time |
+| source_type | VARCHAR(30) | NOT NULL, DEFAULT 'engine' | engine / manual / imported |
+| is_locked | BOOLEAN | NOT NULL, DEFAULT FALSE | User lock state |
+| explanation_payload | JSONB | NULL | Explanation metadata for the generated decision |
+| confidence_score | NUMERIC(4,3) | NULL | Optional confidence for assisted placements |
+| created_at | TIMESTAMPTZ | NOT NULL | Creation time |
+| updated_at | TIMESTAMPTZ | NOT NULL | Last update time |
+
+---
+
+# 6.6.13C automation_events Table
+
+## Purpose
+Stores system events that can trigger automation logic.
+
+## Columns
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| id | UUID | PK | Event ID |
+| user_id | UUID | FK → users.id, NOT NULL | Owner user |
+| event_type | VARCHAR(50) | NOT NULL | task_completed / task_skipped / day_overloaded / dependency_unlocked / etc. |
+| entity_type | VARCHAR(50) | NULL | Source entity type |
+| entity_id | UUID | NULL | Source entity identifier |
+| event_payload | JSONB | NULL | Structured event payload |
+| occurred_at | TIMESTAMPTZ | NOT NULL | Event occurrence time |
+| processed_at | TIMESTAMPTZ | NULL | Processing time |
+| status | VARCHAR(30) | NOT NULL, DEFAULT 'pending' | pending / processed / skipped / failed |
+
+---
+
+# 6.6.13D automation_actions Table
+
+## Purpose
+Stores actions produced by the automation layer.
+
+## Columns
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| id | UUID | PK | Action ID |
+| event_id | UUID | FK → automation_events.id, NOT NULL | Trigger event |
+| user_id | UUID | FK → users.id, NOT NULL | Owner user |
+| action_type | VARCHAR(50) | NOT NULL | regenerate_future_schedule / move_task / risk_warning / etc. |
+| target_type | VARCHAR(50) | NULL | Target entity type |
+| target_id | UUID | NULL | Target entity ID |
+| action_payload | JSONB | NULL | Structured action description |
+| requires_confirmation | BOOLEAN | NOT NULL, DEFAULT FALSE | Whether user confirmation is required |
+| executed_at | TIMESTAMPTZ | NULL | Execution time |
+| status | VARCHAR(30) | NOT NULL, DEFAULT 'planned' | planned / previewed / executed / cancelled / failed |
+
 ## Columns
 
 | Column | Type | Constraints | Description |
@@ -5111,6 +5422,7 @@ Stores deep work and Pomodoro sessions.
 | started_at | TIMESTAMPTZ | NOT NULL | Session start |
 | ended_at | TIMESTAMPTZ | NULL | Session end |
 | completed_at | TIMESTAMPTZ | NULL | Completion time |
+| is_deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Soft delete flag for historical preservation |
 | created_at | TIMESTAMPTZ | NOT NULL | Record creation |
 
 ## Indexes
@@ -5210,11 +5522,17 @@ Stores precomputed analytics summaries for dashboard views and trend reporting.
 - users → prayer_logs
 - users → quran_progress_logs
 - users → focus_sessions
+- users → daily_schedules
+- users → automation_events
+- users → automation_actions
 - users → ai_suggestions
 - users → notifications
 - users → analytics_snapshots
 - task_projects → tasks
 - tasks → task_subtasks
+- tasks → task_dependencies (as dependent task)
+- daily_schedules → schedule_blocks
+- automation_events → automation_actions
 
 ## Optional Relationships
 - tasks → focus_sessions
@@ -5255,7 +5573,7 @@ Use unique indexes for:
 - prayer_logs(user_id, prayer_name, prayer_date)
 - analytics_snapshots(user_id, snapshot_date)
 
-Primary keys automatically create unique B-tree indexes in PostgreSQL, which is one reason they are important in the schema design. :contentReference[oaicite:4]{index=4}
+Primary keys automatically create unique B-tree indexes in PostgreSQL, which is one reason they are important in the schema design.
 
 ---
 
@@ -5298,22 +5616,31 @@ Recommended MVP:
 
 # 6.10 Soft Delete Strategy
 
-For some entities, soft delete is better than hard delete.
+Soft delete is a **mandatory design rule** for selected behavioral entities.
 
-## Recommended Soft Delete Entities
-- tasks (optional in future)
-- notes (archive first, hard delete on explicit action)
+## Mandatory Soft Delete Entities
+- tasks
 - habits
-- projects
+- focus_sessions
 
-Reason:
-- preserve analytics
-- reduce accidental data loss
-- improve UX recovery
+These entities must include an `is_deleted` flag instead of relying only on hard deletion.
 
-MVP approach:
-- use status/archive fields where practical
-- hard delete only on confirmed destructive actions
+## Reason
+Soft delete is required because the system should preserve long-term behavioral history for:
+- analytics
+- productivity trends
+- habit consistency insights
+- focus pattern analysis
+- future AI coaching logic
+
+## MVP Rule
+- set `is_deleted = TRUE` when the user deletes one of the mandatory entities
+- exclude soft-deleted records from normal active queries
+- keep soft-deleted records available for analytics, auditing, and controlled recovery workflows
+- use hard delete only for exceptional administrative cleanup or explicitly destructive maintenance tasks
+
+## Optional Extended Strategy
+Other entities such as notes or projects may later support archive or soft-delete patterns, but the mandatory requirement in the current design applies specifically to tasks, habits, and focus_sessions.
 
 ---
 
@@ -5331,7 +5658,7 @@ Event tables may additionally include:
 - `logged_at`
 - `scheduled_at`
 
-These should be stored as `TIMESTAMPTZ` because they represent actual moments in time, which PostgreSQL guidance recommends handling with `timestamp with time zone` instead of `timestamp without time zone`. :contentReference[oaicite:5]{index=5}
+These should be stored as `TIMESTAMPTZ` because they represent actual moments in time, which PostgreSQL guidance recommends handling with `timestamp with time zone` instead of `timestamp without time zone`.
 
 ---
 
@@ -5384,6 +5711,11 @@ For MVP implementation, the minimum required tables are:
 - notifications
 
 Optional later-phase tables:
+- task_dependencies
+- daily_schedules
+- schedule_blocks
+- automation_events
+- automation_actions
 - ai_suggestions
 - analytics_snapshots
 
@@ -5406,6 +5738,11 @@ users
  ├── quran_goals
  │    └── quran_progress_logs
  ├── focus_sessions
+ ├── task_dependencies
+ ├── daily_schedules
+ │    └── schedule_blocks
+ ├── automation_events
+ │    └── automation_actions
  ├── notifications
  ├── ai_suggestions
  └── analytics_snapshots
@@ -5590,6 +5927,8 @@ Main route groups:
 * quran
 * focus
 * analytics
+* schedule
+* automation
 * ai
 * voice
 * notifications
@@ -5843,6 +6182,15 @@ Mark a task as completed.
 **Endpoint**
 `DELETE /api/v1/tasks/{task_id}`
 
+### 7.14.8 Task Dependency Endpoints
+**Base Path**
+`/api/v1/tasks/{task_id}/dependencies`
+
+**Endpoints**
+* **Create Dependency:** `POST /api/v1/tasks/{task_id}/dependencies`
+* **List Dependencies:** `GET /api/v1/tasks/{task_id}/dependencies`
+* **Delete Dependency:** `DELETE /api/v1/tasks/{task_id}/dependencies/{dependency_id}`
+
 ## 7.15 Task Subtask Endpoints
 **Base Path**
 
@@ -6024,6 +6372,34 @@ Return today’s prayer schedule for the authenticated user based on location an
 * **Get Focus Analytics:** `GET /api/v1/focus/analytics`
 
 ## 7.23 Analytics Endpoints
+
+## 7.23A Schedule Endpoints
+**Base Path**
+
+```text
+/api/v1/schedule
+```
+
+**Endpoints**
+* **Get Today Schedule:** `GET /api/v1/schedule/today`
+* **Generate Daily Schedule:** `POST /api/v1/schedule/generate`
+* **Replan Future Schedule:** `POST /api/v1/schedule/replan`
+* **Get Schedule By Date:** `GET /api/v1/schedule/{date}`
+* **Lock Schedule Block:** `PATCH /api/v1/schedule/blocks/{block_id}/lock`
+* **Move Schedule Block:** `PATCH /api/v1/schedule/blocks/{block_id}/move`
+
+## 7.23B Automation Endpoints
+**Base Path**
+
+```text
+/api/v1/automation
+```
+
+**Endpoints**
+* **Get Automation Events:** `GET /api/v1/automation/events`
+* **Get Automation Actions:** `GET /api/v1/automation/actions`
+* **Preview Replan:** `POST /api/v1/automation/preview-replan`
+
 **Base Path**
 
 ```text
@@ -6092,6 +6468,9 @@ Return recommended next task based on:
 * focus history
 * habits
 * prayer schedule
+* dependency readiness
+* estimated duration fit
+* energy-time match
 
 ### 7.24.3 Generate Daily Plan
 **Endpoint**
@@ -6111,6 +6490,13 @@ Create AI-assisted daily schedule.
 ### 7.24.4 Get Productivity Insight
 **Endpoint**
 `GET /api/v1/ai/insights`
+
+### 7.24.5 Get Deadline Risk Alerts
+**Endpoint**
+`GET /api/v1/ai/deadline-risks`
+
+**Purpose**
+Return tasks at high risk of missing their deadlines based on urgency, dependency state, remaining time, and schedule fit.
 
 ## 7.25 Voice Endpoints
 **Base Path**
@@ -6202,6 +6588,15 @@ List endpoints should support pagination.
 **Standard Query Params**
 * page
 * page_size
+
+**Pagination Safety Rules**
+* `page` defaults to `1`
+* `page_size` defaults to `20`
+* maximum allowed `page_size` is `100`
+* requests above the maximum must be clamped or rejected with a validation error
+* the backend must never allow unbounded list responses on normal mobile endpoints
+
+These limits are required to protect PostgreSQL query cost, FastAPI memory usage, and general API stability from buggy or malicious clients.
 
 **Standard Pagination Response Example**
 
@@ -6377,6 +6772,7 @@ For MVP release, the minimum required endpoint groups are:
 
 **Optional for later MVP+:**
 * analytics advanced endpoints
+* schedule adherence endpoint details
 * voice transcription endpoint
 * AI insights endpoint
 
@@ -6644,6 +7040,9 @@ Output:
 **Purpose**
 Recommend useful next actions to the user.
 
+**Important Extension**
+The smart suggestion layer must not only rank by deadline and priority. It should also respect dependency readiness, duration fit, prayer-aware free windows, and human execution realism.
+
 **Responsibilities**
 * suggest next task
 * suggest best task for available time
@@ -6668,15 +7067,26 @@ Recommend useful next actions to the user.
 }
 ```
 
-### 8.5.5 Daily Planning Module
+### 8.5.5 Scheduling Logic
 **Purpose**
 Generate a smart suggested structure for the user’s day.
+
+**Core Scheduling Flow**
+1. AI interprets the task request and extracts planning parameters such as duration, urgency, and intent.
+2. The system evaluates dependency readiness and removes blocked tasks from the autonomous execution pool.
+3. The system identifies valid **hard gaps** between fixed constraints such as prayer times and preferred work hours.
+4. The H-ASAE engine computes weighted task scores using priority, urgency, energy fit, duration fit, dependency state, and behavioral suitability.
+5. The scheduling engine places the best candidates into the most logical available gaps.
+6. The automation layer monitors important events and may safely replan only the future portion of the day.
 
 **Responsibilities**
 * arrange tasks into time blocks
 * avoid collisions with prayer times
 * consider user work hours
 * consider task priority and urgency
+* consider dependency readiness
+* consider energy-time match
+* detect overload instead of forcing unrealistic output
 * balance focus and habit completion
 
 **Example Output**
@@ -6690,6 +7100,40 @@ Generate a smart suggested structure for the user’s day.
   ]
 }
 ```
+
+### 8.5.5A Next Best Action Logic
+**Purpose**
+Return the best immediate action for the user based on the current moment rather than only on full-day planning.
+
+**Decision Inputs**
+* current time
+* next prayer
+* task urgency
+* dependency readiness
+* estimated duration
+* remaining free window
+* energy-time match
+
+**Output Rule**
+The system should return:
+* recommended task
+* short reasoning
+* optional alternative task
+
+### 8.5.5B Automation and Replanning Logic
+**Purpose**
+Continuously protect future schedule validity after important events.
+
+**Core Events**
+* task_completed
+* task_skipped
+* day_overloaded
+* dependency_unlocked
+* prayer_schedule_changed
+* user_routine_changed
+
+**Core Rule**
+Automation may update only future schedule state and assistive recommendations unless the user explicitly confirms a higher-risk write action.
 
 ### 8.5.6 Productivity Insights Module
 **Purpose**
@@ -6757,8 +7201,14 @@ Intent & Parsing Layer
 Validation Layer
 (rule checks / ownership / allowed actions)
    ↓
+Dependency & Readiness Layer
+(blocked task filtering / graph checks)
+   ↓
+Human-Aware Scoring Layer
+(priority / urgency / energy fit / duration fit / history)
+   ↓
 Action Layer
-(create task / suggest plan / return insight)
+(create task / suggest plan / return insight / replan preview)
    ↓
 Storage Layer
 (save structured results if needed)
@@ -6871,6 +7321,7 @@ The AI must have clear limits.
 * generate optional plans
 * summarize behavior
 * recommend routines
+* surface explainable next-action and risk suggestions
 
 **AI Must Not Do Without Confirmation**
 * delete user data
@@ -6889,6 +7340,20 @@ All AI outputs must pass through validation before execution.
 * action allowed for current user
 * ownership checks for referenced resources
 * confidence threshold checks where needed
+* schema conformance against strict backend models
+
+**Prompt Injection and Hallucination Protection Rules**
+Because user text may contain adversarial or misleading instructions, the AI pipeline must treat user input as untrusted data.
+
+Required rules:
+* system instructions and output schema requirements must be separated from raw user input
+* the model must be instructed to produce only the allowed structured schema for the requested operation
+* the backend must never execute arbitrary text returned by the model
+* destructive or administrative actions must not be inferable from ordinary user free-text without an explicitly permitted command path
+* impossible or malformed values such as invalid dates must be rejected by backend validation even if the model emits them confidently
+
+**Backend Enforcement Rule**
+The FastAPI backend must validate AI output using strict Pydantic request/response models before any write or action execution occurs.
 
 **Example**
 If AI returns:
@@ -6966,14 +7431,17 @@ Convert text into structured tasks.
 **2. Voice Command Understanding**
 Interpret Arabic and English voice-to-text commands.
 
-**3. Next Action Suggestions**
-Recommend the next best task.
+**3. Dependency-Aware Next Action Suggestions**
+Recommend the next best ready task with a short explanation.
 
-**4. Basic Daily Planning Suggestions**
-Generate simple prayer-aware planning suggestions.
+**4. Human-Aware Daily Planning Suggestions**
+Generate prayer-aware planning suggestions using deterministic ranking and placement.
 
 **5. Basic Productivity Insights**
 Generate a small number of behavioral summaries.
+
+**6. Deadline Risk and Overload Signals**
+Surface risky tasks and overloaded days without forcing unrealistic scheduling.
 
 ## 8.15 Post-MVP AI Expansion
 Future AI features may include:
@@ -7653,7 +8121,10 @@ Example:
 * spoken command = Arabic
 The system must still support that.
 
-## 9.10 Voice UI States
+## 9.10 Voice UI
+The voice interface must clearly support Arabic and English commands and provide visible real-time feedback so the user can verify what the system understood before execution.
+
+### 9.10.1 Voice UI States
 The voice interface should have clear visible states.
 
 **State 1 — Idle**
@@ -7686,6 +8157,24 @@ Show:
 * error message
 * retry option
 * manual fallback
+
+### 9.10.2 Latency Handling and Perceived Responsiveness
+Because the end-to-end voice path may include speech-to-text, intent parsing, backend validation, and final execution, the interface must be designed to feel responsive even when actual processing takes multiple seconds.
+
+**Required UI Rules**
+* show immediate visual acknowledgement as soon as the microphone is tapped
+* preserve and display the transcribed text as early as possible
+* use skeleton loaders, progressive result states, or lightweight placeholder cards instead of long blank waits
+* use optimistic UI only where the action is low-risk and easily reversible
+* avoid optimistic execution for destructive actions or ambiguous writes
+* keep the user on the same screen context whenever possible instead of causing unnecessary route changes during processing
+
+**Examples**
+* for `get_next_prayer` or `get_daily_plan`, show a placeholder answer card immediately, then replace it with the validated result
+* for `create_task`, show a draft preview card instantly after transcription, then convert it to confirmed saved state after validation
+* for low-confidence or high-risk actions, show a fast editable preview rather than a blocking spinner-only flow
+
+The goal is to reduce spinner fatigue and make the app feel alive while the AI pipeline completes in the background.
 
 ## 9.11 Voice Command Confidence Strategy
 Confidence-aware execution is important.
@@ -7905,7 +8394,7 @@ It should instead:
 * adapt to real life constraints
 * integrate productivity with prayer and wellbeing
 
-Android’s notification guidance recommends using system templates and prioritizing clarity and compatibility, while live-update guidance emphasizes brief, timely, and relevant information. :contentReference[oaicite:1]{index=1}
+Android’s notification guidance recommends using system templates and prioritizing clarity and compatibility, while live-update guidance emphasizes brief, timely, and relevant information.
 
 ---
 
@@ -8195,6 +8684,70 @@ The engine may generate:
 }
 ```
 
+## 10.9.4 Human-Aware Task Ranking
+The scheduling engine shall rank candidate tasks using a deterministic weighted model rather than relying only on static priority.
+
+**Ranking Factors**
+* explicit priority
+* deadline urgency
+* dependency readiness
+* estimated duration fit
+* energy-time match
+* historical suitability
+* placement friction
+
+**Product Rule**
+The system should be able to explain each recommended task using short reasoning such as:
+* due today
+* already unblocked
+* fits before next prayer
+* matches your preferred focus period
+
+## 10.9.5 Dependency-Aware Eligibility
+The engine shall treat dependency state as an eligibility rule before scoring autonomous task placement.
+
+**Rules**
+* blocked tasks should not be silently scheduled ahead of prerequisites
+* blocked tasks may still appear in UI with a visible blocked state
+* when a prerequisite is completed, the system may surface a dependency-unlock suggestion
+
+## 10.9.6 Overload Detection
+The system shall detect when the user’s day is not realistically schedulable.
+
+**Overload Indicators**
+* urgent work exceeds realistic free time
+* a long task cannot fit into valid gaps
+* high-friction tasks cluster with insufficient recovery windows
+* hard deadlines collide with prayer or locked constraints
+
+**Default Behavior**
+The app must prefer an honest partial plan over a fake perfect schedule.
+
+## 10.9.7 Event-Driven Automation and Future-Only Replanning
+The scheduling subsystem shall react to important state changes through an internal automation layer.
+
+**Core Events**
+* task_created
+* high_priority_task_created
+* task_completed
+* task_skipped
+* schedule_block_missed
+* day_overloaded
+* dependency_unlocked
+* prayer_schedule_changed
+* user_routine_changed
+
+**Core Automation Actions**
+* regenerate_future_schedule
+* recommend_next_best_action
+* push_low-score_task_forward
+* split_large_task
+* create_risk_warning
+* suggest_recovery_plan
+
+**Safety Rule**
+Automation must affect only future schedule state and assistive recommendations unless the user explicitly confirms a higher-risk change.
+
 ## 10.10 Timezone & Time Handling Rules
 This subsystem is highly time-sensitive, so timezone handling must be explicit.
 PostgreSQL’s current documentation recommends time-zone-aware date/time types for timezone use cases, stores timezone-aware values internally in UTC, and converts them for display according to session timezone. The PostgreSQL wiki also strongly recommends `timestamptz` instead of `timestamp without time zone` for real moments in time. 
@@ -8206,6 +8759,34 @@ PostgreSQL’s current documentation recommends time-zone-aware date/time types 
 * **Rule 4:** Avoid using time-only timezone fields for real-world moments.
 
 PostgreSQL also does not recommend time with time zone for these use cases. 
+
+### 10.10.1 Floating Time vs Absolute Time Rule
+Human scheduling intent is not uniform. The system must distinguish between **absolute-time** items and **floating-time** items.
+
+**Absolute Time**
+Use for items tied to a specific real-world global moment.
+Examples:
+* meetings
+* appointments
+* externally fixed deadlines
+* exams
+
+If the user travels, the event should still occur at the corresponding converted instant in the new timezone.
+
+**Floating Time**
+Use for items that should occur at the same local wall-clock time regardless of travel.
+Examples:
+* habits
+* local reminders such as “drink water at 9:00 AM”
+* prayer-related routine prompts
+
+If the user travels, the event should continue to occur at the new local time.
+
+**Design Rules**
+* tasks shall default to `absolute` unless product logic or explicit user choice marks them as `floating`
+* habits and prayer-related routine reminders shall default to `floating`
+* the scheduling engine must preserve and interpret the item’s `time_semantics` when recalculating reminders after timezone changes
+* timezone change detection shall trigger local rescheduling of floating-time reminders without mutating the semantic meaning of absolute-time records
 
 ## 10.11 Notification Job Lifecycle
 A notification moves through the following lifecycle.
@@ -8233,26 +8814,44 @@ Best for:
 * exact reminders already known on the device
 * focus timers
 * some habit reminders
+* prayer notifications that must fire at precise local times
 * short-lived local events
 
 Advantages:
 * works faster
 * less backend dependency
 * useful offline
+* more resilient against Android background deferral for already-known time-critical events
+
+**Android Exact-Alarm Rule**
+For time-critical alerts such as focus timers and user-visible precise prayer alerts, the mobile app should prefer a local alarm-based scheduling path when platform permissions and product policy allow it.
+
+Important Android constraints:
+* Doze defers background network access, jobs, syncs, and standard alarms, so backend-triggered delivery can be delayed while the device sleeps
+* exact alarms are intended only for precise user-intentioned actions and, on modern Android, exact-alarm permission is denied by default for most newly installed apps targeting recent API levels
+* the app must therefore check exact-alarm capability at runtime, request permission only when justified, and provide fallback behavior when exact alarms are unavailable
+
+Recommended fallback order:
+1. local exact alarm path when permitted and user-enabled
+2. local inexact/local-notification scheduling when acceptable
+3. high-priority FCM only for urgent user-visible content that still makes sense as a push notification
+4. normal-priority FCM for sync or non-urgent nudges
 
 ### 10.12.2 Backend Scheduling
 Best for:
-* prayer notifications
-* AI nudges
 * synced reminders across devices
-* future server-driven scheduling logic
+* AI nudges
+* non-time-critical suggestion delivery
+* server-driven scheduling logic
+* notification job coordination and audit history
 
 FastAPI provides `BackgroundTasks` for running work after a response is sent, which is useful for lighter follow-up work, but a full scheduling system should still be designed as a deliberate subsystem rather than relying only on request-time background tasks. 
 
 **Recommendation**
 Use:
-* local scheduling for client-known exact reminders
-* backend-generated jobs for shared or AI-driven reminders
+* local scheduling for client-known exact reminders and timers
+* backend-generated jobs for shared, non-urgent, or AI-driven reminders
+* FCM primarily for sync, state refresh, or non-guaranteed alert delivery rather than as the sole timing mechanism for precision-critical local alerts
 
 ## 10.13 Task Reminder Logic
 Task reminders should be based on:
@@ -8327,6 +8926,8 @@ Keep AI nudges limited to:
 * next action suggestions
 * end-of-day reflection prompt
 * overdue important task prompt
+* dependency-unlock recommendation
+* overload warning prompt
 
 ## 10.19 Daily Plan Scheduling Logic
 The daily planning engine should generate suggestions, not forced schedules.
@@ -8469,6 +9070,9 @@ The MVP notification/scheduling system should include:
 * Quran goal reminders
 * notification settings
 * basic daily plan generation
+* human-aware ranking for daily planning
+* overload detection
+* future-only replanning
 * timezone-aware reminder scheduling
 
 **Can Be Deferred**
@@ -8933,6 +9537,8 @@ AI and voice features must not bypass normal security controls.
 * AI must not execute destructive actions without confirmation
 * AI-generated schedules or suggestions must not expose private data beyond the current user
 * transcripts and AI prompts should be minimized to what is necessary for the feature
+* prompts must separate trusted system instructions from untrusted user text
+* backend schema validation must remain the final authority over all AI-produced structured data
 
 This is important because convenience layers must not weaken the core system’s security model. The same storage, privacy, and authorization rules still apply. 
 
@@ -8969,6 +9575,19 @@ For MVP, the minimum required security/privacy controls are:
 * no plaintext secrets in code
 * safe error handling
 * minimized sensitive logging
+* basic rate limiting on authentication endpoints from day one
+
+### 11.19.1 Mandatory MVP Auth Rate Limiting
+Authentication routes are high-risk even in MVP and must not wait for post-MVP hardening.
+
+**Minimum Required Protection**
+* apply rate limiting to `register`, `login`, `forgot-password`, and other credential-recovery endpoints
+* default protection target: no more than **5 login attempts per minute per IP**
+* apply stricter lockout or cool-down behavior after repeated failures where practical
+* record suspicious repeated failures in security logs/monitoring
+* use generic authentication failure messages to avoid account enumeration where possible
+
+This is intentionally limited MVP protection, but it must exist from the first public deployment because auth endpoints are prime brute-force and credential-stuffing targets.
 
 **Strongly Recommended**
 * database least-privilege role
@@ -8986,7 +9605,7 @@ Future security upgrades may include:
 * audit logs for sensitive account changes
 * finer-grained roles/admin controls
 * broader database row-level security
-* advanced abuse/rate limiting
+* advanced abuse controls beyond baseline auth rate limiting
 * secret rotation automation
 
 These are useful expansions once the MVP foundation is stable. PostgreSQL’s row-security and role systems provide a path for stronger database-side controls later. 
@@ -9254,6 +9873,17 @@ Docker volumes are the preferred persistent storage mechanism for containerized 
 * credentials must come from environment configuration
 * only application service should have direct DB access in normal runtime
 
+### 12.8.4 Connection Pooling and Spike Protection
+FastAPI can process requests quickly, but PostgreSQL must be protected from uncontrolled connection spikes.
+
+**Required Rules**
+* the backend shall use bounded database connection pooling rather than unlimited per-request connection creation
+* SQLAlchemy/async database configuration must set explicit pool limits, overflow limits, and timeouts appropriate to the deployment size
+* for higher-scale or bursty deployments, the architecture should support a PostgreSQL connection pooler such as PgBouncer between the app and the database
+* operational monitoring must track pool exhaustion, connection wait time, and database connection counts
+
+This prevents sync bursts, notification-triggered traffic spikes, or startup storms from exhausting PostgreSQL connection limits.
+
 ## 12.9 Secrets and Configuration Management
 Configuration must be environment-driven.
 
@@ -9517,7 +10147,7 @@ This means the project will follow:
 - phased implementation for manageable execution
 - iterative releases for learning and refinement
 
-Agile works well for software projects that need adaptation and incremental delivery, while MVP helps teams validate assumptions early with the simplest useful version before expanding the roadmap. :contentReference[oaicite:1]{index=1}
+Agile works well for software projects that need adaptation and incremental delivery, while MVP helps teams validate assumptions early with the simplest useful version before expanding the roadmap.
 
 ---
 
@@ -9538,7 +10168,7 @@ Because of this, requirements may improve as implementation progresses.
 
 A rigid one-shot development style would be risky.
 
-Agile is a better fit for complex software that changes frequently, while Scrum and Kanban can be used to organize iterative delivery and continuous flow of work. :contentReference[oaicite:2]{index=2}
+Agile is a better fit for complex software that changes frequently, while Scrum and Kanban can be used to organize iterative delivery and continuous flow of work.
 
 ### Reasons this methodology fits
 
@@ -9583,7 +10213,7 @@ Used for day-to-day implementation:
 ## C. MVP Product Strategy
 Used to define the smallest version worth building first.
 
-SDLC provides the structured lifecycle, while Agile provides iterative execution inside that lifecycle. MVP helps define the first release boundary. :contentReference[oaicite:3]{index=3}
+SDLC provides the structured lifecycle, while Agile provides iterative execution inside that lifecycle. MVP helps define the first release boundary.
 
 ---
 
@@ -9600,7 +10230,7 @@ This means:
 - keep work-in-progress controlled
 - stay flexible when priorities change
 
-Atlassian notes that Scrum uses fixed-length sprints, while Kanban emphasizes continuous flow and visibility; many teams combine the two into a hybrid approach often called Scrumban. :contentReference[oaicite:4]{index=4}
+Atlassian notes that Scrum uses fixed-length sprints, while Kanban emphasizes continuous flow and visibility; many teams combine the two into a hybrid approach often called Scrumban.
 
 ### Practical meaning for this project
 
@@ -9632,7 +10262,7 @@ The roadmap defines:
 - in what order
 - in what phases
 
-A roadmap should act as the shared product direction over time and be updated as priorities change. :contentReference[oaicite:5]{index=5}
+A roadmap should act as the shared product direction over time and be updated as priorities change.
 
 ---
 
@@ -9647,7 +10277,7 @@ The backlog contains:
 - API tasks
 - test tasks
 
-Backlog management and grooming are standard parts of Agile delivery because they help teams prioritize and keep work ready for execution. :contentReference[oaicite:6]{index=6}
+Backlog management and grooming are standard parts of Agile delivery because they help teams prioritize and keep work ready for execution.
 
 ---
 
@@ -9726,7 +10356,7 @@ Validate core workflows before optimization.
 ### Rule 4
 Introduce advanced automation only after the base experience is stable.
 
-This matches MVP practice: build the simplest usable version first, learn from real use, and then iterate. :contentReference[oaicite:7]{index=7}
+This matches MVP practice: build the simplest usable version first, learn from real use, and then iterate.
 
 ---
 
@@ -9867,7 +10497,7 @@ Prepare the product for real test users.
 - QA checklist passed
 - reduced crash risk
 
-Testing is a formal SDLC phase because it reveals performance, usability, and functional issues before deployment. :contentReference[oaicite:8]{index=8}
+Testing is a formal SDLC phase because it reveals performance, usability, and functional issues before deployment.
 
 ---
 
@@ -9889,7 +10519,7 @@ Release the product to selected early users.
 - beta mobile release
 - first external user validation
 
-Deployment is a distinct SDLC phase, often followed by maintenance and iteration after real-world use. :contentReference[oaicite:9]{index=9}
+Deployment is a distinct SDLC phase, often followed by maintenance and iteration after real-world use.
 
 ---
 
@@ -9912,7 +10542,7 @@ Improve the product based on learning.
 - better retention
 - more advanced system behavior
 
-Maintenance and improvement are ongoing SDLC concerns after release. :contentReference[oaicite:10]{index=10}
+Maintenance and improvement are ongoing SDLC concerns after release.
 
 ---
 
@@ -9920,40 +10550,49 @@ Maintenance and improvement are ongoing SDLC concerns after release. :contentRef
 
 The MVP should be the **smallest useful version** of Smart Life Planner that proves the product concept.
 
-An MVP is the simplest version of a product that lets a team validate ideas and gather real feedback with minimal effort. :contentReference[oaicite:11]{index=11}
+An MVP is the simplest version of a product that lets a team validate ideas and gather real feedback with minimal effort.
 
-## MVP Must Include
+The roadmap is divided into two practical delivery levels so the project stays realistic and shippable.
 
-### Core Mobile Experience
-- onboarding
-- authentication
+## MVP Phase 1 — Core Focus
+
+### Core Access
+- sign up
+- login
+
+### Core Productivity
+- basic task CRUD
+- projects
+
+### Core Spiritual
+- prayer times
+- prayer tracking
+
+### Core Smart Capture
+- quick task capture via AI parsing
+- basic voice-assisted task input
+
+## MVP Phase 2 — Expansion
+
+### Expanded Organization
+- notes full integration
+- habits full integration
+
+### Deep Work
+- focus timer
+
+### AI Coach Expansion
+- advanced scheduling
+- habit suggestions
+
+## Shared MVP Foundation
+Across the MVP path, the app should still maintain:
 - Home dashboard
 - bottom navigation
 - profile/settings
-
-### Core Productivity Features
-- tasks
-- projects
-- notes
-- habits
-- focus sessions
-
-### Core Spiritual Features
-- prayer times
-- prayer tracking
-- Quran goals
-
-### Core Smart Features
-- quick capture
-- voice-to-command input
-- natural language task parsing
-- next-action suggestion
-
-### Core System Features
 - notifications
 - local caching
 - backend sync
-- production-ready auth
 
 ---
 
@@ -10046,7 +10685,7 @@ The project should move in short cycles.
 - 1 to 2 weeks per mini-iteration for a solo or small team
 - adjust depending on academic load and complexity
 
-Scrum commonly uses fixed-length sprints, often around two weeks, while Kanban allows continuous flow; either can work as long as delivery is incremental and visible. :contentReference[oaicite:12]{index=12}
+Scrum commonly uses fixed-length sprints, often around two weeks, while Kanban allows continuous flow; either can work as long as delivery is incremental and visible.
 
 ---
 
@@ -10097,7 +10736,7 @@ The project backlog should be grouped by epics.
 - Deployment & DevOps
 - QA & Stability
 
-Agile teams often use epics and backlog items to break work into manageable increments and dependencies. :contentReference[oaicite:13]{index=13}
+Agile teams often use epics and backlog items to break work into manageable increments and dependencies.
 
 ---
 
@@ -10192,7 +10831,7 @@ Limited public release with monitoring.
 ## Release 4 — Stable Public Version
 Google Play release with stronger polish.
 
-This staged release approach reduces risk and helps gather useful product feedback before a wide launch. MVP and testing-before-broad-launch are standard product-development practices. :contentReference[oaicite:14]{index=14}
+This staged release approach reduces risk and helps gather useful product feedback before a wide launch. MVP and testing-before-broad-launch are standard product-development practices.
 
 ---
 
@@ -10597,6 +11236,10 @@ Whenever a major feature is added:
 
 ## 14.14 Acceptance Criteria
 Acceptance criteria define when a feature is considered complete.
+
+### Minimum Cross-System Acceptance Criteria
+- task parsing accuracy should be greater than 90% for supported MVP-style inputs
+- prayer times must correctly sync with the user's local GPS/location context
 
 **Example Acceptance Criteria — Task Creation**
 Feature is accepted when:
@@ -11202,6 +11845,10 @@ Premium Features
 Monthly / Yearly Subscription
 ```
 
+Positioning summary:
+- **Freemium:** core tasks and prayer features remain accessible to all users
+- **Subscription:** advanced AI scheduling, advanced analytics, and premium customization such as custom voice skins
+
 This approach is widely used in successful productivity apps.
 
 Freemium models attract large user bases, while premium upgrades generate revenue from power users.
@@ -11215,12 +11862,13 @@ The free version should be powerful enough to attract users.
 Free features include:
 
 ### Productivity Features
-* task management
+* core task management
 * notes
 * habit tracking
 * basic focus timer
 
 ### Spiritual Features
+* core prayer features
 * prayer times
 * prayer tracking
 * Quran goals
@@ -11253,6 +11901,7 @@ Premium users unlock advanced capabilities.
 * unlimited voice commands
 * AI voice planning assistant
 * advanced command interpretation
+* custom voice skins
 
 ### 16.6.3 Advanced Productivity Tools
 * unlimited projects
@@ -11501,3 +12150,753 @@ Growth will be driven through:
 This strategy allows the application to grow from a **student project into a sustainable startup-level product**.
 
 ---
+
+---
+
+# 📘 Smart Life Planner — Software Documentation
+# Step 17: System Decision Rules, Edge Cases, and Production Readiness Finalization
+
+---
+
+## 17.1 Purpose
+
+This step closes the remaining gap between a **strong product design** and a **high-confidence implementation specification**.
+
+The previous steps already defined:
+
+- product vision
+- modules and flows
+- architecture
+- database design
+- APIs
+- AI behavior
+- notifications
+- roadmap
+- QA
+- monitoring
+- monetization
+
+However, a system can still fail in production when its **decision rules** are not explicit enough.
+
+This step therefore formalizes the missing operational rules for:
+
+- scheduling decisions
+- edge-case handling
+- conflict resolution
+- reminder lifecycle behavior
+- AI fallback and confidence behavior
+- retention and delete policy
+- measurable acceptance gates
+
+This step is the **final implementation-hardening layer** of Smart Life Planner.
+
+---
+
+## 17.2 Design Principle of This Finalization Step
+
+The core principle is:
+
+> **When the system is uncertain, conflicting, or interrupted, it must fail safely, explain clearly, preserve user control, and remain logically consistent.**
+
+That means:
+
+- no silent destructive overwrite where it can be avoided
+- no hidden AI decisions for important user data changes
+- no stale reminders after item completion or deletion
+- no schedule blocks that conflict with prayer times or hard user constraints
+- no execution of low-confidence voice or AI write actions without confirmation
+
+---
+
+## 17.3 Scheduling Engine Decision Hierarchy
+
+The scheduling engine shall follow a strict decision hierarchy.
+
+### 17.3.1 Scheduling Priority Order
+
+When generating a daily plan, the engine shall resolve constraints in this order:
+
+1. prayer times and spiritual fixed windows
+2. sleep window and wake window
+3. hard calendar constraints or user-blocked time
+4. overdue tasks with hard deadlines
+5. today’s hard-deadline tasks
+6. high-priority tasks
+7. recurring habits with strict time preference
+8. medium-priority tasks
+9. flexible habits
+10. low-priority tasks
+11. optional reflection or AI suggestion blocks
+
+### 17.3.2 Hard Constraints
+
+The engine shall treat the following as **hard constraints**:
+
+- prayer blocks
+- sleep window
+- manually blocked time
+- user-confirmed fixed appointments
+- completed time blocks
+- already-running focus sessions
+
+The engine must not place other blocks on top of these unless the user explicitly edits the schedule manually.
+
+### 17.3.3 Soft Constraints
+
+The engine shall treat the following as **soft constraints**:
+
+- preferred work hours
+- preferred focus periods
+- habit ideal time windows
+- AI-recommended deep work windows
+- historical best-focus periods
+
+Soft constraints influence ranking but do not fully prohibit scheduling.
+
+### 17.3.4 Dependency Eligibility Rule
+
+Before a task is considered for autonomous placement, the engine shall verify whether the task is ready to execute.
+
+A task is considered **blocked** when one or more required prerequisite tasks are unfinished. Blocked tasks may appear in the UI, but they must not be silently placed into active schedule blocks until they become ready or the user explicitly overrides the dependency rule.
+
+### 17.3.5 Human-Aware Ranking Factors
+
+When multiple eligible tasks compete for the same free window, the engine shall prefer the task with the strongest combined execution value using factors such as:
+
+- explicit priority
+- deadline urgency
+- duration fit
+- energy-time match
+- dependency readiness
+- historical suitability
+- placement friction
+
+The system should be able to explain the final choice in plain language.
+
+---
+
+## 17.4 Scheduling Decision Table
+
+| Scenario | System Rule | Default Action |
+|---|---|---|
+| Task duration fully fits in one free gap | Use the highest-ranked valid gap | Schedule one block |
+| Task duration does not fit in one gap but can fit in multiple gaps | Split only if task is splittable | Create multiple linked blocks |
+| Task duration does not fit at all today | Do not force unrealistic schedule | Suggest defer, shorten, or split |
+| Two tasks have same priority and same due date | Prefer shorter task first if it unlocks progress, otherwise earlier-created task | Deterministic tie-break |
+| Task conflicts with prayer time | Prayer wins | Shift task before or after prayer |
+| Task conflicts with user-blocked time | User block wins | Find another gap |
+| Task conflicts with existing confirmed focus block | Confirmed focus block wins | Reschedule task |
+| Overdue task exists with no time today | Surface warning, do not auto-overbook | Ask user to reschedule or reduce scope |
+| Habit and urgent task compete for same slot | Urgent hard-deadline task wins unless habit is marked strict-time | Move habit to next valid window |
+| User manually drags a block | Manual edit becomes highest priority for that item | Respect user override |
+| AI confidence is low for duration or deadline | Do not auto-place silently | Ask for confirmation |
+
+---
+
+## 17.5 Task Splitting Rules
+
+Not every task should be split automatically.
+
+### 17.5.1 Splittable Tasks
+
+The engine may split a task when:
+
+- the task duration is longer than the available gap
+- the task is marked as splittable
+- the task is a study/work/review type task
+- the task has no strict uninterrupted requirement
+
+### 17.5.2 Non-Splittable Tasks
+
+The engine shall avoid automatic splitting when:
+
+- the user marked the task as deep work / uninterrupted
+- the task is a meeting-like activity
+- the task is a prayer-related fixed act
+- the task duration is uncertain and AI confidence is low
+
+### 17.5.3 Splitting Limits
+
+The MVP should keep splitting simple:
+
+- maximum 3 blocks per task per day
+- minimum suggested block length: 15 minutes
+- blocks shorter than 15 minutes should not be generated unless the task itself is a micro-task
+
+### 17.5.4 Overload Honesty Rule
+
+If the engine cannot place all urgent work without violating hard constraints or creating an unrealistic day, it shall not fabricate a perfect schedule.
+Instead, it must:
+
+- show that the day is overloaded
+- keep the most defensible blocks
+- defer lower-value work
+- suggest reduction, split, or rescheduling
+
+---
+
+## 17.6 Scheduling Edge-Case Matrix
+
+### 17.6.0 Event-Driven Automation Rule
+
+The system shall treat automation as a future-state protection mechanism.
+
+When events such as task completion, task skip, dependency unlock, or prayer schedule changes occur, the engine may regenerate the future portion of the schedule, create a preview, or surface a next-action suggestion. It must not silently rewrite completed history or override manually locked schedule blocks.
+
+
+### 17.6.1 Edge Cases and Required Behavior
+
+| Edge Case | Required Behavior |
+|---|---|
+| User creates task shorter than 5 minutes | Treat as micro-task; do not over-engineer scheduling |
+| User asks for 4-hour task but only 2 hours exist today | Suggest split across days or multiple blocks |
+| User adds task after most of the day has passed | Only schedule in future remaining time |
+| User misses a scheduled block | Mark as missed or incomplete; offer replan |
+| Prayer time changes due to location/method change | Recompute future blocks and affected reminders |
+| User edits wake/sleep time midday | Recompute future schedule only |
+| Schedule contains no valid free gap | Show “No realistic slot found” instead of forcing a plan |
+| Multiple overdue high-priority tasks exist | Rank by due date, user priority, and estimated effort |
+| Recurring habit was skipped for several days | Do not auto-backfill old days; resume from current day |
+| User manually completes task before scheduled block starts | Cancel pending reminders and remove future block need |
+
+### 17.6.2 Replanning Rules
+
+The engine shall trigger replanning when:
+
+- a high-priority task is added
+- a scheduled task is completed early
+- a scheduled task is skipped or expires
+- prayer settings change
+- work hours change
+- wake/sleep times change
+- location change materially affects prayer schedule
+
+The engine should only replan the **future portion** of the day, not rewrite already completed history.
+
+---
+
+## 17.7 User Override and Schedule Authority Rules
+
+The system must remain assistive, not authoritarian.
+
+### 17.7.1 Override Principle
+
+If the user manually changes a suggested schedule block, the manual change becomes the authoritative version for that block.
+
+### 17.7.2 Auto-Rewrite Restriction
+
+The engine shall not silently rewrite a user-confirmed block unless:
+
+- the user explicitly requests replan
+- the underlying task is deleted
+- the task is completed
+- the schedule becomes invalid due to a changed hard constraint
+
+### 17.7.3 Invalid Block Handling
+
+If a manual block becomes invalid because of a new hard constraint, the system should:
+
+1. preserve the original user intent
+2. mark the block as needing attention
+3. suggest a valid replacement slot
+4. never discard it silently
+
+---
+
+## 17.8 AI Parsing, Confidence, and Fallback Rules
+
+The AI layer is responsible for understanding user intent, but the system must remain deterministic in execution.
+
+### 17.8.1 AI Responsibility Boundary
+
+AI may perform:
+
+- natural language understanding
+- extraction of title, duration, date, urgency, and category
+- classification of command intent
+- recommendation generation
+
+AI must not be the final authority for:
+
+- committing destructive operations at low confidence
+- silently changing locked schedule blocks
+- merging conflicting user records without explicit system rules
+
+### 17.8.2 Confidence Bands
+
+| Confidence Band | Meaning | Write Actions |
+|---|---|---|
+| High | parse is clear and parameters are complete | may continue with lightweight confirmation or safe direct action for low-risk actions |
+| Medium | likely correct but one or more fields may be ambiguous | require user confirmation before saving |
+| Low | parsing is unreliable or incomplete | do not commit; ask for clarification or manual edit |
+
+### 17.8.3 Ambiguity Triggers
+
+The system shall downgrade confidence when any of the following occur:
+
+- ambiguous date such as “next Friday” when locale/date basis is unclear
+- conflicting duration and deadline
+- mixed Arabic/English phrase with unclear intent
+- missing task title
+- uncertain time extraction
+- conflicting urgency phrases
+- speech transcript confidence below threshold
+
+### 17.8.4 Fallback Sequence
+
+When AI parsing is uncertain, the system should follow this sequence:
+
+1. show transcript or parsed preview
+2. highlight uncertain fields
+3. ask the user to confirm or edit
+4. if still unresolved, save as draft/inbox item instead of structured scheduled task
+5. offer manual form fallback
+
+---
+
+## 17.9 Voice and AI Failure Handling Matrix
+
+| Failure Type | System Behavior | User Experience Rule |
+|---|---|---|
+| Speech not detected | Retry capture | Keep prior screen intact |
+| Transcript low confidence | Show editable transcript | Never auto-save |
+| Intent classification failed | Ask what the user wants to create or do | Offer quick action chips or manual fallback |
+| Duration missing | Save as unscheduled draft or ask follow-up | Do not invent duration |
+| Deadline unclear | Create task without deadline only after confirmation | Avoid false precision |
+| AI service unavailable | Fall back to manual entry and local deterministic features | Explain clearly without crash |
+| Network unavailable | Preserve transcript locally for retry if appropriate | Do not lose input |
+| Unsupported language mix | Show transcript and request clarification | No auto-write |
+
+---
+
+## 17.10 Offline Sync Conflict Resolution Matrix
+
+The MVP uses **Last Write Wins (LWW)** for simple entity conflicts, but the system must define exactly when LWW is safe and when special handling is required.
+
+### 17.10.1 Timestamp Authority Rule
+
+LWW must not rely blindly on raw mobile device clock time.
+
+**Required Rule**
+* server-generated timestamps are authoritative for conflict resolution whenever the backend is reachable
+* offline clients may keep a local provisional `updated_at`, but the server must normalize the final authoritative timestamp during sync
+* the client should record an approximate client-server time delta during authenticated handshake or recent sync so obviously skewed local times can be detected
+* if client time is clearly unreliable or far outside tolerated skew, the server must prefer authoritative server ordering and may flag the record for conflict review instead of trusting pure client-side time
+
+This rule prevents incorrect overwrites caused by manual clock changes, timezone mistakes, or damaged device time settings.
+
+### 17.10.2 Safe LWW Cases
+
+LWW is acceptable for:
+
+- title edits where only one final value can exist
+- description edits on simple records
+- settings changes where latest explicit choice should win
+- non-critical display preferences
+
+Only server-authoritative ordering should decide the winning write in synced state.
+
+### 17.10.3 Special Conflict Cases
+
+| Conflict Type | Safe to Use Pure LWW? | Required Rule |
+|---|---|---|
+| edit vs edit on same task title | Yes, MVP | newest authoritative `updated_at` wins |
+| edit vs delete on task | No | delete must create recoverable tombstone and be reviewable if later edit arrives |
+| complete vs edit on task | No | preserve completion event, merge non-destructive fields where possible |
+| habit completion log on two devices | No | merge logs by date, do not drop completed-day evidence |
+| prayer completion on two devices | No | merge by prayer/date key |
+| notification read state vs content update | No | preserve read audit and update content separately |
+| focus session started offline on one device and edited on another | No | preserve session event history first |
+| settings change vs stale device sync | Yes, usually | latest valid authoritative settings record wins |
+
+### 17.10.4 Delete Tombstone Rule
+
+When a mandatory behavioral entity is deleted, the system should sync a **tombstone record** rather than simply removing the row from sync consideration.
+
+Minimum tombstone fields:
+
+- entity_id
+- entity_type
+- deleted_at
+- deleted_by_device_id (optional later)
+- updated_at
+
+This prevents stale devices from resurrecting deleted items by accident.
+
+### 17.10.5 Merge Priority Rule
+
+When conflict type is not safe for pure LWW, the system shall prefer:
+
+1. preserving event history
+2. preserving explicit user completion actions
+3. preserving deletion intent through tombstones
+4. preserving newest editable content fields
+5. surfacing a conflict flag if needed
+
+---
+
+## 17.10.6 Auth Recovery Queue Rule
+Offline work must not be lost merely because authentication expires before reconnection.
+
+**Required Rule**
+* if a queued sync request fails with `401 Unauthorized` after reconnect, the client must pause outbound sync rather than dropping queued writes
+* the app shall preserve the offline mutation queue locally in secure durable storage
+* the user must be prompted to re-authenticate through a clear recovery flow
+* after successful re-authentication, the client shall replay the queued mutations in original safe order
+* replay must remain subject to normal conflict rules, tombstone rules, and idempotency protections where applicable
+
+This creates an **auth recovery queue** instead of a destructive sync failure path.
+
+## 17.11 Multi-Device Sync Scenarios
+
+### Scenario 1 — Task Edited on Device A and Deleted on Device B
+The system shall:
+
+- keep the delete tombstone
+- not resurrect the task automatically
+- preserve the last edited content in recoverable history if recovery workflow exists
+- show deleted state as authoritative in active views
+
+### Scenario 2 — Habit Completed Offline on Two Devices
+The system shall:
+
+- merge completion logs by date
+- avoid duplicate daily completion records
+- keep streak calculation deterministic
+
+### Scenario 3 — Prayer Marked Complete Offline on One Device and Schedule Recomputed on Another
+The system shall:
+
+- preserve the completion log for the prayer/date pair
+- recompute future prayer schedule only
+- never erase already logged prayer completion due to schedule refresh
+
+### Scenario 4 — Notification Read on One Device but Source Task Edited on Another
+The system shall:
+
+- preserve notification read history
+- update future reminder scheduling if needed
+- avoid re-sending identical stale reminder
+
+---
+
+## 17.12 Reminder Lifecycle State Machine
+
+The notification subsystem needs a stricter state machine than a simple scheduled/delivered model.
+
+### 17.12.1 Reminder States
+
+A reminder shall move through these states:
+
+1. **created** — business rule says reminder should exist
+2. **scheduled** — concrete delivery time registered
+3. **queued** — ready for dispatch by local or backend scheduler
+4. **delivered** — notification sent to device/UI
+5. **acknowledged** — user opened, tapped, or marked seen
+6. **dismissed** — user intentionally dismissed
+7. **completed_source** — source item completed, making reminder irrelevant
+8. **cancelled** — reminder intentionally cancelled before delivery
+9. **expired** — time has passed and reminder is no longer useful
+10. **invalidated** — rule change or sync event made reminder obsolete
+11. **archived** — kept only for analytics/history
+
+### 17.12.2 Required Transition Rules
+
+| From | To | Trigger |
+|---|---|---|
+| created | scheduled | concrete fire time generated |
+| scheduled | queued | scheduler accepts job |
+| queued | delivered | delivery attempt succeeds |
+| delivered | acknowledged | user opens or taps |
+| delivered | dismissed | user dismisses |
+| scheduled / queued | cancelled | source item deleted or reminders disabled |
+| scheduled / queued / delivered | completed_source | user completes task/habit/prayer before reminder matters |
+| delivered | expired | user takes no action and utility window ends |
+| any active state | invalidated | schedule/settings/sync change makes reminder obsolete |
+| completed_source / cancelled / expired / invalidated | archived | retention policy moves old reminder to history |
+
+### 17.12.3 Duplicate Prevention Rule
+
+A reminder engine must not allow multiple active reminders representing the same:
+
+- source entity
+- reminder type
+- scheduled fire time window
+
+unless the product explicitly supports multiple reminder offsets.
+
+---
+
+## 17.13 Reminder Invalidation Rules
+
+A reminder shall be invalidated immediately when any of the following happens:
+
+- the source task is completed
+- the source task is deleted
+- the habit is already completed for that recurrence window
+- prayer reminder settings change
+- the reminder time changes
+- the user disables that reminder category
+- the schedule changes and the old reminder no longer matches the valid block
+
+### 17.13.1 Invalidation Timing Rule
+
+For local operations, invalidation should occur immediately on the device.
+
+For synced operations, invalidation must occur no later than the next successful sync or scheduler refresh cycle.
+
+### 17.13.2 No Stale Reminder Rule
+
+The system shall never knowingly deliver:
+
+- a reminder for a completed item
+- a reminder for a deleted item
+- a reminder for an outdated prayer schedule
+- duplicate reminders for the same active obligation
+
+---
+
+## 17.14 Extended Data Retention and Delete Policy
+
+### 17.14.1 Mandatory Soft-Delete Entities
+
+The following must continue using soft delete:
+
+- tasks
+- habits
+- focus_sessions
+
+### 17.14.2 Recommended Archive / Recovery Entities
+
+The following are recommended for archive or recoverable-delete behavior in later phases:
+
+- notes
+- projects
+- journal entries
+- notification history
+
+### 17.14.3 Hard-Delete Appropriate Entities
+
+The following may be hard-deleted under normal system rules when business value is low or retention is unnecessary:
+
+- transient failed transcript buffers after expiry
+- temporary upload cache files
+- revoked session tokens
+- expired one-time verification tokens
+
+### 17.14.4 Right to be Forgotten / Full Account Deletion Rule
+
+The product must support a privacy-compliant full account deletion flow for app-store compliance and user rights requests.
+
+**Required Deletion Flow**
+1. user identity and request intent are verified
+2. the account enters a controlled deletion workflow
+3. personally identifiable information is hard-deleted or irreversibly anonymized
+4. all active sessions and tokens are revoked
+5. synced devices receive invalidation for the deleted account
+6. retained macro-analytics, if any, must contain no recoverable personal identity
+
+**PII That Must Be Removed or Anonymized**
+* full name
+* email address
+* profile image URL
+* raw voice/audio artifacts if stored
+* raw transcript content where retention is not legally or operationally required
+* personal journal/note/task content if the user requested full deletion
+
+**Retention Rule**
+* user-level identifiable content must not remain in normal analytics stores after a full deletion request is completed
+* only aggregated or anonymized metadata may remain, and only if it cannot be linked back to the deleted user
+
+### 17.14.5 Delete Policy Principle
+
+The rule is:
+
+> **Delete behavior must match analytical value, legal/privacy value, and user recovery expectations.**
+
+Behavioral history should be preserved where it improves analytics or user trust.
+Sensitive transient data should not be retained longer than needed.
+
+### 17.14.6 Operational Note
+
+Normal in-app delete may still use soft delete for recovery and analytics workflows, but full account deletion is a separate privacy-critical path and must bypass soft-retention assumptions when legal or policy requirements demand permanent erasure or irreversible anonymization.
+
+---
+
+## 17.15 Module-Level Acceptance Criteria
+
+This section upgrades the general acceptance criteria into measurable gates.
+
+### 17.15.1 Task Management Acceptance Criteria
+
+A task feature is accepted only when:
+
+- user can create, edit, complete, and delete task successfully
+- task persists after app restart and sync
+- completed tasks do not trigger stale reminders
+- deleted tasks disappear from active lists but remain recoverable if soft-deleted
+- duplicate active task records are not created in normal sync scenarios
+
+### 17.15.2 Habit System Acceptance Criteria
+
+The habit system is accepted only when:
+
+- user can create, update, complete, and archive habit
+- daily completion is recorded once per habit per recurrence window
+- streak calculation remains consistent across device sync
+- completed habits do not re-trigger duplicate same-day reminders unless explicitly configured
+
+### 17.15.3 Prayer System Acceptance Criteria
+
+The prayer system is accepted only when:
+
+- prayer times are generated correctly for the selected location, date, and calculation settings
+- future prayer reminders update after location or method change
+- prayer completion logs remain preserved after sync and schedule recomputation
+- next-prayer widget always reflects latest valid computed schedule
+
+### 17.15.4 Focus System Acceptance Criteria
+
+The focus system is accepted only when:
+
+- session can start, pause if supported, complete, and cancel correctly
+- cancelled sessions do not trigger end alerts unless intentionally designed
+- completed sessions are stored for analytics
+- active session state survives normal app backgrounding conditions
+
+### 17.15.5 AI Parsing Acceptance Criteria
+
+The AI parsing subsystem is accepted only when:
+
+- supported MVP-style task inputs achieve greater than 90% structured parsing accuracy in test dataset
+- low-confidence write actions require confirmation
+- unclear date or duration extraction does not silently create false precision
+- AI unavailability does not block manual task creation
+
+### 17.15.6 Scheduling Engine Acceptance Criteria
+
+The scheduling engine is accepted only when:
+
+- generated task blocks never overlap with prayer blocks in tested scenarios
+- generated blocks do not exceed the remaining valid time window of the day
+- user-confirmed manual blocks are not silently rewritten
+- no-valid-gap scenario produces explicit user feedback rather than forced schedule output
+- split-task behavior follows defined splitting rules
+
+### 17.15.7 Notification System Acceptance Criteria
+
+The notification system is accepted only when:
+
+- scheduled reminders fire only once per intended event
+- source completion/deletion invalidates future stale reminders
+- tapping a reminder deep-links to the correct target screen
+- user preference toggles immediately affect future reminder generation
+- duplicate active reminders are prevented under normal scheduler conditions
+
+### 17.15.8 Offline Sync Acceptance Criteria
+
+Offline sync is accepted only when:
+
+- same entity converges to one deterministic final state after sync
+- delete tombstones prevent accidental resurrection of deleted mandatory entities
+- completion logs are preserved across multi-device conflicts
+- no duplicate active rows appear after conflict resolution in tested scenarios
+- sync failure does not corrupt local data
+
+### 17.15.9 Voice UI Acceptance Criteria
+
+Voice UI is accepted only when:
+
+- user always sees listening, processing, preview, success, or failure state
+- low-confidence transcript is editable before commit
+- failed transcription does not crash the app
+- Arabic and English supported commands can be previewed before write action execution
+
+---
+
+## 17.16 Beta Release Gates
+
+The system shall not be considered beta-ready unless all of the following are true:
+
+1. core auth flow is stable
+2. task CRUD is stable
+3. prayer calculation and tracking are stable
+4. notification invalidation rules are working
+5. voice preview and confirmation flow are working
+6. AI fallback to manual entry is working
+7. no known blocker exists in sync convergence for core entities
+8. app has no major crash pattern in core flows
+9. production monitoring hooks are enabled
+10. MVP scope is still controlled and not overloaded by non-essential features
+
+---
+
+## 17.17 MVP Lock Rules
+
+To protect delivery quality, the MVP must remain narrow.
+
+### 17.17.1 MVP Must Include
+
+- authentication
+- task CRUD and projects
+- prayer times and prayer tracking
+- quick AI task parsing
+- dependency-aware next action
+- overload-aware daily planning
+- voice capture with preview/confirmation
+- essential reminders
+- dashboard overview
+
+### 17.17.2 MVP Must Not Expand Into Yet
+
+- advanced automatic multi-day scheduling optimization
+- full AI coaching ecosystem
+- overly complex mood-to-productivity correlation engine
+- large-scale customization marketplace
+- aggressive AI nudging logic
+- complex collaborative/team features
+
+### 17.17.3 MVP Protection Rule
+
+If a proposed feature increases implementation complexity but does not materially improve the first usable product, it must be deferred.
+
+---
+
+## 17.18 Final Engineering Principle
+
+The final engineering principle of Smart Life Planner is:
+
+> **AI may assist the system, but deterministic product rules must protect the user.**
+
+This means:
+
+- AI understands language
+- deterministic logic protects schedule correctness
+- sync rules protect data consistency
+- reminder lifecycle rules protect trust
+- manual override protects autonomy
+- measurable acceptance criteria protect quality
+
+---
+
+## 17.19 Step 17 Summary
+
+This step finalizes Smart Life Planner as a much more implementation-ready software system.
+
+It adds the operational rules that turn a good architecture into a reliable product specification, including:
+
+- detailed scheduling decisions
+- split-task policy
+- replanning rules
+- user override authority
+- AI confidence and fallback logic
+- offline conflict matrix
+- tombstone-based delete protection
+- full reminder state machine
+- stale reminder invalidation rules
+- extended delete and retention policy
+- measurable module-level acceptance criteria
+- beta release gates
+- MVP lock rules
+
+With this step added, the documentation is now significantly closer to a **real build-ready system specification** rather than only a high-level software concept.
