@@ -130,6 +130,28 @@ class _ContextIntelligenceScreenState
                     ),
                     const SizedBox(height: 4),
                   ],
+                  if (state.taskRecommendations != null) ...[
+                    Text(
+                      'Ranked tasks',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (state.taskRecommendations!.recommendations.isEmpty)
+                      const _EmptyTaskRecommendations()
+                    else
+                      ...state.taskRecommendations!.recommendations.map(
+                        (item) => _ScoredTaskTile(
+                          title: item.title,
+                          score: item.score,
+                          priority: item.priority,
+                          energyRequired: item.energyRequired,
+                          explanation: item.explanation,
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                  ],
                   _ContextCard(
                     icon: Icons.schedule_outlined,
                     title: 'Time Context',
@@ -157,6 +179,101 @@ class _ContextIntelligenceScreenState
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _ScoredTaskTile extends StatelessWidget {
+  final String title;
+  final double score;
+  final String priority;
+  final String energyRequired;
+  final String explanation;
+
+  const _ScoredTaskTile({
+    required this.title,
+    required this.score,
+    required this.priority,
+    required this.energyRequired,
+    required this.explanation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: AppColors.success.withValues(alpha: 0.14),
+            child: Text(
+              score.round().toString(),
+              style: const TextStyle(
+                color: AppColors.success,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$priority priority - $energyRequired energy',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  explanation,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyTaskRecommendations extends StatelessWidget {
+  const _EmptyTaskRecommendations();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        'No active tasks are available for scoring.',
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+      ),
     );
   }
 }
@@ -254,7 +371,7 @@ class _RecommendationTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '$taskType · $suggestedEnergy energy',
+                  '$taskType - $suggestedEnergy energy',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: AppColors.textSecondary,
                   ),

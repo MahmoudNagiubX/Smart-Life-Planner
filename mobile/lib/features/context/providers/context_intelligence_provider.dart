@@ -13,6 +13,7 @@ final contextIntelligenceServiceProvider = Provider<ContextIntelligenceService>(
 class ContextIntelligenceState {
   final ContextIntelligenceSnapshot snapshot;
   final TimeContextRecommendationResult? recommendations;
+  final ContextTaskRecommendationResult? taskRecommendations;
   final String? previewTimeBlock;
   final bool isLoading;
   final bool isSaving;
@@ -21,6 +22,7 @@ class ContextIntelligenceState {
   const ContextIntelligenceState({
     this.snapshot = const ContextIntelligenceSnapshot(),
     this.recommendations,
+    this.taskRecommendations,
     this.previewTimeBlock,
     this.isLoading = false,
     this.isSaving = false,
@@ -30,6 +32,7 @@ class ContextIntelligenceState {
   ContextIntelligenceState copyWith({
     ContextIntelligenceSnapshot? snapshot,
     TimeContextRecommendationResult? recommendations,
+    ContextTaskRecommendationResult? taskRecommendations,
     String? previewTimeBlock,
     bool clearPreviewTimeBlock = false,
     bool? isLoading,
@@ -39,6 +42,7 @@ class ContextIntelligenceState {
     return ContextIntelligenceState(
       snapshot: snapshot ?? this.snapshot,
       recommendations: recommendations ?? this.recommendations,
+      taskRecommendations: taskRecommendations ?? this.taskRecommendations,
       previewTimeBlock: clearPreviewTimeBlock
           ? null
           : previewTimeBlock ?? this.previewTimeBlock,
@@ -65,9 +69,13 @@ class ContextIntelligenceNotifier
       final recommendations = await _ref
           .read(contextIntelligenceServiceProvider)
           .getRecommendations(timeBlock: state.previewTimeBlock);
+      final taskRecommendations = await _ref
+          .read(contextIntelligenceServiceProvider)
+          .getTaskRecommendations(timeBlock: state.previewTimeBlock);
       state = state.copyWith(
         snapshot: snapshot,
         recommendations: recommendations,
+        taskRecommendations: taskRecommendations,
         isLoading: false,
       );
     } on DioException catch (error) {
@@ -95,9 +103,13 @@ class ContextIntelligenceNotifier
       final recommendations = await _ref
           .read(contextIntelligenceServiceProvider)
           .getRecommendations(timeBlock: state.previewTimeBlock);
+      final taskRecommendations = await _ref
+          .read(contextIntelligenceServiceProvider)
+          .getTaskRecommendations(timeBlock: state.previewTimeBlock);
       state = state.copyWith(
         snapshot: snapshot,
         recommendations: recommendations,
+        taskRecommendations: taskRecommendations,
         isSaving: false,
       );
     } on DioException catch (error) {
@@ -122,9 +134,13 @@ class ContextIntelligenceNotifier
       final recommendations = await _ref
           .read(contextIntelligenceServiceProvider)
           .getRecommendations(timeBlock: state.previewTimeBlock);
+      final taskRecommendations = await _ref
+          .read(contextIntelligenceServiceProvider)
+          .getTaskRecommendations(timeBlock: state.previewTimeBlock);
       state = state.copyWith(
         snapshot: snapshot,
         recommendations: recommendations,
+        taskRecommendations: taskRecommendations,
         isSaving: false,
       );
     } on DioException catch (error) {
@@ -155,7 +171,14 @@ class ContextIntelligenceNotifier
       final recommendations = await _ref
           .read(contextIntelligenceServiceProvider)
           .getRecommendations(timeBlock: timeBlock);
-      state = state.copyWith(recommendations: recommendations, isSaving: false);
+      final taskRecommendations = await _ref
+          .read(contextIntelligenceServiceProvider)
+          .getTaskRecommendations(timeBlock: timeBlock);
+      state = state.copyWith(
+        recommendations: recommendations,
+        taskRecommendations: taskRecommendations,
+        isSaving: false,
+      );
     } on DioException catch (error) {
       state = state.copyWith(
         isSaving: false,

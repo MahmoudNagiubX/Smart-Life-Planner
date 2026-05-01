@@ -77,3 +77,35 @@ class TimeContextRecommendationResponse(BaseModel):
     goal_tags: list[str]
     recommendations: list[TimeContextRecommendationItem]
     explanation: str
+
+
+class ContextTaskScoreBreakdown(BaseModel):
+    priority_component: float
+    time_match_component: float
+    energy_match_component: float
+    location_match_component: float
+    weather_match_component: float
+    friction_penalty: float
+    due_bonus: float
+
+
+class ContextTaskRecommendationItem(BaseModel):
+    task_id: uuid.UUID
+    title: str
+    priority: str
+    status: str
+    category: Optional[str]
+    due_at: Optional[datetime]
+    energy_required: str
+    difficulty_level: str
+    estimated_minutes: Optional[int]
+    score: float
+    score_breakdown: ContextTaskScoreBreakdown
+    explanation: str
+
+
+class ContextTaskRecommendationResponse(BaseModel):
+    local_time_block: str
+    energy_level: str
+    recommendations: list[ContextTaskRecommendationItem]
+    explanation: str

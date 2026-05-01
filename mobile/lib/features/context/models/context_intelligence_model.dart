@@ -136,3 +136,116 @@ class TimeContextRecommendationResult {
     );
   }
 }
+
+class ContextTaskScoreBreakdown {
+  final double priorityComponent;
+  final double timeMatchComponent;
+  final double energyMatchComponent;
+  final double locationMatchComponent;
+  final double weatherMatchComponent;
+  final double frictionPenalty;
+  final double dueBonus;
+
+  const ContextTaskScoreBreakdown({
+    required this.priorityComponent,
+    required this.timeMatchComponent,
+    required this.energyMatchComponent,
+    required this.locationMatchComponent,
+    required this.weatherMatchComponent,
+    required this.frictionPenalty,
+    required this.dueBonus,
+  });
+
+  factory ContextTaskScoreBreakdown.fromJson(Map<String, dynamic> json) {
+    double read(String key) => (json[key] as num?)?.toDouble() ?? 0;
+    return ContextTaskScoreBreakdown(
+      priorityComponent: read('priority_component'),
+      timeMatchComponent: read('time_match_component'),
+      energyMatchComponent: read('energy_match_component'),
+      locationMatchComponent: read('location_match_component'),
+      weatherMatchComponent: read('weather_match_component'),
+      frictionPenalty: read('friction_penalty'),
+      dueBonus: read('due_bonus'),
+    );
+  }
+}
+
+class ContextTaskRecommendation {
+  final String taskId;
+  final String title;
+  final String priority;
+  final String status;
+  final String? category;
+  final String? dueAt;
+  final String energyRequired;
+  final String difficultyLevel;
+  final int? estimatedMinutes;
+  final double score;
+  final ContextTaskScoreBreakdown scoreBreakdown;
+  final String explanation;
+
+  const ContextTaskRecommendation({
+    required this.taskId,
+    required this.title,
+    required this.priority,
+    required this.status,
+    this.category,
+    this.dueAt,
+    required this.energyRequired,
+    required this.difficultyLevel,
+    this.estimatedMinutes,
+    required this.score,
+    required this.scoreBreakdown,
+    required this.explanation,
+  });
+
+  factory ContextTaskRecommendation.fromJson(Map<String, dynamic> json) {
+    return ContextTaskRecommendation(
+      taskId: json['task_id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      priority: json['priority'] as String? ?? 'medium',
+      status: json['status'] as String? ?? 'pending',
+      category: json['category'] as String?,
+      dueAt: json['due_at'] as String?,
+      energyRequired: json['energy_required'] as String? ?? 'medium',
+      difficultyLevel: json['difficulty_level'] as String? ?? 'medium',
+      estimatedMinutes: json['estimated_minutes'] as int?,
+      score: (json['score'] as num?)?.toDouble() ?? 0,
+      scoreBreakdown: ContextTaskScoreBreakdown.fromJson(
+        json['score_breakdown'] as Map<String, dynamic>? ?? const {},
+      ),
+      explanation: json['explanation'] as String? ?? '',
+    );
+  }
+}
+
+class ContextTaskRecommendationResult {
+  final String localTimeBlock;
+  final String energyLevel;
+  final List<ContextTaskRecommendation> recommendations;
+  final String explanation;
+
+  const ContextTaskRecommendationResult({
+    required this.localTimeBlock,
+    required this.energyLevel,
+    required this.recommendations,
+    required this.explanation,
+  });
+
+  factory ContextTaskRecommendationResult.fromJson(Map<String, dynamic> json) {
+    final rawRecommendations =
+        json['recommendations'] as List<dynamic>? ?? const [];
+    return ContextTaskRecommendationResult(
+      localTimeBlock: json['local_time_block'] as String? ?? 'morning',
+      energyLevel: json['energy_level'] as String? ?? 'medium',
+      recommendations: rawRecommendations
+          .map(
+            (item) => ContextTaskRecommendation.fromJson(
+              item as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+      explanation: json['explanation'] as String? ?? '',
+    );
+  }
+}
