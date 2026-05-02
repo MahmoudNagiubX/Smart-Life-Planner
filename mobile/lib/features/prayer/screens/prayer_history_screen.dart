@@ -37,66 +37,61 @@ class _PrayerHistoryScreenState extends ConsumerState<PrayerHistoryScreen> {
       body: state.isLoading
           ? const AppLoadingState(message: 'Loading history...')
           : state.error != null
-              ? AppErrorState(
-                  title: 'History could not load',
-                  message: state.error!,
-                  onRetry: () => ref
-                      .read(prayerHistoryProvider.notifier)
-                      .loadWeeklySummary(),
-                )
-              : state.summary == null
-                  ? const Center(child: Text('No history available.'))
-                  : RefreshIndicator(
-                      onRefresh: () => ref
-                          .read(prayerHistoryProvider.notifier)
-                          .loadWeeklySummary(),
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Weekly Overview',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 16),
-                            _SummaryCard(
-                              title: 'Missed Prayers',
-                              value: '${state.summary!.totalMissed}',
-                              subtitle:
-                                  '${state.summary!.todayMissed} missed today',
-                              icon: Icons.warning_amber_rounded,
-                              color: Colors.redAccent,
-                            ),
-                            const SizedBox(height: 12),
-                            _SummaryCard(
-                              title: 'Completed',
-                              value: '${state.summary!.totalCompleted}',
-                              subtitle:
-                                  'Out of ${state.summary!.totalPrayers} total prayers',
-                              icon: Icons.check_circle_outline,
-                              color: AppColors.prayerGold,
-                            ),
-                            const SizedBox(height: 32),
-                            Text(
-                              'Daily Breakdown',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 16),
-                            ...state.summary!.days.reversed.map(
-                              (day) => _DayCard(day: day),
-                            ),
-                          ],
-                        ),
+          ? AppErrorState(
+              title: 'History could not load',
+              message: state.error!,
+              onRetry: () =>
+                  ref.read(prayerHistoryProvider.notifier).loadWeeklySummary(),
+            )
+          : state.summary == null
+          ? const Center(child: Text('No history available.'))
+          : RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(prayerHistoryProvider.notifier).loadWeeklySummary(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Weekly Overview',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    _SummaryCard(
+                      title: 'Missed Prayers',
+                      value: '${state.summary!.totalMissed}',
+                      subtitle: '${state.summary!.todayMissed} missed today',
+                      icon: Icons.warning_amber_rounded,
+                      color: Colors.redAccent,
+                    ),
+                    const SizedBox(height: 12),
+                    _SummaryCard(
+                      title: 'Completed',
+                      value: '${state.summary!.totalCompleted}',
+                      subtitle:
+                          'Out of ${state.summary!.totalPrayers} total prayers',
+                      icon: Icons.check_circle_outline,
+                      color: AppColors.prayerGold,
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Daily Breakdown',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...state.summary!.days.reversed.map(
+                      (day) => _DayCard(day: day),
+                    ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }
@@ -140,14 +135,11 @@ class _SummaryCard extends StatelessWidget {
                 Text(
                   value,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
                 ),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ),
@@ -164,8 +156,12 @@ class _DayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = DateTime.parse(day.prayerDate);
-    final isToday = date.day == DateTime.now().day &&
+    final date = DateTime.tryParse(day.prayerDate);
+    if (date == null) {
+      return const SizedBox.shrink();
+    }
+    final isToday =
+        date.day == DateTime.now().day &&
         date.month == DateTime.now().month &&
         date.year == DateTime.now().year;
 
@@ -193,7 +189,10 @@ class _DayCard extends StatelessWidget {
               ),
               if (day.missed > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.redAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -245,9 +244,9 @@ class _StatColumn extends StatelessWidget {
         ),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
         ),
       ],
     );

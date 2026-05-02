@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
@@ -42,16 +43,35 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
       final data = await service.getTodayPrayers();
       state = state.copyWith(data: data, isLoading: false);
 
+      await _syncOptionalPrayerReminders(data);
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: friendlyApiError(e, 'Failed to load prayers'),
+      );
+    } catch (error) {
+      debugPrint('Prayer load failed: $error');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Prayer times could not load. Please try again.',
+      );
+    }
+  }
+
+  Future<void> _syncOptionalPrayerReminders(DailyPrayers data) async {
+    try {
       await _ref.read(notificationSchedulerProvider).cancelAllPrayerReminders();
       await _schedulePrayerReminders(data);
       await _ref
           .read(ramadanSettingsProvider.notifier)
           .syncRemindersForPrayers(data.prayers);
     } on DioException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: friendlyApiError(e, 'Failed to load prayers'),
+      debugPrint(
+        'Prayer reminder sync skipped: status=${e.response?.statusCode} '
+        'body=${e.response?.data}',
       );
+    } catch (error) {
+      debugPrint('Prayer reminder sync skipped: $error');
     }
   }
 
@@ -98,14 +118,21 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
         } catch (_) {}
       } else {
         // Cancel reminder if already completed
-        await scheduler.cancelPrayerReminder(prayer.prayerName);
-        await _ref
-            .read(reminderServiceProvider)
-            .dismissTargetReminders(
-              targetType: 'prayer',
-              reminderType: 'prayer',
-              recurrenceRule: _prayerReminderRule(prayer.prayerName, data.date),
-            );
+        try {
+          await scheduler.cancelPrayerReminder(prayer.prayerName);
+          await _ref
+              .read(reminderServiceProvider)
+              .dismissTargetReminders(
+                targetType: 'prayer',
+                reminderType: 'prayer',
+                recurrenceRule: _prayerReminderRule(
+                  prayer.prayerName,
+                  data.date,
+                ),
+              );
+        } catch (error) {
+          debugPrint('Prayer reminder cleanup skipped: $error');
+        }
       }
     }
   }
@@ -138,22 +165,16 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
       } else {
         await service.completePrayer(prayerName, data.date);
         // Cancel reminder since prayer is now done
-        await _ref
-            .read(notificationSchedulerProvider)
-            .cancelPrayerReminder(prayerName);
-        await _ref
-            .read(reminderServiceProvider)
-            .dismissTargetReminders(
-              targetType: 'prayer',
-              reminderType: 'prayer',
-              recurrenceRule: _prayerReminderRule(prayerName, data.date),
-            );
+        await _cleanupPrayerReminder(prayerName, data.date);
       }
       await loadTodayPrayers();
     } on DioException catch (e) {
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to update prayer'),
       );
+    } catch (error) {
+      debugPrint('Prayer update failed: $error');
+      state = state.copyWith(error: 'Failed to update prayer');
     }
   }
 
@@ -164,29 +185,48 @@ class PrayerNotifier extends StateNotifier<PrayerState> {
       final service = _ref.read(prayerServiceProvider);
       await service.setPrayerStatus(prayerName, data.date, status);
       if (status == 'prayed_on_time' || status == 'prayed_late') {
-        await _ref.read(notificationSchedulerProvider).cancelPrayerReminder(prayerName);
-        await _ref.read(reminderServiceProvider).dismissTargetReminders(
-          targetType: 'prayer',
-          reminderType: 'prayer',
-          recurrenceRule: _prayerReminderRule(prayerName, data.date),
-        );
+        await _cleanupPrayerReminder(prayerName, data.date);
       }
       await loadTodayPrayers();
     } on DioException catch (e) {
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to set prayer status'),
       );
+    } catch (error) {
+      debugPrint('Prayer status update failed: $error');
+      state = state.copyWith(error: 'Failed to set prayer status');
+    }
+  }
+
+  Future<void> _cleanupPrayerReminder(String prayerName, String date) async {
+    try {
+      await _ref
+          .read(notificationSchedulerProvider)
+          .cancelPrayerReminder(prayerName);
+      await _ref
+          .read(reminderServiceProvider)
+          .dismissTargetReminders(
+            targetType: 'prayer',
+            reminderType: 'prayer',
+            recurrenceRule: _prayerReminderRule(prayerName, date),
+          );
+    } catch (error) {
+      debugPrint('Prayer reminder cleanup skipped: $error');
     }
   }
 
   Future<void> _dismissPrayerReminders(DailyPrayers data) async {
     final service = _ref.read(reminderServiceProvider);
     for (final prayer in data.prayers) {
-      await service.dismissTargetReminders(
-        targetType: 'prayer',
-        reminderType: 'prayer',
-        recurrenceRule: _prayerReminderRule(prayer.prayerName, data.date),
-      );
+      try {
+        await service.dismissTargetReminders(
+          targetType: 'prayer',
+          reminderType: 'prayer',
+          recurrenceRule: _prayerReminderRule(prayer.prayerName, data.date),
+        );
+      } catch (error) {
+        debugPrint('Prayer reminder dismiss skipped: $error');
+      }
     }
   }
 }

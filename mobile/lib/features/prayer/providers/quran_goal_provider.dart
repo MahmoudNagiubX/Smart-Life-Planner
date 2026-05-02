@@ -54,6 +54,11 @@ class QuranGoalNotifier extends StateNotifier<QuranGoalState> {
         isLoading: false,
         error: friendlyApiError(e, 'Failed to load Quran goal'),
       );
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load Quran goal',
+      );
     }
   }
 

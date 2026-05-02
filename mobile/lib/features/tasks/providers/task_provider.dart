@@ -494,7 +494,8 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
         isLoading: false,
         error: friendlyApiError(e, 'Failed to load calendar tasks'),
       );
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Calendar task load failed: $error');
       state = state.copyWith(
         isLoading: false,
         error: 'Failed to load calendar tasks',

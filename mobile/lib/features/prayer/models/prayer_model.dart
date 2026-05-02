@@ -15,11 +15,11 @@ class PrayerTime {
 
   factory PrayerTime.fromJson(Map<String, dynamic> json) {
     return PrayerTime(
-      prayerName: json['prayer_name'] as String,
-      scheduledAt: json['scheduled_at'] as String?,
-      completed: json['completed'] as bool,
-      completedAt: json['completed_at'] as String?,
-      status: json['status'] as String?,
+      prayerName: _asString(json['prayer_name'], fallback: 'unknown'),
+      scheduledAt: _asNullableString(json['scheduled_at']),
+      completed: _asBool(json['completed']),
+      completedAt: _asNullableString(json['completed_at']),
+      status: _normalizePrayerStatus(json['status']),
     );
   }
 }
@@ -40,14 +40,16 @@ class DailyPrayers {
   });
 
   factory DailyPrayers.fromJson(Map<String, dynamic> json) {
+    final rawPrayers = json['prayers'];
     return DailyPrayers(
-      date: json['date'] as String,
-      prayers: (json['prayers'] as List<dynamic>)
-          .map((p) => PrayerTime.fromJson(p as Map<String, dynamic>))
+      date: _asString(json['date']),
+      prayers: (rawPrayers is List<dynamic> ? rawPrayers : const [])
+          .whereType<Map>()
+          .map((p) => PrayerTime.fromJson(Map<String, dynamic>.from(p)))
           .toList(),
-      completedCount: json['completed_count'] as int,
-      totalCount: json['total_count'] as int,
-      missedCount: json['missed_count'] as int? ?? 0,
+      completedCount: _asInt(json['completed_count']),
+      totalCount: _asInt(json['total_count']),
+      missedCount: _asInt(json['missed_count']),
     );
   }
 }
@@ -71,12 +73,12 @@ class PrayerDaySummary {
 
   factory PrayerDaySummary.fromJson(Map<String, dynamic> json) {
     return PrayerDaySummary(
-      prayerDate: json['prayer_date'] as String,
-      total: json['total'] as int,
-      completed: json['completed'] as int,
-      missed: json['missed'] as int,
-      late: json['late'] as int,
-      excused: json['excused'] as int,
+      prayerDate: _asString(json['prayer_date']),
+      total: _asInt(json['total']),
+      completed: _asInt(json['completed']),
+      missed: _asInt(json['missed']),
+      late: _asInt(json['late']),
+      excused: _asInt(json['excused']),
     );
   }
 }
@@ -101,16 +103,50 @@ class PrayerWeeklySummary {
   });
 
   factory PrayerWeeklySummary.fromJson(Map<String, dynamic> json) {
+    final rawDays = json['days'];
     return PrayerWeeklySummary(
-      weekStart: json['week_start'] as String,
-      weekEnd: json['week_end'] as String,
-      totalMissed: json['total_missed'] as int,
-      totalCompleted: json['total_completed'] as int,
-      totalPrayers: json['total_prayers'] as int,
-      todayMissed: json['today_missed'] as int,
-      days: (json['days'] as List<dynamic>)
-          .map((d) => PrayerDaySummary.fromJson(d as Map<String, dynamic>))
+      weekStart: _asString(json['week_start']),
+      weekEnd: _asString(json['week_end']),
+      totalMissed: _asInt(json['total_missed']),
+      totalCompleted: _asInt(json['total_completed']),
+      totalPrayers: _asInt(json['total_prayers']),
+      todayMissed: _asInt(json['today_missed']),
+      days: (rawDays is List<dynamic> ? rawDays : const [])
+          .whereType<Map>()
+          .map((d) => PrayerDaySummary.fromJson(Map<String, dynamic>.from(d)))
           .toList(),
     );
   }
+}
+
+String _asString(dynamic value, {String fallback = ''}) {
+  if (value is String) return value;
+  return value?.toString() ?? fallback;
+}
+
+String? _asNullableString(dynamic value) {
+  if (value == null) return null;
+  if (value is String) return value;
+  return value.toString();
+}
+
+int _asInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+bool _asBool(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  if (value is String) return value.toLowerCase() == 'true';
+  return false;
+}
+
+String? _normalizePrayerStatus(dynamic value) {
+  final status = _asNullableString(value)?.trim();
+  if (status == null || status.isEmpty) return null;
+  const valid = {'prayed_on_time', 'prayed_late', 'missed', 'excused'};
+  return valid.contains(status) ? status : null;
 }

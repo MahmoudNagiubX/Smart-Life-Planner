@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/network/api_client.dart';
 import '../models/project_timeline_model.dart';
 import '../models/task_model.dart';
@@ -56,9 +58,24 @@ class TaskService {
         'date_to': dateTo.toIso8601String().substring(0, 10),
       },
     );
-    return (response.data as List<dynamic>)
-        .map((t) => TaskModel.fromJson(t as Map<String, dynamic>))
-        .toList();
+    final data = response.data;
+    if (data is! List<dynamic>) {
+      debugPrint('Calendar tasks response was not a list: ${data.runtimeType}');
+      return const [];
+    }
+    final tasks = <TaskModel>[];
+    for (final item in data) {
+      try {
+        if (item is Map<String, dynamic>) {
+          tasks.add(TaskModel.fromJson(item));
+        } else if (item is Map) {
+          tasks.add(TaskModel.fromJson(Map<String, dynamic>.from(item)));
+        }
+      } catch (error) {
+        debugPrint('Calendar skipped malformed task item: $error');
+      }
+    }
+    return tasks;
   }
 
   Future<TaskModel> createTask({
