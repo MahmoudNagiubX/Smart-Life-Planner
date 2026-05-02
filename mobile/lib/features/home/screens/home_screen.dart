@@ -17,8 +17,8 @@ import '../../../routes/app_routes.dart';
 import '../widgets/progress_ring.dart';
 
 // ── Layout ────────────────────────────────────────────────────────────────────
-// FabOverhang(22) + NavHeight(78) + NavBottomMargin(18) + breathing(20) = 138
-const double _kNavClearance = 138.0;
+// Bottom nav clearance: compact floating nav + FAB overhang + breathing room.
+const double _kNavClearance = 118.0;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // HomeScreen
@@ -525,17 +525,16 @@ class _DailySummaryCard extends StatelessWidget {
       child: Stack(
         children: [
           Positioned(
-            right: 4,
-            bottom: -8,
-            child: _HeroBars(color: Colors.white.withValues(alpha: 0.12)),
-          ),
-          Positioned(
-            right: 76,
-            top: 20,
-            child: Icon(
-              Icons.auto_awesome_rounded,
-              color: AppColors.brandGold.withValues(alpha: 0.92),
-              size: 24,
+            right: -30,
+            bottom: -34,
+            child: Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
             ),
           ),
           Row(
@@ -659,108 +658,123 @@ class _NextPrayerCard extends StatelessWidget {
         border: Border.all(color: AppColors.borderSoft),
         boxShadow: AppShadows.card,
       ),
-      padding: const EdgeInsets.all(16),
-      child: Stack(
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            right: -10,
-            bottom: 42,
-            child: _MosqueSilhouette(
-              color: AppColors.brandViolet.withValues(alpha: 0.16),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              // Label
-              Row(
-                children: [
-                  const Icon(
-                    Icons.nightlight_rounded,
-                    size: 16,
-                    color: AppColors.brandViolet,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Next Prayer',
-                    style: GoogleFonts.manrope(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textBody,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Prayer name
-              Text(
-                name,
-                style: GoogleFonts.manrope(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textHeading,
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppColors.featPrayerSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(
+                  Icons.nightlight_rounded,
+                  size: 16,
+                  color: AppColors.brandViolet,
                 ),
               ),
-              const SizedBox(height: 4),
-
-              // Time
-              Text(
-                timeStr,
-                style: GoogleFonts.manrope(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.brandPrimary,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 2),
-
-              // Countdown
-              Text(
-                countdown,
-                style: GoogleFonts.manrope(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textHint,
-                ),
-              ),
-
-              const Spacer(),
-
-              // Button
-              GestureDetector(
-                onTap: onTap,
-                child: Container(
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: AppColors.bgSurface,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    border: Border.all(color: AppColors.borderSoft),
-                    boxShadow: AppShadows.soft,
+              const SizedBox(width: AppSpacing.s8),
+              Expanded(
+                child: Text(
+                  'Next Prayer',
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textBody,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'View Prayer Times',
-                        style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.brandPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 12,
-                        color: AppColors.brandPrimary,
-                      ),
-                    ],
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.manrope(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textHeading,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s4),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        timeStr,
+                        style: GoogleFonts.manrope(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.brandPrimary,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              _MiniMasjidIcon(
+                color: AppColors.brandViolet.withValues(alpha: 0.18),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s4),
+          Text(
+            countdown,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textHint,
+            ),
+          ),
+          const Spacer(),
+          GestureDetector(
+            onTap: onTap,
+            child: Container(
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                border: Border.all(color: AppColors.borderSoft),
+                boxShadow: AppShadows.soft,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Prayer Times',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.brandPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 12,
+                    color: AppColors.brandPrimary,
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -1405,64 +1419,38 @@ class _AiSuggestionCard extends StatelessWidget {
 // State cards: loading / error / empty
 // ═════════════════════════════════════════════════════════════════════════════
 
-class _HeroBars extends StatelessWidget {
+class _MiniMasjidIcon extends StatelessWidget {
   final Color color;
 
-  const _HeroBars({required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    const heights = [34.0, 50.0, 68.0, 86.0, 112.0];
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        for (final height in heights)
-          Container(
-            width: 16,
-            height: height,
-            margin: const EdgeInsets.only(left: 8),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _MosqueSilhouette extends StatelessWidget {
-  final Color color;
-
-  const _MosqueSilhouette({required this.color});
+  const _MiniMasjidIcon({required this.color});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 92,
-      height: 74,
+      width: 54,
+      height: 46,
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
           Positioned(
             bottom: 0,
-            left: 12,
-            right: 12,
+            left: 8,
+            right: 8,
             child: Container(
-              height: 28,
+              height: 18,
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppRadius.xl2),
+                  top: Radius.circular(AppRadius.lg),
                 ),
               ),
             ),
           ),
           Positioned(
-            bottom: 22,
+            bottom: 14,
             child: Container(
-              width: 46,
-              height: 46,
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
           ),
@@ -1470,8 +1458,8 @@ class _MosqueSilhouette extends StatelessWidget {
             bottom: 0,
             left: 0,
             child: Container(
-              width: 12,
-              height: 64,
+              width: 7,
+              height: 38,
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -1482,8 +1470,8 @@ class _MosqueSilhouette extends StatelessWidget {
             bottom: 0,
             right: 0,
             child: Container(
-              width: 12,
-              height: 54,
+              width: 7,
+              height: 32,
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(AppRadius.pill),

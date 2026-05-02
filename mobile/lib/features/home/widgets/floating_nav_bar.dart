@@ -11,13 +11,13 @@ import '../../../core/theme/app_tokens.dart';
 import '../../dashboard/widgets/quick_capture_sheet.dart';
 
 // ── Layout constants matching Claude Design tokens ──────────────────────────
-const double _kNavHeight = 82;
-const double _kNavBottomMargin = 16;
-const double _kNavSideMargin = 14;
-const double _kFabSize = 64;
-const double _kFabBorderWidth = 5;
+const double _kNavHeight = 66;
+const double _kNavBottomMargin = 12;
+const double _kNavSideMargin = 18;
+const double _kFabSize = 54;
+const double _kFabBorderWidth = 4;
 // FAB protrudes this many px above nav pill top (matches tokens.css top:-22px)
-const double _kFabOverhang = 22;
+const double _kFabOverhang = 16;
 
 /// Total height of the bottomNavigationBar slot:
 ///   fab-overhang + nav-pill + bottom-margin + safeArea
@@ -86,8 +86,8 @@ class _FloatingNavBarState extends ConsumerState<FloatingNavBar>
     final totalH = _totalHeight(safeArea);
 
     final navBg = isDark
-        ? AppColors.darkSurface.withValues(alpha: 0.96)
-        : AppColors.bgSurface.withValues(alpha: 0.95);
+        ? AppColors.darkSurface.withValues(alpha: 0.92)
+        : AppColors.bgSurface.withValues(alpha: 0.86);
     final borderC = isDark ? AppColors.darkBorder : AppColors.borderSoft;
     final activeC = isDark ? AppColors.darkPrimary : AppColors.brandPrimary;
     final inactiveC = isDark ? AppColors.darkTextMuted : AppColors.textHint;
@@ -126,18 +126,24 @@ class _FloatingNavBarState extends ConsumerState<FloatingNavBar>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppRadius.xl3),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: Container(
                   decoration: BoxDecoration(
                     color: navBg,
-                    borderRadius: BorderRadius.circular(AppRadius.xl3),
+                    borderRadius: BorderRadius.circular(AppRadius.xl2),
                     border: Border.all(color: borderC),
-                    boxShadow: AppShadows.floating,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.textHeading.withValues(alpha: 0.10),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
                       for (int i = 0; i < _kTabs.length; i++) ...[
-                        if (i == 2) const SizedBox(width: _kFabSize + 10),
+                        if (i == 2) const SizedBox(width: _kFabSize + 4),
                         Expanded(
                           child: _NavTabItem(
                             tab: _kTabs[i],
@@ -156,19 +162,19 @@ class _FloatingNavBarState extends ConsumerState<FloatingNavBar>
           ),
 
           Positioned(
-            bottom: _kNavBottomMargin + safeArea + _kNavHeight - 2,
+            bottom: _kNavBottomMargin + safeArea + _kNavHeight - 1,
             left: 0,
             right: 0,
             child: IgnorePointer(
               child: Center(
                 child: Container(
-                  width: _kFabSize + 22,
-                  height: 24,
+                  width: _kFabSize + 14,
+                  height: 18,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
                         AppColors.bgApp.withValues(alpha: 0),
-                        AppColors.bgApp.withValues(alpha: 0.88),
+                        AppColors.bgApp.withValues(alpha: 0.80),
                         AppColors.bgApp.withValues(alpha: 0),
                       ],
                     ),
@@ -213,15 +219,15 @@ class _FloatingNavBarState extends ConsumerState<FloatingNavBar>
                           ...AppShadows.glowPurple,
                           BoxShadow(
                             color: AppColors.brandPink.withValues(alpha: 0.22),
-                            blurRadius: 34,
-                            offset: const Offset(0, 12),
+                            blurRadius: 22,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
                       child: const Icon(
                         Icons.add_rounded,
                         color: Colors.white,
-                        size: 26,
+                        size: 24,
                       ),
                     ),
                   ),
@@ -266,25 +272,33 @@ class _NavTabItem extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           height: _kNavHeight,
-          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
           decoration: BoxDecoration(
             color: isActive
-                ? activeColor.withValues(alpha: 0.10)
+                ? activeColor.withValues(alpha: 0.08)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadius.xl),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                width: 34,
-                height: 30,
+                width: 30,
+                height: 28,
                 decoration: BoxDecoration(
                   gradient: isActive ? AppGradients.action : null,
                   color: isActive ? null : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  boxShadow: isActive ? AppShadows.glowPurple : null,
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: activeColor.withValues(alpha: 0.16),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Center(
                   child: AnimatedSwitcher(
@@ -296,17 +310,17 @@ class _NavTabItem extends StatelessWidget {
                     child: Icon(
                       isActive ? tab.activeIcon : tab.icon,
                       key: ValueKey(isActive),
-                      size: AppIconSize.nav,
+                      size: 21,
                       color: isActive ? Colors.white : inactiveColor,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               Text(
                 tab.label,
                 style: GoogleFonts.manrope(
-                  fontSize: 9.5,
+                  fontSize: 9,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
                   color: isActive ? activeColor : inactiveColor,
                   height: 1.0,
@@ -314,7 +328,7 @@ class _NavTabItem extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 200),
                 opacity: isActive ? 1.0 : 0.0,
