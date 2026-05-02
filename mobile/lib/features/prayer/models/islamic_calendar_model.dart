@@ -17,12 +17,12 @@ class HijriDateModel {
 
   factory HijriDateModel.fromJson(Map<String, dynamic> json) {
     return HijriDateModel(
-      year: json['year'] as int? ?? 0,
-      month: json['month'] as int? ?? 0,
-      day: json['day'] as int? ?? 0,
-      monthName: json['month_name'] as String? ?? '',
-      label: json['label'] as String? ?? '',
-      estimated: json['estimated'] as bool? ?? true,
+      year: _asInt(json['year']),
+      month: _asInt(json['month']),
+      day: _asInt(json['day']),
+      monthName: _asString(json['month_name']),
+      label: _asString(json['label'], fallback: 'Estimated Hijri date'),
+      estimated: _asBool(json['estimated'], fallback: true),
     );
   }
 }
@@ -50,14 +50,16 @@ class IslamicCalendarEventModel {
 
   factory IslamicCalendarEventModel.fromJson(Map<String, dynamic> json) {
     return IslamicCalendarEventModel(
-      key: json['key'] as String? ?? '',
-      title: json['title'] as String? ?? '',
-      hijriMonth: json['hijri_month'] as int? ?? 0,
-      hijriDay: json['hijri_day'] as int? ?? 0,
-      gregorianDate: DateTime.parse(json['gregorian_date'] as String),
-      hijriLabel: json['hijri_label'] as String? ?? '',
-      estimated: json['estimated'] as bool? ?? true,
-      description: json['description'] as String? ?? '',
+      key: _asString(json['key']),
+      title: _asString(json['title'], fallback: 'Islamic calendar event'),
+      hijriMonth: _asInt(json['hijri_month']),
+      hijriDay: _asInt(json['hijri_day']),
+      gregorianDate:
+          DateTime.tryParse(_asString(json['gregorian_date'])) ??
+          DateTime.now(),
+      hijriLabel: _asString(json['hijri_label']),
+      estimated: _asBool(json['estimated'], fallback: true),
+      description: _asString(json['description']),
     );
   }
 }
@@ -76,20 +78,56 @@ class IslamicCalendarModel {
   });
 
   factory IslamicCalendarModel.fromJson(Map<String, dynamic> json) {
-    final rawEvents = json['events'] as List<dynamic>? ?? const [];
+    final rawEvents = json['events'];
     return IslamicCalendarModel(
-      gregorianDate: DateTime.parse(json['gregorian_date'] as String),
+      gregorianDate:
+          DateTime.tryParse(_asString(json['gregorian_date'])) ??
+          DateTime.now(),
       hijriDate: HijriDateModel.fromJson(
-        json['hijri_date'] as Map<String, dynamic>? ?? const {},
+        _asMap(json['hijri_date']) ?? const {},
       ),
-      events: rawEvents
+      events: (rawEvents is List<dynamic> ? rawEvents : const [])
+          .whereType<Map>()
           .map(
             (item) => IslamicCalendarEventModel.fromJson(
-              item as Map<String, dynamic>,
+              Map<String, dynamic>.from(item),
             ),
           )
           .toList(),
-      calculationNote: json['calculation_note'] as String? ?? '',
+      calculationNote: _asString(
+        json['calculation_note'],
+        fallback: 'Islamic calendar dates are estimated.',
+      ),
     );
   }
+}
+
+String _asString(dynamic value, {String fallback = ''}) {
+  if (value is String) return value;
+  return value?.toString() ?? fallback;
+}
+
+int _asInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+bool _asBool(dynamic value, {bool fallback = false}) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  if (value is String) {
+    final normalized = value.toLowerCase();
+    if (normalized == 'true') return true;
+    if (normalized == 'false') return false;
+  }
+  return fallback;
+}
+
+Map<String, dynamic>? _asMap(dynamic value) {
+  if (value == null) return null;
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return null;
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/network/api_error.dart';
 import '../models/prayer_model.dart';
 import 'prayer_provider.dart';
@@ -9,11 +10,7 @@ class PrayerHistoryState {
   final bool isLoading;
   final String? error;
 
-  const PrayerHistoryState({
-    this.summary,
-    this.isLoading = false,
-    this.error,
-  });
+  const PrayerHistoryState({this.summary, this.isLoading = false, this.error});
 
   PrayerHistoryState copyWith({
     PrayerWeeklySummary? summary,
@@ -44,11 +41,17 @@ class PrayerHistoryNotifier extends StateNotifier<PrayerHistoryState> {
         isLoading: false,
         error: friendlyApiError(e, 'Failed to load prayer history'),
       );
+    } catch (error) {
+      debugPrint('Prayer history load failed: $error');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load prayer history',
+      );
     }
   }
 }
 
 final prayerHistoryProvider =
     StateNotifierProvider<PrayerHistoryNotifier, PrayerHistoryState>((ref) {
-  return PrayerHistoryNotifier(ref);
-});
+      return PrayerHistoryNotifier(ref);
+    });

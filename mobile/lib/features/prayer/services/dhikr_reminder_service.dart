@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/network/api_client.dart';
 import '../models/dhikr_reminder_model.dart';
 
@@ -8,11 +10,28 @@ class DhikrReminderService {
 
   Future<List<DhikrReminderModel>> getReminders() async {
     final response = await _apiClient.dio.get('/dhikr-reminders');
-    return (response.data as List<dynamic>)
-        .map(
-          (item) => DhikrReminderModel.fromJson(item as Map<String, dynamic>),
-        )
-        .toList();
+    final data = response.data;
+    if (data is! List<dynamic>) {
+      debugPrint(
+        'Dhikr reminders response was not a list: ${data.runtimeType}',
+      );
+      return const [];
+    }
+    final reminders = <DhikrReminderModel>[];
+    for (final item in data) {
+      try {
+        final reminder = switch (item) {
+          Map<String, dynamic>() => DhikrReminderModel.fromJson(item),
+          Map() => DhikrReminderModel.fromJson(Map<String, dynamic>.from(item)),
+          _ => null,
+        };
+        if (reminder == null || reminder.id.isEmpty) continue;
+        reminders.add(reminder);
+      } catch (error) {
+        debugPrint('Skipped malformed dhikr reminder item: $error');
+      }
+    }
+    return reminders;
   }
 
   Future<DhikrReminderModel> createReminder(DhikrReminderDraft draft) async {

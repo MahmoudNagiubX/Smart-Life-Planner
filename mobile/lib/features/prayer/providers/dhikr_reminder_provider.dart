@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error.dart';
@@ -191,15 +192,20 @@ class DhikrReminderNotifier extends StateNotifier<DhikrReminderState> {
   }
 
   Future<void> _scheduleLocal(DhikrReminderModel reminder) async {
-    final nextAt = _nextLocalOccurrence(reminder.scheduleTime);
-    await _ref
-        .read(notificationSchedulerProvider)
-        .scheduleDhikrReminder(
-          dhikrId: reminder.id,
-          title: reminder.title,
-          phrase: reminder.phrase,
-          reminderAt: nextAt,
-        );
+    try {
+      if (reminder.id.isEmpty) return;
+      final nextAt = _nextLocalOccurrence(reminder.scheduleTime);
+      await _ref
+          .read(notificationSchedulerProvider)
+          .scheduleDhikrReminder(
+            dhikrId: reminder.id,
+            title: reminder.title,
+            phrase: reminder.phrase,
+            reminderAt: nextAt,
+          );
+    } catch (error) {
+      debugPrint('Dhikr local reminder scheduling skipped: $error');
+    }
   }
 }
 

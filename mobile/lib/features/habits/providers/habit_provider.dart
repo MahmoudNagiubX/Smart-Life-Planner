@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
@@ -57,6 +58,9 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
         isLoading: false,
         error: friendlyApiError(e, 'Failed to load habits'),
       );
+    } catch (error) {
+      debugPrint('Habit load failed: $error');
+      state = state.copyWith(isLoading: false, error: 'Failed to load habits');
     }
   }
 
@@ -83,6 +87,9 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to create habit'),
       );
+    } catch (error) {
+      debugPrint('Habit create failed: $error');
+      state = state.copyWith(error: 'Failed to create habit');
     }
   }
 
@@ -98,6 +105,9 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to complete habit'),
       );
+    } catch (error) {
+      debugPrint('Habit complete failed: $error');
+      state = state.copyWith(error: 'Failed to complete habit');
     }
   }
 
@@ -147,6 +157,9 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to archive habit'),
       );
+    } catch (error) {
+      debugPrint('Habit archive failed: $error');
+      state = state.copyWith(error: 'Failed to archive habit');
     }
   }
 
@@ -173,40 +186,47 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to update habit reminder'),
       );
+    } catch (error) {
+      debugPrint('Habit reminder update failed: $error');
+      state = state.copyWith(error: 'Failed to update habit reminder');
     }
   }
 
   Future<void> _syncHabitReminders(List<HabitModel> habits) async {
     for (final habit in habits) {
-      await _syncHabitReminder(habit);
+      try {
+        await _syncHabitReminder(habit);
+      } catch (error) {
+        debugPrint('Habit reminder sync skipped for ${habit.id}: $error');
+      }
     }
   }
 
   Future<void> _syncHabitReminder(HabitModel habit) async {
     final scheduler = _ref.read(notificationSchedulerProvider);
-    if (!habit.isActive || habit.reminderTime == null) {
-      await scheduler.cancelHabitReminders(habit.id);
-      await _ref
-          .read(reminderServiceProvider)
-          .dismissTargetReminders(
-            targetType: 'habit',
-            targetId: habit.id,
-            reminderType: 'habit',
-            recurrenceRule: _habitReminderRule,
-          );
-      return;
-    }
-
-    final reminderAt = _nextHabitReminderAt(
-      habit.reminderTime!,
-      forceTomorrow: state.completedTodayIds.contains(habit.id),
-    );
-    if (reminderAt == null) {
-      await scheduler.cancelHabitReminders(habit.id);
-      return;
-    }
-
     try {
+      if (!habit.isActive || habit.reminderTime == null) {
+        await scheduler.cancelHabitReminders(habit.id);
+        await _ref
+            .read(reminderServiceProvider)
+            .dismissTargetReminders(
+              targetType: 'habit',
+              targetId: habit.id,
+              reminderType: 'habit',
+              recurrenceRule: _habitReminderRule,
+            );
+        return;
+      }
+
+      final reminderAt = _nextHabitReminderAt(
+        habit.reminderTime!,
+        forceTomorrow: state.completedTodayIds.contains(habit.id),
+      );
+      if (reminderAt == null) {
+        await scheduler.cancelHabitReminders(habit.id);
+        return;
+      }
+
       final reminder = await _ref
           .read(reminderServiceProvider)
           .syncTargetReminder(
@@ -230,7 +250,8 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
         reminderAt: reminderAt,
         reminderId: reminder.id,
       );
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Habit reminder sync skipped for ${habit.id}: $error');
       await scheduler.cancelHabitReminders(habit.id);
     }
   }

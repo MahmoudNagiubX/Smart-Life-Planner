@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/network/api_client.dart';
 import '../models/habit_model.dart';
 
@@ -8,9 +10,26 @@ class HabitService {
 
   Future<List<HabitModel>> getHabits() async {
     final response = await _apiClient.dio.get('/habits');
-    return (response.data as List<dynamic>)
-        .map((h) => HabitModel.fromJson(h as Map<String, dynamic>))
-        .toList();
+    final data = response.data;
+    if (data is! List<dynamic>) {
+      debugPrint('Habits response was not a list: ${data.runtimeType}');
+      return const [];
+    }
+    final habits = <HabitModel>[];
+    for (final item in data) {
+      try {
+        final habit = switch (item) {
+          Map<String, dynamic>() => HabitModel.fromJson(item),
+          Map() => HabitModel.fromJson(Map<String, dynamic>.from(item)),
+          _ => null,
+        };
+        if (habit == null || habit.id.isEmpty) continue;
+        habits.add(habit);
+      } catch (error) {
+        debugPrint('Skipped malformed habit item: $error');
+      }
+    }
+    return habits;
   }
 
   Future<HabitModel> createHabit({
