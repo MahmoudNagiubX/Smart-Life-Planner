@@ -51,13 +51,7 @@ class TaskService {
     required DateTime dateFrom,
     required DateTime dateTo,
   }) async {
-    final response = await _apiClient.dio.get(
-      '/tasks/range',
-      queryParameters: {
-        'date_from': dateFrom.toIso8601String().substring(0, 10),
-        'date_to': dateTo.toIso8601String().substring(0, 10),
-      },
-    );
+    final response = await _apiClient.dio.get('/tasks');
     final data = response.data;
     if (data is! List<dynamic>) {
       debugPrint('Calendar tasks response was not a list: ${data.runtimeType}');
@@ -66,16 +60,40 @@ class TaskService {
     final tasks = <TaskModel>[];
     for (final item in data) {
       try {
-        if (item is Map<String, dynamic>) {
-          tasks.add(TaskModel.fromJson(item));
-        } else if (item is Map) {
-          tasks.add(TaskModel.fromJson(Map<String, dynamic>.from(item)));
+        final task = switch (item) {
+          Map<String, dynamic>() => TaskModel.fromJson(item),
+          Map() => TaskModel.fromJson(Map<String, dynamic>.from(item)),
+          _ => null,
+        };
+        if (task == null || !_taskDueDateIsInRange(task, dateFrom, dateTo)) {
+          continue;
         }
+        tasks.add(task);
       } catch (error) {
         debugPrint('Calendar skipped malformed task item: $error');
       }
     }
     return tasks;
+  }
+
+  bool _taskDueDateIsInRange(
+    TaskModel task,
+    DateTime dateFrom,
+    DateTime dateTo,
+  ) {
+    final dueAt = task.dueAt;
+    if (dueAt == null || dueAt.trim().isEmpty) return false;
+    final parsedDueAt = DateTime.tryParse(dueAt)?.toLocal();
+    if (parsedDueAt == null) return false;
+
+    final dueDate = DateTime(
+      parsedDueAt.year,
+      parsedDueAt.month,
+      parsedDueAt.day,
+    );
+    final start = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
+    final end = DateTime(dateTo.year, dateTo.month, dateTo.day);
+    return !dueDate.isBefore(start) && !dueDate.isAfter(end);
   }
 
   Future<TaskModel> createTask({
