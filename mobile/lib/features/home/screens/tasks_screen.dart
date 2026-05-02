@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
@@ -16,6 +19,8 @@ import '../../prayer/models/prayer_model.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/screens/create_task_sheet.dart';
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 
 class TasksScreen extends ConsumerStatefulWidget {
   const TasksScreen({super.key});
@@ -32,6 +37,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 7, vsync: this);
+    _tabController.addListener(() => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tasksProvider.notifier).loadTasks();
       ref.read(focusProvider.notifier).loadAnalytics();
@@ -51,85 +57,196 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
     final state = ref.watch(tasksProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Tasks',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Task templates',
-            onPressed: () => _showTaskTemplatePicker(context),
-            icon: const Icon(Icons.dashboard_customize_outlined),
-          ),
-          IconButton(
-            tooltip: 'Project timelines',
-            onPressed: () => _showProjectTimelinePicker(context, ref),
-            icon: const Icon(Icons.account_tree_outlined),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: const [
-            Tab(text: 'Pending'),
-            Tab(text: 'Completed'),
-            Tab(text: 'Smart'),
-            Tab(text: 'GTD'),
-            Tab(text: 'Kanban'),
-            Tab(text: 'Matrix'),
-            Tab(text: 'Calendar'),
+      backgroundColor: AppColors.bgApp,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                AppSpacing.s20,
+                AppSpacing.screenH,
+                AppSpacing.s12,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Tasks',
+                          style: GoogleFonts.manrope(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textHeading,
+                            letterSpacing: -0.4,
+                            height: 1.2,
+                          ),
+                        ),
+                        Text(
+                          'Organize and crush your goals',
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textBody,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _HeaderIconButton(
+                    icon: Icons.dashboard_customize_outlined,
+                    tooltip: 'Task templates',
+                    onTap: () => _showTaskTemplatePicker(context),
+                  ),
+                  const SizedBox(width: AppSpacing.s8),
+                  _HeaderIconButton(
+                    icon: Icons.account_tree_outlined,
+                    tooltip: 'Project timelines',
+                    onTap: () => _showProjectTimelinePicker(context, ref),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Tab pills ─────────────────────────────────────────────
+            SizedBox(
+              height: 38,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenH,
+                ),
+                children: [
+                  _TabPill(
+                    label: 'Pending',
+                    index: 0,
+                    controller: _tabController,
+                  ),
+                  _TabPill(
+                    label: 'Completed',
+                    index: 1,
+                    controller: _tabController,
+                  ),
+                  _TabPill(
+                    label: 'Smart',
+                    index: 2,
+                    controller: _tabController,
+                  ),
+                  _TabPill(
+                    label: 'GTD',
+                    index: 3,
+                    controller: _tabController,
+                  ),
+                  _TabPill(
+                    label: 'Kanban',
+                    index: 4,
+                    controller: _tabController,
+                  ),
+                  _TabPill(
+                    label: 'Matrix',
+                    index: 5,
+                    controller: _tabController,
+                  ),
+                  _TabPill(
+                    label: 'Calendar',
+                    index: 6,
+                    controller: _tabController,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s12),
+
+            // ── Tab content ───────────────────────────────────────────
+            Expanded(
+              child: state.isLoading
+                  ? const AppLoadingState(message: 'Loading tasks...')
+                  : state.error != null
+                  ? AppErrorState(
+                      title: 'Tasks could not load',
+                      message: state.error!,
+                      onRetry: () =>
+                          ref.read(tasksProvider.notifier).loadTasks(),
+                    )
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _TaskList(
+                          tasks: state.tasks
+                              .where(
+                                (t) =>
+                                    t.status != 'completed' && !t.isDeleted,
+                              )
+                              .toList(),
+                          status: 'pending',
+                        ),
+                        _TaskList(
+                          tasks: state.tasks
+                              .where((t) => t.status == 'completed')
+                              .toList(),
+                          status: 'completed',
+                        ),
+                        _SmartListsView(
+                          tasks: state.tasks
+                              .where((t) => !t.isDeleted)
+                              .toList(),
+                        ),
+                        _GtdBucketsView(
+                          tasks: state.tasks
+                              .where((t) => !t.isDeleted)
+                              .toList(),
+                        ),
+                        _KanbanBoardView(
+                          tasks: state.tasks
+                              .where((t) => !t.isDeleted)
+                              .toList(),
+                        ),
+                        _EisenhowerMatrixView(
+                          tasks: state.tasks
+                              .where(
+                                (t) =>
+                                    t.status != 'completed' && !t.isDeleted,
+                              )
+                              .toList(),
+                        ),
+                        const _TaskCalendarView(),
+                      ],
+                    ),
+            ),
           ],
         ),
       ),
-      body: state.isLoading
-          ? const AppLoadingState(message: 'Loading tasks...')
-          : state.error != null
-          ? AppErrorState(
-              title: 'Tasks could not load',
-              message: state.error!,
-              onRetry: () => ref.read(tasksProvider.notifier).loadTasks(),
-            )
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _TaskList(
-                  tasks: state.tasks
-                      .where((t) => t.status != 'completed' && !t.isDeleted)
-                      .toList(),
-                  status: 'pending',
-                ),
-                _TaskList(
-                  tasks: state.tasks
-                      .where((t) => t.status == 'completed')
-                      .toList(),
-                  status: 'completed',
-                ),
-                _SmartListsView(
-                  tasks: state.tasks.where((t) => !t.isDeleted).toList(),
-                ),
-                _GtdBucketsView(
-                  tasks: state.tasks.where((t) => !t.isDeleted).toList(),
-                ),
-                _KanbanBoardView(
-                  tasks: state.tasks.where((t) => !t.isDeleted).toList(),
-                ),
-                _EisenhowerMatrixView(
-                  tasks: state.tasks
-                      .where((t) => t.status != 'completed' && !t.isDeleted)
-                      .toList(),
-                ),
-                const _TaskCalendarView(),
-              ],
+      floatingActionButton: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: AppGradients.action,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.brandPrimary.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          builder: (_) => const CreateTaskSheet(),
+          ],
         ),
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            onTap: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const CreateTaskSheet(),
+            ),
+            child: const Icon(Icons.add, color: Colors.white, size: 24),
+          ),
+        ),
       ),
     );
   }
@@ -140,9 +257,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
         .toList(growable: false);
     final template = await showModalBottomSheet<AppTemplate>(
       context: context,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       builder: (context) => _TaskTemplatePickerSheet(templates: templates),
     );
@@ -171,6 +288,86 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
   }
 }
 
+// ── Header icon button ────────────────────────────────────────────────────────
+
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _HeaderIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.bgSurface,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(color: AppColors.borderSoft),
+          ),
+          child: Icon(icon, size: 18, color: AppColors.textHeading),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Tab pill ──────────────────────────────────────────────────────────────────
+
+class _TabPill extends StatelessWidget {
+  final String label;
+  final int index;
+  final TabController controller;
+
+  const _TabPill({
+    required this.label,
+    required this.index,
+    required this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final active = controller.index == index;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        controller.animateTo(index);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: active ? AppGradients.action : null,
+          color: active ? null : AppColors.bgSurface,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: active ? null : Border.all(color: AppColors.borderSoft),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            color: active ? Colors.white : AppColors.textBody,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Template picker sheet ─────────────────────────────────────────────────────
+
 class _TaskTemplatePickerSheet extends StatelessWidget {
   final List<AppTemplate> templates;
 
@@ -178,30 +375,90 @@ class _TaskTemplatePickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: ListView.separated(
-        shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        itemCount: templates.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 8),
-        itemBuilder: (context, index) {
-          final template = templates[index];
-          return ListTile(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            tileColor: Theme.of(context).cardTheme.color,
-            leading: const Icon(Icons.playlist_add_check_outlined),
-            title: Text(template.title),
-            subtitle: Text('${template.tasks.length} starter tasks'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.pop(context, template),
-          );
-        },
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.sheetBr,
+      ),
+      child: SafeArea(
+        child: ListView.separated(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenH,
+            20,
+            AppSpacing.screenH,
+            24,
+          ),
+          itemCount: templates.length,
+          separatorBuilder: (context, index) =>
+              const SizedBox(height: AppSpacing.s8),
+          itemBuilder: (context, index) {
+            final template = templates[index];
+            return InkWell(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              onTap: () => Navigator.pop(context, template),
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.s16),
+                decoration: BoxDecoration(
+                  color: AppColors.bgApp,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.borderSoft),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.featTasksSoft,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: const Icon(
+                        Icons.playlist_add_check_outlined,
+                        size: 18,
+                        color: AppColors.featTasks,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            template.title,
+                            style: GoogleFonts.manrope(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textHeading,
+                            ),
+                          ),
+                          Text(
+                            '${template.tasks.length} starter tasks',
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              color: AppColors.textBody,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: AppColors.textHint,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 }
+
+// ── Project timeline picker ───────────────────────────────────────────────────
 
 Future<void> _showProjectTimelinePicker(
   BuildContext context,
@@ -209,9 +466,9 @@ Future<void> _showProjectTimelinePicker(
 ) async {
   await showModalBottomSheet<void>(
     context: context,
-    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    backgroundColor: Colors.transparent,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
     ),
     builder: (context) => _ProjectTimelinePicker(ref: ref),
   );
@@ -224,82 +481,147 @@ class _ProjectTimelinePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: FutureBuilder<List<TaskProject>>(
-        future: ref.read(taskServiceProvider).getProjects(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const SizedBox(
-              height: 220,
-              child: AppLoadingState(message: 'Loading projects...'),
-            );
-          }
-          if (snapshot.hasError) {
-            return SizedBox(
-              height: 260,
-              child: AppErrorState(
-                title: 'Projects could not load',
-                message: 'Open Tasks again and retry project timelines.',
-              ),
-            );
-          }
-          final projects = snapshot.data ?? const [];
-          if (projects.isEmpty) {
-            return const SizedBox(
-              height: 260,
-              child: AppEmptyState(
-                icon: Icons.folder_outlined,
-                title: 'No projects',
-                message: 'Create a project to view its task timeline.',
-              ),
-            );
-          }
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Project Timelines',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.sheetBr,
+      ),
+      child: SafeArea(
+        child: FutureBuilder<List<TaskProject>>(
+          future: ref.read(taskServiceProvider).getProjects(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 220,
+                child: AppLoadingState(message: 'Loading projects...'),
+              );
+            }
+            if (snapshot.hasError) {
+              return const SizedBox(
+                height: 260,
+                child: AppErrorState(
+                  title: 'Projects could not load',
+                  message: 'Open Tasks again and retry project timelines.',
                 ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: projects.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final project = projects[index];
-                      return ListTile(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        tileColor: Theme.of(context).cardTheme.color,
-                        leading: const Icon(Icons.timeline_outlined),
-                        title: Text(project.title),
-                        subtitle: Text(project.status),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          Navigator.pop(context);
-                          context.push('/home/projects/${project.id}');
-                        },
-                      );
-                    },
+              );
+            }
+            final projects = snapshot.data ?? const [];
+            if (projects.isEmpty) {
+              return const SizedBox(
+                height: 260,
+                child: AppEmptyState(
+                  icon: Icons.folder_outlined,
+                  title: 'No projects',
+                  message: 'Create a project to view its task timeline.',
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                20,
+                AppSpacing.screenH,
+                28,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Project Timelines',
+                    style: GoogleFonts.manrope(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textHeading,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                  const SizedBox(height: AppSpacing.s12),
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: projects.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: AppSpacing.s8),
+                      itemBuilder: (context, index) {
+                        final project = projects[index];
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          onTap: () {
+                            Navigator.pop(context);
+                            context.push('/home/projects/${project.id}');
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(AppSpacing.s16),
+                            decoration: BoxDecoration(
+                              color: AppColors.bgApp,
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.lg),
+                              border:
+                                  Border.all(color: AppColors.borderSoft),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.bgSurfaceLavender,
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.sm),
+                                  ),
+                                  child: const Icon(
+                                    Icons.timeline_outlined,
+                                    size: 18,
+                                    color: AppColors.brandPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.s12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        project.title,
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textHeading,
+                                        ),
+                                      ),
+                                      Text(
+                                        project.status,
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 12,
+                                          color: AppColors.textBody,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  size: 18,
+                                  color: AppColors.textHint,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 }
+
+// ── Smart lists view ──────────────────────────────────────────────────────────
 
 class _SmartListsView extends StatefulWidget {
   final List<TaskModel> tasks;
@@ -328,64 +650,112 @@ class _SmartListsViewState extends State<_SmartListsView> {
     return RefreshIndicator(
       onRefresh: () async {},
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          0,
+          AppSpacing.screenH,
+          138,
+        ),
         children: [
           Text(
             'Smart Lists',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: GoogleFonts.manrope(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textHeading,
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             'Saved filters for the task views you check most often.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              color: AppColors.textBody,
+            ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.s12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: _smartFilters.map((filter) {
               final count = activeTasks.where(filter.matches).length;
               final selected = filter.id == _selectedFilterId;
-              return ChoiceChip(
-                avatar: Icon(filter.icon, size: 16),
-                label: Text('${filter.title} ($count)'),
-                selected: selected,
-                onSelected: (_) {
-                  setState(() => _selectedFilterId = filter.id);
-                },
+              return GestureDetector(
+                onTap: () => setState(() => _selectedFilterId = filter.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? filter.color.withValues(alpha: 0.12)
+                        : AppColors.bgSurface,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    border: Border.all(
+                      color: selected
+                          ? filter.color.withValues(alpha: 0.4)
+                          : AppColors.borderSoft,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        filter.icon,
+                        size: 14,
+                        color: selected ? filter.color : AppColors.textBody,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${filter.title} ($count)',
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color:
+                              selected ? filter.color : AppColors.textBody,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               );
             }).toList(),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s16),
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(AppSpacing.s16),
             decoration: BoxDecoration(
-              color: selectedFilter.color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: selectedFilter.color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(
-                color: selectedFilter.color.withValues(alpha: 0.22),
+                color: selectedFilter.color.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
               children: [
                 Icon(selectedFilter.icon, color: selectedFilter.color),
-                const SizedBox(width: 10),
+                const SizedBox(width: AppSpacing.s12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         selectedFilter.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textHeading,
+                        ),
                       ),
                       Text(
                         selectedFilter.description,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          color: AppColors.textBody,
                         ),
                       ),
                     ],
@@ -394,7 +764,7 @@ class _SmartListsViewState extends State<_SmartListsView> {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.s12),
           if (filteredTasks.isEmpty)
             AppEmptyState(
               icon: selectedFilter.icon,
@@ -529,7 +899,8 @@ bool _isPrayerFriendlyTask(TaskModel task) {
 
 int _compareByDueDateThenPriority(TaskModel left, TaskModel right) {
   final leftDue = left.dueAt == null ? null : DateTime.tryParse(left.dueAt!);
-  final rightDue = right.dueAt == null ? null : DateTime.tryParse(right.dueAt!);
+  final rightDue =
+      right.dueAt == null ? null : DateTime.tryParse(right.dueAt!);
   if (leftDue != null && rightDue != null) {
     final dueCompare = leftDue.compareTo(rightDue);
     if (dueCompare != 0) return dueCompare;
@@ -557,6 +928,8 @@ int _priorityRank(String priority) {
   };
 }
 
+// ── GTD buckets view ──────────────────────────────────────────────────────────
+
 class _GtdBucketsView extends ConsumerStatefulWidget {
   final List<TaskModel> tasks;
 
@@ -583,41 +956,82 @@ class _GtdBucketsViewState extends ConsumerState<_GtdBucketsView> {
     return RefreshIndicator(
       onRefresh: () => ref.read(tasksProvider.notifier).loadTasks(),
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          0,
+          AppSpacing.screenH,
+          138,
+        ),
         children: [
           Text(
             'GTD Buckets',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: GoogleFonts.manrope(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textHeading,
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             'Capture, clarify, organize, reflect, and engage from one trusted view.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textBody),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.s12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: _gtdBuckets.map((item) {
               final count = item.filter(activeTasks).length;
-              return ChoiceChip(
-                avatar: Icon(item.icon, size: 16),
-                label: Text('${item.title} ($count)'),
-                selected: item.id == _selectedBucket,
-                onSelected: (_) => setState(() => _selectedBucket = item.id),
+              final selected = item.id == _selectedBucket;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedBucket = item.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? item.color.withValues(alpha: 0.12)
+                        : AppColors.bgSurface,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    border: Border.all(
+                      color: selected
+                          ? item.color.withValues(alpha: 0.4)
+                          : AppColors.borderSoft,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        item.icon,
+                        size: 14,
+                        color: selected ? item.color : AppColors.textBody,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${item.title} ($count)',
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          fontWeight:
+                              selected ? FontWeight.w700 : FontWeight.w500,
+                          color: selected ? item.color : AppColors.textBody,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               );
             }).toList(),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s16),
           _GtdBucketHeader(bucket: bucket, count: visibleTasks.length),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.s12),
           if (bucket.id == 'projects') ...[
             _ProjectsBucketPanel(tasks: activeTasks),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.s12),
           ],
           if (visibleTasks.isEmpty)
             AppEmptyState(
@@ -643,28 +1057,33 @@ class _GtdBucketHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: bucket.color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: bucket.color.withValues(alpha: 0.24)),
+        color: bucket.color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: bucket.color.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           Icon(bucket.icon, color: bucket.color),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   bucket.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textHeading,
+                  ),
                 ),
                 Text(
                   bucket.description,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    color: AppColors.textBody,
                   ),
                 ),
               ],
@@ -672,7 +1091,11 @@ class _GtdBucketHeader extends StatelessWidget {
           ),
           Text(
             count.toString(),
-            style: TextStyle(color: bucket.color, fontWeight: FontWeight.bold),
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: bucket.color,
+            ),
           ),
         ],
       ),
@@ -694,21 +1117,28 @@ class _ProjectsBucketPanel extends StatelessWidget {
         .length;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.borderSoft),
       ),
       child: Row(
         children: [
-          const Icon(Icons.folder_outlined, color: AppColors.primary),
-          const SizedBox(width: 10),
+          const Icon(
+            Icons.folder_outlined,
+            color: AppColors.brandPrimary,
+          ),
+          const SizedBox(width: AppSpacing.s12),
           Expanded(
             child: Text(
               projectTaskCount == 0
                   ? 'No active project tasks yet.'
                   : '$projectTaskCount projects have active tasks.',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                color: AppColors.textBody,
+              ),
             ),
           ),
         ],
@@ -770,7 +1200,8 @@ final _gtdBuckets = [
     emptyMessage: 'Project tasks will appear here after you link them.',
     icon: Icons.folder_copy_outlined,
     color: AppColors.success,
-    filter: (tasks) => tasks.where((task) => task.projectId != null).toList(),
+    filter: (tasks) =>
+        tasks.where((task) => task.projectId != null).toList(),
   ),
   _GtdBucket(
     id: 'waiting',
@@ -779,7 +1210,8 @@ final _gtdBuckets = [
     emptyMessage: 'Waiting items stay parked here until the blocker clears.',
     icon: Icons.hourglass_empty_outlined,
     color: AppColors.prayerGold,
-    filter: (tasks) => tasks.where((task) => task.status == 'waiting').toList(),
+    filter: (tasks) =>
+        tasks.where((task) => task.status == 'waiting').toList(),
   ),
   _GtdBucket(
     id: 'someday',
@@ -788,7 +1220,8 @@ final _gtdBuckets = [
     emptyMessage: 'Future ideas can rest here without cluttering today.',
     icon: Icons.lightbulb_outline,
     color: AppColors.warning,
-    filter: (tasks) => tasks.where((task) => task.status == 'someday').toList(),
+    filter: (tasks) =>
+        tasks.where((task) => task.status == 'someday').toList(),
   ),
   _GtdBucket(
     id: 'calendar',
@@ -803,7 +1236,8 @@ final _gtdBuckets = [
 
 int _compareByGtd(TaskModel left, TaskModel right) {
   final leftDue = left.dueAt == null ? null : DateTime.tryParse(left.dueAt!);
-  final rightDue = right.dueAt == null ? null : DateTime.tryParse(right.dueAt!);
+  final rightDue =
+      right.dueAt == null ? null : DateTime.tryParse(right.dueAt!);
   if (leftDue != null && rightDue != null) {
     final dueCompare = leftDue.compareTo(rightDue);
     if (dueCompare != 0) return dueCompare;
@@ -814,6 +1248,8 @@ int _compareByGtd(TaskModel left, TaskModel right) {
   }
   return _compareByPriorityThenTitle(left, right);
 }
+
+// ── Kanban board view ─────────────────────────────────────────────────────────
 
 class _KanbanBoardView extends ConsumerWidget {
   final List<TaskModel> tasks;
@@ -834,14 +1270,20 @@ class _KanbanBoardView extends ConsumerWidget {
       onRefresh: () => ref.read(tasksProvider.notifier).loadTasks(),
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          0,
+          AppSpacing.screenH,
+          0,
+        ),
         children: _kanbanColumns
             .map(
               (column) => _KanbanColumn(
                 column: column,
                 tasks: tasks
                     .where(
-                      (task) => _kanbanStatus(task.status) == column.status,
+                      (task) =>
+                          _kanbanStatus(task.status) == column.status,
                     )
                     .toList(),
                 onMove: (task, status) => ref
@@ -871,59 +1313,83 @@ class _KanbanColumn extends StatelessWidget {
     return Container(
       width: 280,
       margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: column.color.withValues(alpha: 0.24)),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: [
+          BoxShadow(
+            color: column.color.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(column.icon, color: column.color, size: 20),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: column.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.xs),
+                ),
+                child: Icon(column.icon, color: column.color, size: 16),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   column.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textHeading,
+                  ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: column.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: Text(
                   tasks.length.toString(),
-                  style: TextStyle(
-                    color: column.color,
+                  style: GoogleFonts.manrope(
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
+                    color: column.color,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             column.description,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              color: AppColors.textBody,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           Expanded(
             child: tasks.isEmpty
                 ? Center(
                     child: Text(
                       'No tasks',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        color: AppColors.textHint,
                       ),
                     ),
                   )
@@ -957,17 +1423,23 @@ class _KanbanTaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pColor = _priorityColor(task.priority);
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       onTap: () => context.push('/home/tasks/${task.id}'),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border(
-            left: BorderSide(color: _priorityColor(task.priority), width: 3),
-          ),
+          color: AppColors.bgApp,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.borderSoft),
+          boxShadow: [
+            BoxShadow(
+              color: pColor.withValues(alpha: 0.07),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -979,12 +1451,20 @@ class _KanbanTaskCard extends StatelessWidget {
                     task.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textHeading,
+                    ),
                   ),
                 ),
                 PopupMenuButton<String>(
                   tooltip: 'Move task',
-                  icon: const Icon(Icons.more_vert, size: 18),
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: AppColors.textHint,
+                  ),
                   onSelected: (status) => onMove(task, status),
                   itemBuilder: (context) => _kanbanColumns
                       .where((column) => column.status != currentStatus)
@@ -999,22 +1479,26 @@ class _KanbanTaskCard extends StatelessWidget {
               ],
             ),
             if (task.dueAt != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 'Due ${task.dueAt!.substring(0, 10)}',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  color: AppColors.textBody,
+                ),
               ),
             ],
             const SizedBox(height: 8),
             Wrap(
               spacing: 6,
-              runSpacing: 6,
+              runSpacing: 4,
               children: [
-                _KanbanChip(label: task.priority),
+                _KanbanChip(label: task.priority, color: pColor),
                 if (task.estimatedMinutes != null)
-                  _KanbanChip(label: '${task.estimatedMinutes} min'),
+                  _KanbanChip(
+                    label: '${task.estimatedMinutes} min',
+                    color: AppColors.brandPrimary,
+                  ),
               ],
             ),
           ],
@@ -1026,23 +1510,24 @@ class _KanbanTaskCard extends StatelessWidget {
 
 class _KanbanChip extends StatelessWidget {
   final String label;
+  final Color color;
 
-  const _KanbanChip({required this.label});
+  const _KanbanChip({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: AppColors.primary,
+        style: GoogleFonts.manrope(
           fontSize: 11,
           fontWeight: FontWeight.w600,
+          color: color,
         ),
       ),
     );
@@ -1123,11 +1608,13 @@ String _kanbanStatus(String status) {
 
 Color _priorityColor(String priority) {
   return switch (priority) {
-    'high' => AppColors.error,
-    'medium' => AppColors.warning,
-    _ => AppColors.success,
+    'high' => AppColors.errorColor,
+    'medium' => AppColors.warningColor,
+    _ => AppColors.successColor,
   };
 }
+
+// ── Eisenhower matrix view ────────────────────────────────────────────────────
 
 class _EisenhowerMatrixView extends StatelessWidget {
   final List<TaskModel> tasks;
@@ -1180,7 +1667,7 @@ class _EisenhowerMatrixView extends StatelessWidget {
         title: 'Urgent + Important',
         subtitle: 'Do first',
         tasks: urgentImportant,
-        color: AppColors.error,
+        color: AppColors.errorColor,
         icon: Icons.priority_high,
       ),
       _MatrixQuadrantData(
@@ -1194,7 +1681,7 @@ class _EisenhowerMatrixView extends StatelessWidget {
         title: 'Urgent, Not Important',
         subtitle: 'Reduce or delegate',
         tasks: urgentNotImportant,
-        color: AppColors.warning,
+        color: AppColors.warningColor,
         icon: Icons.schedule_outlined,
       ),
       _MatrixQuadrantData(
@@ -1212,22 +1699,30 @@ class _EisenhowerMatrixView extends StatelessWidget {
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 640;
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenH,
+              0,
+              AppSpacing.screenH,
+              138,
+            ),
             children: [
               Text(
                 'Priority Matrix',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: GoogleFonts.manrope(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textHeading,
+                ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 'Urgent means overdue or due within 48 hours. Important means high priority.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  color: AppColors.textBody,
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.s16),
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1274,11 +1769,18 @@ class _MatrixQuadrant extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: data.color.withValues(alpha: 0.26)),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: data.color.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: data.color.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1289,10 +1791,10 @@ class _MatrixQuadrant extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: data.color.withValues(alpha: 0.12),
+                  color: data.color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(data.icon, color: data.color, size: 18),
+                child: Icon(data.icon, color: data.color, size: 17),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1303,14 +1805,19 @@ class _MatrixQuadrant extends StatelessWidget {
                       data.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textHeading,
+                      ),
                     ),
                     Text(
-                      '${data.subtitle} - ${data.tasks.length}',
+                      '${data.subtitle} · ${data.tasks.length}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        color: AppColors.textBody,
                       ),
                     ),
                   ],
@@ -1318,14 +1825,15 @@ class _MatrixQuadrant extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           Expanded(
             child: data.tasks.isEmpty
                 ? Center(
                     child: Text(
                       'No tasks',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        color: AppColors.textHint,
                       ),
                     ),
                   )
@@ -1355,13 +1863,14 @@ class _MatrixTaskTile extends StatelessWidget {
         ? null
         : DateTime.tryParse(task.dueAt!)?.toLocal();
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppRadius.sm),
       onTap: () => context.push('/home/tasks/${task.id}'),
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
+          color: AppColors.bgApp,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: AppColors.borderSoft),
         ),
         child: Row(
           children: [
@@ -1373,30 +1882,41 @@ class _MatrixTaskTile extends StatelessWidget {
                     task.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textHeading,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     dueAt == null
                         ? task.priority
-                        : '${_dateLabel(dueAt)} - ${task.priority}',
+                        : '${_dateLabel(dueAt)} · ${task.priority}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      color: AppColors.textBody,
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, size: 18),
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: AppColors.textHint,
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+// ── Calendar view ─────────────────────────────────────────────────────────────
 
 enum _CalendarMode { today, week, month }
 
@@ -1461,25 +1981,67 @@ class _TaskCalendarViewState extends ConsumerState<_TaskCalendarView> {
         await ref.read(prayerProvider.notifier).loadTodayPrayers();
       },
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          0,
+          AppSpacing.screenH,
+          138,
+        ),
         children: [
-          SegmentedButton<_CalendarMode>(
-            segments: const [
-              ButtonSegment(value: _CalendarMode.today, label: Text('Today')),
-              ButtonSegment(value: _CalendarMode.week, label: Text('Week')),
-              ButtonSegment(value: _CalendarMode.month, label: Text('Month')),
-            ],
-            selected: {_mode},
-            onSelectionChanged: (selection) => _setMode(selection.first),
+          // Mode selector
+          Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.bgSurface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.borderSoft),
+            ),
+            child: Row(
+              children: _CalendarMode.values.map((mode) {
+                final active = _mode == mode;
+                final label = switch (mode) {
+                  _CalendarMode.today => 'Today',
+                  _CalendarMode.week => 'Week',
+                  _CalendarMode.month => 'Month',
+                };
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => _setMode(mode),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        gradient: active ? AppGradients.action : null,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Center(
+                        child: Text(
+                          label,
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            fontWeight: active
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: active ? Colors.white : AppColors.textBody,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.s16),
           Text(
             _rangeLabel(range.$1, range.$2),
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textHeading,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           if (calendarState.isLoading)
             const AppLoadingState(message: 'Loading agenda...')
           else if (calendarState.error != null)
@@ -1576,30 +2138,32 @@ class _AgendaDaySection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasItems =
-        tasks.isNotEmpty ||
+    final hasItems = tasks.isNotEmpty ||
         focusSessions.isNotEmpty ||
         habits.isNotEmpty ||
         prayers.isNotEmpty;
     if (!hasItems) return const SizedBox.shrink();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.borderSoft),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             _dateLabel(day),
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: GoogleFonts.manrope(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textHeading,
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.s12),
           if (tasks.isNotEmpty)
             ReorderableListView.builder(
               shrinkWrap: true,
@@ -1623,7 +2187,7 @@ class _AgendaDaySection extends ConsumerWidget {
                   title: task.title,
                   subtitle: task.dueAt == null
                       ? task.priority
-                      : '${_timeLabel(task.dueAt!)} - ${task.priority}',
+                      : '${_timeLabel(task.dueAt!)} · ${task.priority}',
                   color: AppColors.primary,
                 );
               },
@@ -1633,20 +2197,18 @@ class _AgendaDaySection extends ConsumerWidget {
               icon: Icons.timer_outlined,
               title: 'Focus session',
               subtitle:
-                  '${session.actualMinutes ?? session.plannedMinutes} min - ${session.status}',
+                  '${session.actualMinutes ?? session.plannedMinutes} min · ${session.status}',
               color: AppColors.warning,
             ),
           ),
-          ...habits
-              .take(6)
-              .map(
-                (habit) => _AgendaItem(
-                  icon: Icons.repeat,
-                  title: habit.title,
-                  subtitle: '${habit.frequencyType} habit',
-                  color: AppColors.success,
-                ),
-              ),
+          ...habits.take(6).map(
+            (habit) => _AgendaItem(
+              icon: Icons.repeat,
+              title: habit.title,
+              subtitle: '${habit.frequencyType} habit',
+              color: AppColors.success,
+            ),
+          ),
           if (habits.length > 6)
             _AgendaItem(
               icon: Icons.more_horiz,
@@ -1687,19 +2249,19 @@ class _AgendaItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s8),
       child: Row(
         children: [
           Container(
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 17, color: color),
+            child: Icon(icon, size: 16, color: color),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1708,14 +2270,19 @@ class _AgendaItem extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textHeading,
+                  ),
                 ),
                 Text(
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    color: AppColors.textBody,
                   ),
                 ),
               ],
@@ -1727,6 +2294,8 @@ class _AgendaItem extends StatelessWidget {
   }
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 bool _sameDay(DateTime first, DateTime second) {
   return first.year == second.year &&
       first.month == second.month &&
@@ -1735,18 +2304,8 @@ bool _sameDay(DateTime first, DateTime second) {
 
 String _dateLabel(DateTime date) {
   const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
   return '${months[date.month - 1]} ${date.day}, ${date.year}';
 }
@@ -1781,6 +2340,8 @@ String _gtdStatusLabel(String status) {
   };
 }
 
+// ── Task list ─────────────────────────────────────────────────────────────────
+
 class _TaskList extends ConsumerWidget {
   final List<TaskModel> tasks;
   final String status;
@@ -1799,13 +2360,18 @@ class _TaskList extends ConsumerWidget {
         message: isCompletedTab
             ? 'Completed tasks will appear here after you finish them.'
             : 'Create your first task to start planning the day.',
-        accentColor: isCompletedTab ? AppColors.success : AppColors.primary,
+        accentColor: isCompletedTab ? AppColors.successColor : AppColors.primary,
       );
     }
 
     if (status != 'completed') {
       return ReorderableListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          0,
+          AppSpacing.screenH,
+          138,
+        ),
         itemCount: tasks.length,
         onReorder: (oldIndex, newIndex) {
           final reordered = [...tasks];
@@ -1822,7 +2388,12 @@ class _TaskList extends ConsumerWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenH,
+        0,
+        AppSpacing.screenH,
+        138,
+      ),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
@@ -1832,109 +2403,170 @@ class _TaskList extends ConsumerWidget {
   }
 }
 
+// ── Task card ─────────────────────────────────────────────────────────────────
+
 class _TaskCard extends ConsumerWidget {
   final TaskModel task;
 
   const _TaskCard({super.key, required this.task});
 
-  Color _priorityColor(String priority) {
-    switch (priority) {
-      case 'high':
-        return AppColors.error;
-      case 'medium':
-        return AppColors.warning;
-      default:
-        return AppColors.success;
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final pColor = _priorityColor(task.priority);
+    final isCompleted = task.status == 'completed';
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.listGap),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: _priorityColor(task.priority), width: 4),
-        ),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              if (task.status != 'completed') {
-                ref.read(tasksProvider.notifier).completeTask(task.id);
-              }
-            },
-            child: Icon(
-              task.status == 'completed'
-                  ? Icons.check_circle
-                  : Icons.radio_button_unchecked,
-              color: task.status == 'completed'
-                  ? AppColors.success
-                  : AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    decoration: task.status == 'completed'
-                        ? TextDecoration.lineThrough
-                        : null,
-                  ),
-                ),
-                if (task.dueAt != null)
-                  Text(
-                    'Due: ${task.dueAt!.substring(0, 10)}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Task details',
-            icon: const Icon(Icons.chevron_right, size: 22),
-            onPressed: () => context.push('/home/tasks/${task.id}'),
-          ),
-          if (task.status != 'completed')
-            PopupMenuButton<String>(
-              tooltip: 'Move task',
-              icon: const Icon(Icons.drive_file_move_outlined, size: 20),
-              onSelected: (status) => ref
-                  .read(tasksProvider.notifier)
-                  .moveTaskToStatus(task: task, status: status),
-              itemBuilder: (context) => _gtdMoveStatuses
-                  .where((status) => status != task.status)
-                  .map(
-                    (status) => PopupMenuItem(
-                      value: status,
-                      child: Text('Move to ${_gtdStatusLabel(status)}'),
-                    ),
-                  )
-                  .toList(),
-            ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, size: 20),
-            onPressed: () async {
-              final confirmed = await confirmDestructiveAction(
-                context: context,
-                title: 'Delete Task',
-                message:
-                    'Delete "${task.title}"? This task will be removed from your active list.',
-              );
-              if (!confirmed) return;
-              await ref.read(tasksProvider.notifier).deleteTask(task.id);
-            },
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.brandPrimary.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        onTap: () => context.push('/home/tasks/${task.id}'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s16,
+            vertical: AppSpacing.s12,
+          ),
+          child: Row(
+            children: [
+              // Check circle
+              GestureDetector(
+                onTap: () {
+                  if (!isCompleted) {
+                    HapticFeedback.lightImpact();
+                    ref.read(tasksProvider.notifier).completeTask(task.id);
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isCompleted
+                        ? AppColors.successColor
+                        : Colors.transparent,
+                    border: Border.all(
+                      color: isCompleted ? AppColors.successColor : pColor,
+                      width: 2,
+                    ),
+                  ),
+                  child: isCompleted
+                      ? const Icon(Icons.check, size: 14, color: Colors.white)
+                      : null,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s12),
+
+              // Title + due
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.title,
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isCompleted
+                            ? AppColors.textBody
+                            : AppColors.textHeading,
+                        decoration: isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                    if (task.dueAt != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Due ${task.dueAt!.substring(0, 10)}',
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          color: AppColors.textBody,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Priority badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: pColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  task.priority,
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: pColor,
+                  ),
+                ),
+              ),
+
+              // Move menu
+              if (!isCompleted)
+                PopupMenuButton<String>(
+                  tooltip: 'Move task',
+                  icon: Icon(
+                    Icons.drive_file_move_outlined,
+                    size: 18,
+                    color: AppColors.textHint,
+                  ),
+                  onSelected: (status) => ref
+                      .read(tasksProvider.notifier)
+                      .moveTaskToStatus(task: task, status: status),
+                  itemBuilder: (context) => _gtdMoveStatuses
+                      .where((status) => status != task.status)
+                      .map(
+                        (status) => PopupMenuItem(
+                          value: status,
+                          child: Text('Move to ${_gtdStatusLabel(status)}'),
+                        ),
+                      )
+                      .toList(),
+                ),
+
+              // Delete
+              GestureDetector(
+                onTap: () async {
+                  final confirmed = await confirmDestructiveAction(
+                    context: context,
+                    title: 'Delete Task',
+                    message:
+                        'Delete "${task.title}"? This task will be removed from your active list.',
+                  );
+                  if (!confirmed) return;
+                  await ref.read(tasksProvider.notifier).deleteTask(task.id);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: AppColors.textHint,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
