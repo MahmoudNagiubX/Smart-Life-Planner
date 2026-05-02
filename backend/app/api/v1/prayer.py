@@ -21,7 +21,6 @@ from app.schemas.prayer import (
 )
 from app.repositories.prayer_repository import (
     get_prayer_logs_for_date,
-    get_prayer_log,
     upsert_prayer_log,
     mark_prayer_complete,
     mark_prayer_incomplete,
@@ -335,12 +334,13 @@ async def complete_prayer(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid prayer name. Must be one of {PRAYER_NAMES}",
         )
-    log = await get_prayer_log(db, current_user.id, prayer_name, prayer_date)
-    if not log:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Prayer log not found. Call /today first to generate logs.",
-        )
+    log = await upsert_prayer_log(
+        db,
+        current_user.id,
+        prayer_name,
+        prayer_date,
+        scheduled_at=None,
+    )
     return await mark_prayer_complete(db, log)
 
 
@@ -356,12 +356,13 @@ async def uncomplete_prayer(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid prayer name. Must be one of {PRAYER_NAMES}",
         )
-    log = await get_prayer_log(db, current_user.id, prayer_name, prayer_date)
-    if not log:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Prayer log not found",
-        )
+    log = await upsert_prayer_log(
+        db,
+        current_user.id,
+        prayer_name,
+        prayer_date,
+        scheduled_at=None,
+    )
     return await mark_prayer_incomplete(db, log)
 
 
@@ -378,12 +379,13 @@ async def update_prayer_status(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid prayer name. Must be one of {PRAYER_NAMES}",
         )
-    log = await get_prayer_log(db, current_user.id, prayer_name, prayer_date)
-    if not log:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Prayer log not found. Call /today first to generate logs.",
-        )
+    log = await upsert_prayer_log(
+        db,
+        current_user.id,
+        prayer_name,
+        prayer_date,
+        scheduled_at=None,
+    )
     try:
         return await mark_prayer_status(db, log, payload.status)
     except ValueError as e:

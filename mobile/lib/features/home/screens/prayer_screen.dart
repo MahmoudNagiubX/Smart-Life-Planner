@@ -339,6 +339,8 @@ class _PrayerHeader extends StatelessWidget {
                 'Stay spiritually consistent throughout your day.',
                 style: AppTextStyles.bodySmallLight,
               ),
+              const SizedBox(height: AppSpacing.s8),
+              const _PrayerHeaderChip(),
             ],
           ),
         ),
@@ -367,6 +369,46 @@ class _PrayerHeader extends StatelessWidget {
 }
 
 // ── Next Prayer Hero Card ─────────────────────────────────────────────────────
+
+class _PrayerHeaderChip extends StatelessWidget {
+  const _PrayerHeaderChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s8,
+        vertical: 7,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurfaceLavender,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(
+          color: AppColors.brandPrimary.withValues(alpha: 0.14),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.auto_awesome_rounded,
+            size: 13,
+            color: AppColors.brandViolet,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Bismillah - pray with presence',
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.brandPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _NextPrayerHeroCard extends StatelessWidget {
   final PrayerTime? next;
@@ -638,7 +680,17 @@ class _DailyPrayerListCard extends StatelessWidget {
                   ),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('Prayer Times', style: AppTextStyles.h4Light),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Prayer Times', style: AppTextStyles.h4Light),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Tap any prayer to update it independently.',
+                          style: AppTextStyles.captionLight,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 _PrayerRow(
@@ -692,6 +744,7 @@ class _PrayerRow extends StatelessWidget {
     final isMissed = prayer.status == 'missed';
 
     return GestureDetector(
+      onTap: onToggle,
       onLongPress: onLongPress,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -774,34 +827,31 @@ class _PrayerRow extends StatelessWidget {
                           ],
                         ),
                       ),
-                      GestureDetector(
-                        onTap: onToggle,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isCompleted
+                              ? AppColors.brandViolet
+                              : AppColors.bgSurface,
+                          border: Border.all(
                             color: isCompleted
                                 ? AppColors.brandViolet
-                                : AppColors.bgSurface,
-                            border: Border.all(
-                              color: isCompleted
-                                  ? AppColors.brandViolet
-                                  : isNext
-                                  ? AppColors.brandPrimary
-                                  : AppColors.borderSoft,
-                              width: 2,
-                            ),
+                                : isNext
+                                ? AppColors.brandPrimary
+                                : AppColors.borderSoft,
+                            width: 2,
                           ),
-                          child: isCompleted
-                              ? const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 13,
-                                )
-                              : null,
                         ),
+                        child: isCompleted
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 13,
+                              )
+                            : null,
                       ),
                     ],
                   ),
