@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../voice/screens/voice_capture_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/app_colors.dart';
-import '../../hasae/widgets/hasae_next_action_card.dart';
-import '../../hasae/widgets/overload_warning_card.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dashboard/models/dashboard_model.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
-import '../../dashboard/widgets/quick_capture_sheet.dart';
 import '../../tasks/providers/task_provider.dart';
+import '../../../routes/app_routes.dart';
+import '../widgets/progress_ring.dart';
+
+// ── Layout ────────────────────────────────────────────────────────────────────
+// FabOverhang(22) + NavHeight(78) + NavBottomMargin(18) + breathing(20) = 138
+const double _kNavClearance = 138.0;
+
+// ═════════════════════════════════════════════════════════════════════════════
+// HomeScreen
+// ═════════════════════════════════════════════════════════════════════════════
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -18,500 +29,566 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
   @override
   void initState() {
     super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.04),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(dashboardProvider.notifier).loadDashboard();
+      _ctrl.forward();
     });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
   }
 
   String _greeting() {
     final hour = DateTime.now().hour;
+    if (hour < 5) return 'Good night';
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 20) return 'Good evening';
+    return 'Good night';
   }
 
-  Future<void> _refreshDashboard() {
-    return ref.read(dashboardProvider.notifier).loadDashboard();
+  String _greetingEmoji() {
+    final hour = DateTime.now().hour;
+    if (hour < 5 || hour >= 20) return '🌙';
+    if (hour < 12) return '☀️';
+    if (hour < 17) return '🌤️';
+    return '🌅';
+  }
+
+  String _dateLabel() {
+    final now = DateTime.now();
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+  }
+
+  Future<void> _refreshDashboard() =>
+      ref.read(dashboardProvider.notifier).loadDashboard();
+
+  void _openCustomize(DashboardData data) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bgSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl3)),
+      ),
+      builder: (_) => _DashboardCustomizeSheet(
+        currentWidgets: data.personalization.dailyDashboardWidgets
+            .where(defaultDashboardWidgets.contains)
+            .toList(),
+      ),
+    );
+  }
+
+  double _dayProgress(DashboardData data) {
+    final total = data.pendingCount + data.completedToday;
+    final taskRatio = total == 0 ? 0.0 : data.completedToday / total;
+    final prayerTotal = data.prayerProgress.total <= 0 ? 5 : data.prayerProgress.total;
+    final prayerRatio = data.prayerProgress.completed / prayerTotal;
+    return (taskRatio * 0.55 + prayerRatio * 0.45).clamp(0.0, 1.0);
+  }
+
+  (String, String?) _summaryData(double progress) {
+    if (progress < 0.25) return ('Today is just starting', 'starting');
+    if (progress < 0.5) return ('Making good progress', 'progress');
+    if (progress < 0.8) return ('Today looks balanced', 'balanced');
+    return ('Outstanding day ahead', 'Outstanding');
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final dashState = ref.watch(dashboardProvider);
-    final name = authState.user?['full_name'] as String? ?? 'Friend';
-    final data = dashState.data;
+    final firstName = (authState.user?['full_name'] as String? ?? 'Mahmoud')
+        .split(' ')
+        .first;
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _refreshDashboard,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                Row(
+        child: FadeTransition(
+          opacity: _fade,
+          child: SlideTransition(
+            position: _slide,
+            child: RefreshIndicator(
+              color: AppColors.brandPrimary,
+              onRefresh: _refreshDashboard,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(
+                  left: AppSpacing.screenH,
+                  right: AppSpacing.screenH,
+                  top: AppSpacing.s20,
+                  bottom: _kNavClearance,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        'Hello, $name!',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
+                    // ── Header ────────────────────────────────────────────
+                    _HomeHeader(
+                      greeting:
+                          '${_greeting()}, $firstName ${_greetingEmoji()}',
+                      dateLabel: _dateLabel(),
+                      initials: firstName.isNotEmpty
+                          ? firstName[0].toUpperCase()
+                          : 'M',
+                      onCustomize: dashState.data != null
+                          ? () => _openCustomize(dashState.data!)
+                          : null,
                     ),
-                    IconButton(
-                      tooltip: 'Customize dashboard',
-                      onPressed: data == null
-                          ? null
-                          : () => _openDashboardCustomization(data),
-                      icon: const Icon(Icons.tune_outlined),
-                    ),
+                    const SizedBox(height: AppSpacing.s20),
+
+                    // ── Dashboard content ─────────────────────────────────
+                    if (dashState.isLoading && dashState.data == null)
+                      const _LoadingCard()
+                    else if (dashState.error != null && dashState.data == null)
+                      _ErrorCard(
+                        message: dashState.error!,
+                        onRetry: _refreshDashboard,
+                      )
+                    else if (dashState.data case final data?)
+                      _DashboardBody(
+                        data: data,
+                        dayProgress: _dayProgress(data),
+                        summaryData: _summaryData(_dayProgress(data)),
+                        onCompleteTask: (id) async {
+                          await ref
+                              .read(tasksProvider.notifier)
+                              .completeTask(id);
+                          await ref
+                              .read(dashboardProvider.notifier)
+                              .loadDashboard();
+                        },
+                        onOpenCustomize: () => _openCustomize(data),
+                      )
+                    else
+                      const _EmptyCard(),
                   ],
                 ),
-                Text(
-                  _greeting(),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                GestureDetector(
-                  onTap: () async {
-                    await showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Theme.of(
-                        context,
-                      ).scaffoldBackgroundColor,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                      ),
-                      builder: (_) => const QuickCaptureSheet(),
-                    );
-                    if (context.mounted) {
-                      await _refreshDashboard();
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardTheme.color,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.bolt, color: AppColors.primary),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Quick capture...',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppColors.textSecondary),
-                        ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const VoiceCaptureScreen(),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.mic,
-                              color: AppColors.primary,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                const OverloadWarningCard(),
-                const SizedBox(height: 12),
-                const HasaeNextActionCard(),
-                const SizedBox(height: 24),
-
-                if (dashState.isLoading)
-                  const Center(child: CircularProgressIndicator())
-                else if (dashState.error != null)
-                  _DashboardErrorCard(
-                    message: dashState.error!,
-                    onRetry: _refreshDashboard,
-                  )
-                else if (data == null)
-                  _EmptyCard(message: 'Dashboard is empty')
-                else ...[
-                  _PersonalizedSetupCard(data: data),
-                  const SizedBox(height: 12),
-                  ..._dashboardWidgets(data).expand(
-                    (widgetId) => [
-                      _buildDashboardWidget(context, data, widgetId),
-                      const SizedBox(height: 12),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-
-                  Text(
-                    "Today's Tools",
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _NavCard(
-                          icon: Icons.timer_outlined,
-                          label: 'Focus',
-                          color: AppColors.primary,
-                          onTap: () => context.go('/home/focus'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _NavCard(
-                          icon: Icons.track_changes_outlined,
-                          label: 'Habits',
-                          color: AppColors.success,
-                          onTap: () => context.go('/home/habits'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _NavCard(
-                          icon: Icons.calendar_today_outlined,
-                          label: 'AI Plan',
-                          color: AppColors.warning,
-                          onTap: () => context.go('/home/daily-plan'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
-
-  List<String> _dashboardWidgets(DashboardData data) {
-    return data.personalization.dailyDashboardWidgets
-        .where(defaultDashboardWidgets.contains)
-        .toList();
-  }
-
-  Future<void> _openDashboardCustomization(DashboardData data) async {
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) =>
-          _DashboardCustomizeSheet(currentWidgets: _dashboardWidgets(data)),
-    );
-  }
-
-  Widget _buildDashboardWidget(
-    BuildContext context,
-    DashboardData data,
-    String widgetId,
-  ) {
-    final personalization = data.personalization;
-    return switch (widgetId) {
-      'top_tasks' => _TopTasksSection(data: data),
-      'next_prayer' => _NextPrayerCard(
-        nextPrayer: personalization.nextPrayer,
-        onTap: () => context.go('/home/prayer'),
-      ),
-      'habit_snapshot' => _HabitSnapshotCard(
-        activeCount: personalization.habitSnapshot.activeCount,
-        completedToday: personalization.habitSnapshot.completedToday,
-        highlight: personalization.habitSnapshot.highlight,
-        onTap: () => context.go('/home/habits'),
-      ),
-      'journal_prompt' => _JournalPromptCard(
-        prompt: personalization.journalPrompt,
-        onTap: () => context.go('/home/notes'),
-      ),
-      'ai_plan' => _AiPlanPreviewCard(
-        title: personalization.aiPlanCard.title,
-        preview: personalization.aiPlanCard.preview,
-        onTap: () => context.go('/home/daily-plan'),
-      ),
-      'focus_shortcut' => _FocusShortcutCard(
-        label: personalization.focusShortcut.label,
-        minutes: personalization.focusShortcut.suggestedMinutes,
-        onTap: () => context.go('/home/focus'),
-      ),
-      'productivity_score' => _ProductivityScoreCard(data: data),
-      'quran_goal' => _SpiritualDashboardCard(
-        summary: personalization.spiritualSummary,
-        onPrayer: () => context.go('/home/prayer'),
-        onQuran: () => context.push('/home/prayer/quran-goal'),
-        onQibla: () => context.push('/home/prayer/qibla'),
-        onRamadan: () => context.push('/home/prayer/ramadan'),
-      ),
-      _ => const SizedBox.shrink(),
-    };
-  }
 }
 
-class _PersonalizedSetupCard extends StatelessWidget {
-  final DashboardData data;
+// ═════════════════════════════════════════════════════════════════════════════
+// Header
+// ═════════════════════════════════════════════════════════════════════════════
 
-  const _PersonalizedSetupCard({required this.data});
+class _HomeHeader extends StatelessWidget {
+  final String greeting;
+  final String dateLabel;
+  final String initials;
+  final VoidCallback? onCustomize;
+
+  const _HomeHeader({
+    required this.greeting,
+    required this.dateLabel,
+    required this.initials,
+    this.onCustomize,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final personalization = data.personalization;
-    final goalLabels = personalization.goalLabels;
+    return Row(
+      children: [
+        // Logo
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.brandPrimary.withValues(alpha: 0.18),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.asset(
+              'assets/images/app_logo.png',
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Container(
+                decoration: const BoxDecoration(
+                  gradient: AppGradients.action,
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.s12),
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.28)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        // Greeting + date
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.tune_outlined, color: AppColors.primary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  personalization.taskEnvironment,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                greeting,
+                style: GoogleFonts.manrope(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textHeading,
+                  letterSpacing: -0.3,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                dateLabel,
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textHint,
                 ),
               ),
             ],
           ),
-          if (goalLabels.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: goalLabels
-                  .map(
-                    (goal) => Chip(
-                      label: Text(goal),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _TopTasksSection extends StatelessWidget {
-  final DashboardData data;
-
-  const _TopTasksSection({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Text(
-              'Top Tasks',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: () => context.go('/home/tasks'),
-              child: const Text('See all'),
-            ),
-          ],
         ),
-        const SizedBox(height: 8),
-        if (data.topTasks.isEmpty)
-          _EmptyCard(message: 'No pending tasks')
-        else
-          ...data.topTasks.map(
-            (task) => _TopTaskTile(
-              id: task.id,
-              title: task.title,
-              priority: task.priority,
-              dueAt: task.dueAt,
+
+        // Notification bell
+        GestureDetector(
+          onTap: () => HapticFeedback.lightImpact(),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.bgSurface,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.borderSoft),
+              boxShadow: AppShadows.soft,
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(
+                  Icons.notifications_outlined,
+                  size: 20,
+                  color: AppColors.textHeading,
+                ),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.errorColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.bgSurface, width: 1.5),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
+        const SizedBox(width: AppSpacing.s8),
+
+        // Avatar / customize
+        GestureDetector(
+          onTap: onCustomize,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: AppGradients.action,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                initials,
+                style: GoogleFonts.manrope(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 }
 
-class _ProductivityScoreCard extends StatelessWidget {
+// ═════════════════════════════════════════════════════════════════════════════
+// Dashboard body — only renders when data is present
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _DashboardBody extends StatelessWidget {
   final DashboardData data;
+  final double dayProgress;
+  final (String, String?) summaryData;
+  final Future<void> Function(String id) onCompleteTask;
+  final VoidCallback onOpenCustomize;
 
-  const _ProductivityScoreCard({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    final totalTasks = data.pendingCount + data.completedToday;
-    final taskScore = totalTasks == 0
-        ? 0
-        : ((data.completedToday / totalTasks) * 55).round();
-    final prayerTotal = data.prayerProgress.total <= 0
-        ? 5
-        : data.prayerProgress.total;
-    final prayerScore = ((data.prayerProgress.completed / prayerTotal) * 45)
-        .round();
-    final score = (taskScore + prayerScore).clamp(0, 100);
-
-    return _WideActionCard(
-      icon: Icons.insights_outlined,
-      title: 'Productivity score',
-      subtitle:
-          '$score% today - ${data.completedToday} tasks done, ${data.prayerProgress.completed}/$prayerTotal prayers tracked.',
-      color: AppColors.success,
-      onTap: () => context.go('/home/analytics'),
-    );
-  }
-}
-
-class _SpiritualDashboardCard extends StatelessWidget {
-  final DashboardSpiritualSummary summary;
-  final VoidCallback onPrayer;
-  final VoidCallback onQuran;
-  final VoidCallback onQibla;
-  final VoidCallback onRamadan;
-
-  const _SpiritualDashboardCard({
-    required this.summary,
-    required this.onPrayer,
-    required this.onQuran,
-    required this.onQibla,
-    required this.onRamadan,
+  const _DashboardBody({
+    required this.data,
+    required this.dayProgress,
+    required this.summaryData,
+    required this.onCompleteTask,
+    required this.onOpenCustomize,
   });
 
   @override
   Widget build(BuildContext context) {
-    final prayerTotal = summary.prayerProgress.total <= 0
-        ? 5
-        : summary.prayerProgress.total;
-    final quran = summary.quranGoal;
-    final quranText = quran.enabled
-        ? '${quran.todayPagesCompleted}/${quran.dailyPageTarget} pages (${quran.progressPercent}%)'
-        : 'Set a daily Quran target';
+    final p = data.personalization;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Daily summary gradient card
+        _DailySummaryCard(
+          progress: dayProgress,
+          headline: summaryData.$1,
+          highlightWord: summaryData.$2,
+          completedToday: data.completedToday,
+          pendingCount: data.pendingCount,
+          onViewDay: () => context.go(AppRoutes.tasks),
+        ),
+        const SizedBox(height: 14),
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.prayerGold.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.prayerGold.withValues(alpha: 0.28)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        // Prayer + Focus row
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.mosque_outlined, color: AppColors.prayerGold),
-              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  'Spiritual today',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                child: _NextPrayerCard(
+                  nextPrayer: p.nextPrayer,
+                  onTap: () => context.go(AppRoutes.prayer),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s12),
+              Expanded(
+                child: _FocusSessionCard(
+                  suggestedMinutes: p.focusShortcut.suggestedMinutes,
+                  onTap: () => context.go(AppRoutes.focus),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          _SpiritualMetricRow(
-            icon: Icons.schedule_outlined,
-            label: 'Next prayer',
-            value:
-                '${_prayerDisplayName(summary.nextPrayer.name)} ${_prayerTimeLabel(summary.nextPrayer)}',
-            onTap: onPrayer,
-          ),
-          const SizedBox(height: 8),
-          _SpiritualMetricRow(
-            icon: Icons.check_circle_outline,
-            label: 'Prayers tracked',
-            value: '${summary.prayerProgress.completed}/$prayerTotal today',
-            onTap: onPrayer,
-          ),
-          const SizedBox(height: 8),
-          _SpiritualMetricRow(
-            icon: Icons.menu_book_outlined,
-            label: 'Quran progress',
-            value: quranText,
-            onTap: onQuran,
-          ),
-          if (summary.ramadan.enabled) ...[
-            const SizedBox(height: 8),
-            _SpiritualMetricRow(
-              icon: Icons.nights_stay_outlined,
-              label: 'Ramadan',
-              value: summary.ramadan.label,
-              onTap: onRamadan,
-            ),
-          ],
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+        ),
+        const SizedBox(height: 14),
+
+        // Today's tasks
+        _TodayTasksCard(
+          topTasks: data.topTasks,
+          onCompleteTask: onCompleteTask,
+          onViewAll: () => context.go(AppRoutes.tasks),
+        ),
+        const SizedBox(height: 14),
+
+        // Habits + AI row
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              OutlinedButton.icon(
-                onPressed: onPrayer,
-                icon: const Icon(Icons.mosque_outlined, size: 18),
-                label: const Text('Prayer'),
+              Expanded(
+                child: _HabitsCard(
+                  snapshot: p.habitSnapshot,
+                  onTap: () => context.go(AppRoutes.habits),
+                ),
               ),
-              OutlinedButton.icon(
-                onPressed: onQuran,
-                icon: const Icon(Icons.menu_book_outlined, size: 18),
-                label: const Text('Quran'),
-              ),
-              OutlinedButton.icon(
-                onPressed: onQibla,
-                icon: const Icon(Icons.explore_outlined, size: 18),
-                label: Text(summary.qibla.available ? 'Qibla' : 'Set Qibla'),
+              const SizedBox(width: AppSpacing.s12),
+              Expanded(
+                child: _AiSuggestionCard(
+                  onTap: () => context.go(AppRoutes.aiCoach),
+                ),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Daily Summary Card
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _DailySummaryCard extends StatelessWidget {
+  final double progress;
+  final String headline;
+  final String? highlightWord;
+  final int completedToday;
+  final int pendingCount;
+  final VoidCallback onViewDay;
+
+  const _DailySummaryCard({
+    required this.progress,
+    required this.headline,
+    this.highlightWord,
+    required this.completedToday,
+    required this.pendingCount,
+    required this.onViewDay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final headlineStyle = GoogleFonts.manrope(
+      fontSize: 22,
+      fontWeight: FontWeight.w800,
+      color: Colors.white,
+      height: 1.25,
+    );
+
+    Widget headlineWidget;
+    final hw = highlightWord;
+    if (hw != null && headline.contains(hw)) {
+      final parts = headline.split(hw);
+      headlineWidget = RichText(
+        text: TextSpan(
+          style: headlineStyle,
+          children: [
+            TextSpan(text: parts[0]),
+            TextSpan(
+              text: hw,
+              style: TextStyle(color: AppColors.brandGold),
+            ),
+            if (parts.length > 1) TextSpan(text: parts[1]),
+          ],
+        ),
+      );
+    } else {
+      headlineWidget = Text(headline, style: headlineStyle);
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppGradients.brand,
+        borderRadius: BorderRadius.circular(AppRadius.xl3),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.brandPrimary.withValues(alpha: 0.32),
+            blurRadius: 32,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(AppSpacing.s20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Left: text + button
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                headlineWidget,
+                const SizedBox(height: AppSpacing.s8),
+                Text(
+                  "Keep going! You're building\nconsistency that matters.",
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.92),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.s16),
+                GestureDetector(
+                  onTap: onViewDay,
+                  child: Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'View your day',
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.brandPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: AppColors.brandPrimary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s12),
+
+          // Right: progress ring
+          ProgressRing(
+            value: progress,
+            size: 108,
+            strokeWidth: 9,
+            trackColor: Colors.white.withValues(alpha: 0.22),
+            gradientColors: [AppColors.brandGold, Colors.white],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${(progress * 100).round()}%',
+                  style: GoogleFonts.manrope(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Day Progress',
+                  style: GoogleFonts.manrope(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -519,47 +596,645 @@ class _SpiritualDashboardCard extends StatelessWidget {
   }
 }
 
-class _SpiritualMetricRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
+// ═════════════════════════════════════════════════════════════════════════════
+// Next Prayer Card
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _NextPrayerCard extends StatelessWidget {
+  final DashboardNextPrayer nextPrayer;
   final VoidCallback onTap;
 
-  const _SpiritualMetricRow({
-    required this.icon,
-    required this.label,
-    required this.value,
+  const _NextPrayerCard({required this.nextPrayer, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = nextPrayer.enabled
+        ? _prayerDisplayName(nextPrayer.name)
+        : 'Prayer';
+    final timeStr = nextPrayer.enabled
+        ? _prayerTimeLabel(nextPrayer)
+        : '—';
+    final countdown = nextPrayer.enabled
+        ? _prayerCountdown(nextPrayer.scheduledAt)
+        : 'Open Prayer to sync';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label
+          Row(
+            children: [
+              const Icon(
+                Icons.nightlight_rounded,
+                size: 16,
+                color: AppColors.brandViolet,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Next Prayer',
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textBody,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Prayer name
+          Text(
+            name,
+            style: GoogleFonts.manrope(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textHeading,
+            ),
+          ),
+          const SizedBox(height: 4),
+
+          // Time
+          Text(
+            timeStr,
+            style: GoogleFonts.manrope(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppColors.brandPrimary,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 2),
+
+          // Countdown
+          Text(
+            countdown,
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textHint,
+            ),
+          ),
+
+          const Spacer(),
+
+          // Mosque decoration
+          Align(
+            alignment: Alignment.centerRight,
+            child: Icon(
+              Icons.mosque_outlined,
+              size: 56,
+              color: AppColors.brandViolet.withValues(alpha: 0.10),
+            ),
+          ),
+
+          // Button
+          GestureDetector(
+            onTap: onTap,
+            child: Container(
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                border: Border.all(color: AppColors.borderSoft),
+                boxShadow: AppShadows.soft,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'View Prayer Times',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.brandPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 12,
+                    color: AppColors.brandPrimary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Focus Session Card
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _FocusSessionCard extends StatelessWidget {
+  final int suggestedMinutes;
+  final VoidCallback onTap;
+
+  const _FocusSessionCard({
+    required this.suggestedMinutes,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.prayerGold, size: 19),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                label,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+    final ringValue = (suggestedMinutes / 60.0).clamp(0.0, 1.0);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label
+          Row(
+            children: [
+              const Icon(
+                Icons.timer_rounded,
+                size: 16,
+                color: AppColors.brandPink,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Focus Session',
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textBody,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Ring
+          Center(
+            child: ProgressRing(
+              value: ringValue,
+              size: 110,
+              strokeWidth: 10,
+              trackColor: AppColors.bgSurfaceLavender,
+              gradientColors: [AppColors.brandPrimary, AppColors.brandPink],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$suggestedMinutes:00',
+                    style: GoogleFonts.manrope(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textHeading,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  Text(
+                    'Focus Time',
+                    style: GoogleFonts.manrope(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textHint,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                value,
-                textAlign: TextAlign.end,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+
+          const Spacer(),
+
+          // Button
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              onTap();
+            },
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: AppGradients.action,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                boxShadow: AppShadows.glowPurple,
               ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Start Focus',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Today's Tasks Card
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _TodayTasksCard extends StatelessWidget {
+  final List<DashboardTopTask> topTasks;
+  final Future<void> Function(String id) onCompleteTask;
+  final VoidCallback onViewAll;
+
+  const _TodayTasksCard({
+    required this.topTasks,
+    required this.onCompleteTask,
+    required this.onViewAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tasks = topTasks.take(3).toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppColors.featTasksSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(
+                  Icons.task_alt_rounded,
+                  size: 16,
+                  color: AppColors.featTasks,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Text(
+                "Today's Tasks",
+                style: GoogleFonts.manrope(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textHeading,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: onViewAll,
+                child: Row(
+                  children: [
+                    Text(
+                      'View all',
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.brandPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 12,
+                      color: AppColors.brandPrimary,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // Task rows
+          if (tasks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.s20),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline_rounded,
+                      size: 40,
+                      color: AppColors.borderSoft,
+                    ),
+                    const SizedBox(height: AppSpacing.s8),
+                    Text(
+                      'No tasks for today',
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textHint,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...tasks.asMap().entries.map((e) {
+              final i = e.key;
+              final task = e.value;
+              return _TaskRow(
+                task: task,
+                showDivider: i > 0,
+                onComplete: () => onCompleteTask(task.id),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+class _TaskRow extends StatelessWidget {
+  final DashboardTopTask task;
+  final bool showDivider;
+  final VoidCallback onComplete;
+
+  const _TaskRow({
+    required this.task,
+    required this.showDivider,
+    required this.onComplete,
+  });
+
+  Color _bubbleBg(String p) {
+    if (p == 'high') return AppColors.errorSoft;
+    if (p == 'medium') return AppColors.warningSoft;
+    return AppColors.featHabitsSoft;
+  }
+
+  Color _bubbleColor(String p) {
+    if (p == 'high') return AppColors.errorColor;
+    if (p == 'medium') return AppColors.warningColor;
+    return AppColors.featHabits;
+  }
+
+  IconData _bubbleIcon(String p) {
+    if (p == 'high') return Icons.priority_high_rounded;
+    if (p == 'medium') return Icons.remove_rounded;
+    return Icons.task_alt_rounded;
+  }
+
+  String _priorityLabel(String p) {
+    if (p == 'high') return 'High Priority';
+    if (p == 'medium') return 'Medium';
+    return 'Normal';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        if (showDivider)
+          Divider(height: 1, thickness: 1, color: AppColors.dividerColor),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            children: [
+              // Icon bubble
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _bubbleBg(task.priority),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _bubbleIcon(task.priority),
+                  size: 18,
+                  color: _bubbleColor(task.priority),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s12),
+
+              // Title + sub
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textHeading,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _priorityLabel(task.priority),
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textHint,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+
+              // Badge + check
+              Container(
+                height: 26,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.bgSurfaceLavender,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Center(
+                  child: Text(
+                    'Today',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.brandPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+
+              // Complete button
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  onComplete();
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.brandPrimary,
+                      width: 2,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    size: 16,
+                    color: AppColors.brandPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Habits Overview Card
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _HabitsCard extends StatelessWidget {
+  final DashboardHabitSnapshot snapshot;
+  final VoidCallback onTap;
+
+  const _HabitsCard({required this.snapshot, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final active = snapshot.activeCount;
+    final completed = snapshot.completedToday;
+    final ratio = active == 0 ? 0.0 : (completed / active).clamp(0.0, 1.0);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgSurface,
+          borderRadius: BorderRadius.circular(AppRadius.xl2),
+          border: Border.all(color: AppColors.borderSoft),
+          boxShadow: AppShadows.card,
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.insights_rounded,
+                  size: 16,
+                  color: AppColors.brandPrimary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Habits Overview',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textHeading,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                // Ring
+                ProgressRing(
+                  value: ratio,
+                  size: 60,
+                  strokeWidth: 6,
+                  trackColor: AppColors.bgSurfaceLavender,
+                  gradientColors: [AppColors.brandPink, AppColors.brandPrimary],
+                  child: Text(
+                    '$completed',
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textHeading,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Completed',
+                        style: GoogleFonts.manrope(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textHint,
+                        ),
+                      ),
+                      Text(
+                        '$completed / $active',
+                        style: GoogleFonts.manrope(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textHeading,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                        child: LinearProgressIndicator(
+                          value: ratio,
+                          backgroundColor: AppColors.bgSurfaceLavender,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.brandPrimary,
+                          ),
+                          minHeight: 5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Today',
+                        style: GoogleFonts.manrope(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textHint,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -567,6 +1242,212 @@ class _SpiritualMetricRow extends StatelessWidget {
     );
   }
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// AI Suggestion Card
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _AiSuggestionCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AiSuggestionCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppGradients.ai,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome_rounded,
+                size: 16,
+                color: AppColors.brandPink,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'AI Suggestion',
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textHeading,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Text(
+              '"Small steps today create big changes tomorrow. You\'ve got this!',
+              style: GoogleFonts.manrope(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textBody,
+                fontStyle: FontStyle.italic,
+                height: 1.55,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          GestureDetector(
+            onTap: onTap,
+            child: Row(
+              children: [
+                Text(
+                  'Ask AI anything',
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.brandPrimary,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 11,
+                  color: AppColors.brandPrimary,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// State cards: loading / error / empty
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _LoadingCard extends StatelessWidget {
+  const _LoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s40),
+        child: CircularProgressIndicator(
+          color: AppColors.brandPrimary,
+          strokeWidth: 2.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorCard extends StatelessWidget {
+  final String message;
+  final Future<void> Function() onRetry;
+
+  const _ErrorCard({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.s20),
+      decoration: BoxDecoration(
+        color: AppColors.errorSoft,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.errorColor.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Dashboard failed to load',
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.errorColor,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s6),
+          Text(
+            message,
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textBody,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          GestureDetector(
+            onTap: onRetry,
+            child: Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                border: Border.all(color: AppColors.errorColor.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.refresh_rounded,
+                    size: 16,
+                    color: AppColors.errorColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Retry',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.errorColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyCard extends StatelessWidget {
+  const _EmptyCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.s28),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+      ),
+      child: Center(
+        child: Text(
+          'Dashboard is empty',
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHint,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Dashboard customization sheet — logic preserved exactly from original
+// ═════════════════════════════════════════════════════════════════════════════
 
 class _DashboardCustomizeSheet extends ConsumerStatefulWidget {
   final List<String> currentWidgets;
@@ -599,7 +1480,7 @@ class _DashboardCustomizeSheetState
   Future<void> _save() async {
     setState(() => _isSaving = true);
     final enabled = _orderedWidgets
-        .where((widgetId) => _enabledWidgets.contains(widgetId))
+        .where((id) => _enabledWidgets.contains(id))
         .toList();
     final saved = await ref
         .read(dashboardProvider.notifier)
@@ -611,9 +1492,8 @@ class _DashboardCustomizeSheetState
     } else {
       final error =
           ref.read(dashboardProvider).error ?? 'Dashboard not updated';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
@@ -621,7 +1501,9 @@ class _DashboardCustomizeSheetState
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.s20, AppSpacing.s16, AppSpacing.s20, AppSpacing.s24,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -629,19 +1511,21 @@ class _DashboardCustomizeSheetState
               children: [
                 Text(
                   'Customize Dashboard',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  style: GoogleFonts.manrope(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textHeading,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
                   tooltip: 'Close',
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.textBody),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.s8),
             SizedBox(
               height: 420,
               child: ReorderableListView.builder(
@@ -654,19 +1538,22 @@ class _DashboardCustomizeSheetState
                   });
                 },
                 itemBuilder: (context, index) {
-                  final widgetId = _orderedWidgets[index];
+                  final id = _orderedWidgets[index];
                   return SwitchListTile(
-                    key: ValueKey(widgetId),
-                    value: _enabledWidgets.contains(widgetId),
-                    secondary: Icon(_dashboardWidgetIcon(widgetId)),
-                    title: Text(_dashboardWidgetLabel(widgetId)),
+                    key: ValueKey(id),
+                    value: _enabledWidgets.contains(id),
+                    secondary: Icon(_dashboardWidgetIcon(id)),
+                    title: Text(
+                      _dashboardWidgetLabel(id),
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+                    ),
                     subtitle: const Text('Drag to reorder'),
                     onChanged: (enabled) {
                       setState(() {
                         if (enabled) {
-                          _enabledWidgets.add(widgetId);
+                          _enabledWidgets.add(id);
                         } else {
-                          _enabledWidgets.remove(widgetId);
+                          _enabledWidgets.remove(id);
                         }
                       });
                     },
@@ -674,13 +1561,16 @@ class _DashboardCustomizeSheetState
                 },
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s12),
             _isSaving
                 ? const CircularProgressIndicator()
-                : ElevatedButton.icon(
-                    onPressed: _save,
-                    icon: const Icon(Icons.save_outlined),
-                    label: const Text('Save'),
+                : SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _save,
+                      icon: const Icon(Icons.save_outlined),
+                      label: const Text('Save'),
+                    ),
                   ),
           ],
         ),
@@ -689,455 +1579,69 @@ class _DashboardCustomizeSheetState
   }
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// Helper functions — preserved from original
+// ═════════════════════════════════════════════════════════════════════════════
+
 String _dashboardWidgetLabel(String widgetId) {
   return switch (widgetId) {
-    'top_tasks' => 'Top tasks',
-    'next_prayer' => 'Next prayer',
-    'habit_snapshot' => 'Habits',
-    'journal_prompt' => 'Journal prompt',
-    'ai_plan' => 'AI plan',
-    'focus_shortcut' => 'Focus shortcut',
+    'top_tasks'          => 'Top tasks',
+    'next_prayer'        => 'Next prayer',
+    'habit_snapshot'     => 'Habits',
+    'journal_prompt'     => 'Journal prompt',
+    'ai_plan'            => 'AI plan',
+    'focus_shortcut'     => 'Focus shortcut',
     'productivity_score' => 'Productivity score',
-    'quran_goal' => 'Spiritual today',
-    _ => widgetId,
+    'quran_goal'         => 'Spiritual today',
+    _                    => widgetId,
   };
 }
 
 IconData _dashboardWidgetIcon(String widgetId) {
   return switch (widgetId) {
-    'top_tasks' => Icons.task_alt_outlined,
-    'next_prayer' => Icons.mosque_outlined,
-    'habit_snapshot' => Icons.track_changes_outlined,
-    'journal_prompt' => Icons.edit_note_outlined,
-    'ai_plan' => Icons.auto_awesome_outlined,
-    'focus_shortcut' => Icons.timer_outlined,
+    'top_tasks'          => Icons.task_alt_outlined,
+    'next_prayer'        => Icons.mosque_outlined,
+    'habit_snapshot'     => Icons.track_changes_outlined,
+    'journal_prompt'     => Icons.edit_note_outlined,
+    'ai_plan'            => Icons.auto_awesome_outlined,
+    'focus_shortcut'     => Icons.timer_outlined,
     'productivity_score' => Icons.insights_outlined,
-    'quran_goal' => Icons.menu_book_outlined,
-    _ => Icons.dashboard_customize_outlined,
+    'quran_goal'         => Icons.menu_book_outlined,
+    _                    => Icons.dashboard_customize_outlined,
   };
 }
 
 String _prayerDisplayName(String? name) {
   return switch (name) {
-    'fajr' => 'Fajr',
-    'dhuhr' => 'Dhuhr',
-    'asr' => 'Asr',
-    'maghrib' => 'Maghrib',
-    'isha' => 'Isha',
-    null || '' => 'Next prayer',
-    _ => name,
+    'fajr'       => 'Fajr',
+    'dhuhr'      => 'Dhuhr',
+    'asr'        => 'Asr',
+    'maghrib'    => 'Maghrib',
+    'isha'       => 'Isha',
+    null || ''   => 'Next prayer',
+    _            => name,
   };
 }
 
 String _prayerTimeLabel(DashboardNextPrayer nextPrayer) {
   final scheduledAt = nextPrayer.scheduledAt;
-  if (scheduledAt == null || scheduledAt.length < 16) {
-    return 'Open Prayer to sync today\'s times';
-  }
-
+  if (scheduledAt == null || scheduledAt.length < 16) return '—';
   final parsed = DateTime.tryParse(scheduledAt);
-  if (parsed == null) return 'Open Prayer to sync today\'s times';
+  if (parsed == null) return '—';
   final local = parsed.toLocal();
   final hour = local.hour.toString().padLeft(2, '0');
   final minute = local.minute.toString().padLeft(2, '0');
   return '$hour:$minute';
 }
 
-class _NextPrayerCard extends StatelessWidget {
-  final DashboardNextPrayer nextPrayer;
-  final VoidCallback onTap;
-
-  const _NextPrayerCard({required this.nextPrayer, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final title = nextPrayer.enabled
-        ? _prayerDisplayName(nextPrayer.name)
-        : 'Prayer rhythm';
-    final subtitle = nextPrayer.enabled
-        ? _prayerTimeLabel(nextPrayer)
-        : 'Add spiritual growth in onboarding settings to prioritize prayer anchors.';
-
-    return _WideActionCard(
-      icon: Icons.mosque_outlined,
-      title: title,
-      subtitle: subtitle,
-      color: AppColors.prayerGold,
-      onTap: onTap,
-    );
-  }
-}
-
-class _HabitSnapshotCard extends StatelessWidget {
-  final int activeCount;
-  final int completedToday;
-  final String highlight;
-  final VoidCallback onTap;
-
-  const _HabitSnapshotCard({
-    required this.activeCount,
-    required this.completedToday,
-    required this.highlight,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _MiniActionCard(
-      icon: Icons.track_changes_outlined,
-      title: '$completedToday / $activeCount',
-      subtitle: highlight,
-      color: AppColors.success,
-      onTap: onTap,
-    );
-  }
-}
-
-class _FocusShortcutCard extends StatelessWidget {
-  final String label;
-  final int minutes;
-  final VoidCallback onTap;
-
-  const _FocusShortcutCard({
-    required this.label,
-    required this.minutes,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _MiniActionCard(
-      icon: Icons.timer_outlined,
-      title: '$minutes min',
-      subtitle: label,
-      color: AppColors.primary,
-      onTap: onTap,
-    );
-  }
-}
-
-class _AiPlanPreviewCard extends StatelessWidget {
-  final String title;
-  final String preview;
-  final VoidCallback onTap;
-
-  const _AiPlanPreviewCard({
-    required this.title,
-    required this.preview,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _WideActionCard(
-      icon: Icons.auto_awesome,
-      title: title,
-      subtitle: preview,
-      color: AppColors.warning,
-      onTap: onTap,
-    );
-  }
-}
-
-class _JournalPromptCard extends StatelessWidget {
-  final String prompt;
-  final VoidCallback onTap;
-
-  const _JournalPromptCard({required this.prompt, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return _WideActionCard(
-      icon: Icons.edit_note_outlined,
-      title: 'Journal prompt',
-      subtitle: prompt,
-      color: AppColors.prayerGold,
-      onTap: onTap,
-    );
-  }
-}
-
-class _MiniActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _MiniActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 112,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.28)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color),
-            const Spacer(),
-            Text(
-              title,
-              style: TextStyle(color: color, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _WideActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _WideActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.26)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: color),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TopTaskTile extends ConsumerWidget {
-  final String id;
-  final String title;
-  final String priority;
-  final String? dueAt;
-
-  const _TopTaskTile({
-    required this.id,
-    required this.title,
-    required this.priority,
-    this.dueAt,
-  });
-
-  Color _priorityColor(String p) {
-    if (p == 'high') return AppColors.error;
-    if (p == 'medium') return AppColors.warning;
-    return AppColors.success;
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: _priorityColor(priority), width: 3),
-        ),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () async {
-              await ref.read(tasksProvider.notifier).completeTask(id);
-              await ref.read(dashboardProvider.notifier).loadDashboard();
-            },
-            child: const Icon(
-              Icons.radio_button_unchecked,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                if (dueAt != null)
-                  Text(
-                    'Due: ${dueAt!.substring(0, 10)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DashboardErrorCard extends StatelessWidget {
-  final String message;
-  final Future<void> Function() onRetry;
-
-  const _DashboardErrorCard({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Dashboard failed to load',
-            style: TextStyle(
-              color: AppColors.error,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            message,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('Retry'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyCard extends StatelessWidget {
-  final String message;
-
-  const _EmptyCard({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(child: Text(message)),
-    );
-  }
-}
-
-class _NavCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _NavCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+String _prayerCountdown(String? scheduledAt) {
+  if (scheduledAt == null) return '';
+  final parsed = DateTime.tryParse(scheduledAt);
+  if (parsed == null) return '';
+  final diff = parsed.toLocal().difference(DateTime.now());
+  if (diff.isNegative) return 'Time passed';
+  final h = diff.inHours;
+  final m = diff.inMinutes % 60;
+  if (h > 0) return 'in ${h}h ${m}m';
+  return 'in ${m}m';
 }
