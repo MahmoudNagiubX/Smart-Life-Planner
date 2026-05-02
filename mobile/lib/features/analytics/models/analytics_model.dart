@@ -93,6 +93,10 @@ class WeeklyAnalytics {
     required this.dailyBreakdown,
   });
 
+  /// Algorithm: Aggregation Mapping
+  /// Used for: Weekly analytics summary hydration.
+  /// Complexity: O(n) over daily breakdown rows.
+  /// Notes: Converts grouped backend analytics into app-ready summary models.
   factory WeeklyAnalytics.fromJson(Map<String, dynamic> json) {
     return WeeklyAnalytics(
       weekStart: json['week_start'] as String,

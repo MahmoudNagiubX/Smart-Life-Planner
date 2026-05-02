@@ -18,6 +18,10 @@ class QiblaService {
 
   const QiblaService();
 
+  /// Algorithm: Great-Circle Bearing Formula
+  /// Used for: Qibla direction from user coordinates to the Kaaba.
+  /// Complexity: O(1)
+  /// Notes: Converts coordinates to radians, applies atan2, and normalizes.
   QiblaDirection calculateBearing({
     required double latitude,
     required double longitude,

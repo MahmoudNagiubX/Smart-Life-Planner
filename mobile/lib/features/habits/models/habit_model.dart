@@ -25,6 +25,10 @@ class HabitModel {
     required this.createdAt,
   });
 
+  /// Algorithm: Fault-Tolerant / Defensive Parsing
+  /// Used for: Habit API response parsing.
+  /// Complexity: O(1) per scalar field.
+  /// Notes: Coerces dynamic JSON into safe typed values with fallbacks.
   factory HabitModel.fromJson(Map<String, dynamic> json) {
     return HabitModel(
       id: _asString(json['id']),
@@ -55,6 +59,10 @@ class HabitLogModel {
     required this.isCompleted,
   });
 
+  /// Algorithm: Fault-Tolerant / Defensive Parsing
+  /// Used for: Habit log API response parsing.
+  /// Complexity: O(1) per scalar field.
+  /// Notes: Prevents malformed API values from crashing the mobile client.
   factory HabitLogModel.fromJson(Map<String, dynamic> json) {
     return HabitLogModel(
       id: _asString(json['id']),

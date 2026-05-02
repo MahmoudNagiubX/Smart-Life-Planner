@@ -32,12 +32,20 @@ class NotificationCenterState {
     );
   }
 
+  /// Algorithm: Filtering and Sorting
+  /// Used for: Notification center recent reminders.
+  /// Complexity: O(n log n) because filtered reminders are sorted.
+  /// Notes: Removes cleared reminders and shows newest scheduled items first.
   List<ReminderModel> get recent {
     final items = reminders.where((reminder) => !_isCleared(reminder)).toList()
       ..sort(_newestFirst);
     return items.take(40).toList();
   }
 
+  /// Algorithm: Rule-Based Classification
+  /// Used for: Missed reminder detection.
+  /// Complexity: O(n log n) because matching reminders are sorted.
+  /// Notes: Classifies reminders as missed when their scheduled time is past.
   List<ReminderModel> get missed {
     final now = DateTime.now();
     return reminders.where((reminder) {

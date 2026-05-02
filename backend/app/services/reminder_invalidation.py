@@ -28,6 +28,11 @@ def disabled_preference_target_types(
     *,
     notifications_enabled: bool | None = None,
 ) -> set[str]:
+    """Algorithm: Rule-Based Classification
+    Used for: Mapping disabled reminder preferences to target types.
+    Complexity: O(k), where k is the number of preference categories.
+    Notes: Produces the set of reminder targets that should be invalidated.
+    """
     if notifications_enabled is False:
         return set().union(*PREFERENCE_TARGET_TYPES.values())
 
@@ -50,6 +55,11 @@ async def invalidate_target_reminders(
     target_id: uuid.UUID | None = None,
     reason: str,
 ) -> int:
+    """Algorithm: Invalidation Algorithm
+    Used for: Reminder cleanup when a source entity changes.
+    Complexity: O(n) over matching active reminders.
+    Notes: Finds active reminders for a target and cancels stale records.
+    """
     query = _active_reminders_query(user_id).where(Reminder.target_type == target_type)
     if target_id is not None:
         query = query.where(Reminder.target_id == target_id)
@@ -64,6 +74,11 @@ async def invalidate_target_types(
     target_types: Iterable[str],
     reason: str,
 ) -> int:
+    """Algorithm: Invalidation Algorithm
+    Used for: Bulk reminder cleanup after preference changes.
+    Complexity: O(n) over matching active reminders.
+    Notes: Cancels reminders whose target type is now disabled.
+    """
     normalized = {target_type for target_type in target_types if target_type}
     if not normalized:
         return 0

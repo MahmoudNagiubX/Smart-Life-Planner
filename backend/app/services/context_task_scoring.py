@@ -20,6 +20,11 @@ def score_context_task(
     weather_summary: str | None = None,
     now: datetime | None = None,
 ) -> dict:
+    """Algorithm: Weighted Scoring
+    Used for: Context-aware task ranking.
+    Complexity: O(1) per task.
+    Notes: Adds positive context components and subtracts friction penalties.
+    """
     priority_score = _priority_score(getattr(task, "priority", "medium"))
     time_match_score = _time_match_score(local_time_block, task)
     energy_match_score = _energy_match_score(
@@ -74,6 +79,11 @@ def rank_context_tasks(
     weather_summary: str | None = None,
     limit: int = 5,
 ) -> list[tuple[object, dict]]:
+    """Algorithm: Ranking by Weighted Score
+    Used for: Context intelligence recommendations.
+    Complexity: O(n log n) because scored tasks are sorted.
+    Notes: Returns the highest-scoring incomplete tasks up to the limit.
+    """
     scored = [
         (
             task,

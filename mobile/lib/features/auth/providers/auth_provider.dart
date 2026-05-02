@@ -10,6 +10,10 @@ import '../utils/auth_error_messages.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
+/// Algorithm: Finite State Machine
+/// Used for: Auth flow transitions between unknown, authenticated, and unauthenticated.
+/// Complexity: O(1) per state transition.
+/// Notes: Provider methods move the app through controlled auth states.
 class AuthState {
   final AuthStatus status;
   final Map<String, dynamic>? user;

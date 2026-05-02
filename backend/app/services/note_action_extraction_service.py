@@ -29,6 +29,11 @@ ACTION_WORDS = (
 
 
 def fallback_note_action_extraction(note_text: str, today: date) -> dict[str, Any]:
+    """Algorithm: Rule-Based Information Extraction
+    Used for: Offline-safe note action suggestions.
+    Complexity: O(n) over candidate clauses.
+    Notes: Detects action wording, checklist markers, and reminder times.
+    """
     items: list[dict[str, Any]] = []
     for clause in _candidate_clauses(note_text):
         item = _fallback_item_from_clause(clause, today)
@@ -46,6 +51,11 @@ def fallback_note_action_extraction(note_text: str, today: date) -> dict[str, An
 
 
 def normalize_note_action_extraction(result: dict[str, Any]) -> dict[str, Any]:
+    """Algorithm: Fault-Tolerant / Defensive Parsing
+    Used for: AI action extraction normalization.
+    Complexity: O(n) over extracted items.
+    Notes: Validates item shape and falls back to safe defaults.
+    """
     raw_items = result.get("extracted_items")
     if not isinstance(raw_items, list):
         raw_items = []

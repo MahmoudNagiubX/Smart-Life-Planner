@@ -2,6 +2,11 @@ from datetime import date, timedelta
 
 
 def focus_current_streak(focus_days: set[date], today: date) -> int:
+    """Algorithm: Sequential Counting
+    Used for: Current focus streak calculation.
+    Complexity: O(s), where s is the current streak length.
+    Notes: Walks backward day by day while completed focus days continue.
+    """
     current = today
     if current not in focus_days and current - timedelta(days=1) in focus_days:
         current = current - timedelta(days=1)
@@ -14,6 +19,11 @@ def focus_current_streak(focus_days: set[date], today: date) -> int:
 
 
 def focus_longest_streak(focus_days: list[date]) -> int:
+    """Algorithm: Sequential Counting
+    Used for: Longest focus streak calculation.
+    Complexity: O(n log n) because dates are sorted before scanning.
+    Notes: Counts consecutive completed days and tracks the maximum run.
+    """
     longest = 0
     running = 0
     previous_day: date | None = None

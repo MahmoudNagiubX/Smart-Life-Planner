@@ -7,6 +7,11 @@ MAX_NOTE_SUMMARY_INPUT_CHARS = 12000
 
 
 def build_note_summary_source(note: Note) -> str:
+    """Algorithm: Aggregation
+    Used for: Building a note summary source from title, content, and blocks.
+    Complexity: O(n) over checklist and structured block items.
+    Notes: Combines scattered note fields into one bounded summary input.
+    """
     parts: list[str] = []
     if note.title:
         parts.append(f"Title: {note.title.strip()}")
@@ -48,6 +53,11 @@ def build_note_summary_source(note: Note) -> str:
 
 
 def fallback_note_summary(note_text: str, summary_style: str) -> dict:
+    """Algorithm: Rule-Based Summarization Heuristic
+    Used for: Deterministic note summaries when AI is unavailable.
+    Complexity: O(n) over note text.
+    Notes: Splits sentences and selects a short style-specific summary.
+    """
     clean_text = _compact_whitespace(note_text)
     sentences = _split_sentences(clean_text)
     selected = sentences[:4] if sentences else [clean_text[:280]]
@@ -74,6 +84,11 @@ def fallback_note_summary(note_text: str, summary_style: str) -> dict:
 
 
 def normalize_note_summary_result(result: dict, fallback_used: bool = False) -> dict:
+    """Algorithm: Fault-Tolerant / Defensive Parsing
+    Used for: AI note summary normalization.
+    Complexity: O(1)
+    Notes: Ensures summary, confidence, fallback, and safety fields are safe.
+    """
     if not isinstance(result, dict):
         return fallback_note_summary("", "short")
 

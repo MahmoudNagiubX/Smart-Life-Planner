@@ -23,6 +23,10 @@ final focusAmbientSoundServiceProvider = Provider<FocusAmbientSoundService>((
   return service;
 });
 
+/// Algorithm: Finite State Machine
+/// Used for: Focus session lifecycle and timer state.
+/// Complexity: O(1) per transition; timer ticks update one counter.
+/// Notes: Moves between idle, active focus, break, completed, and cancelled states.
 class FocusState {
   final FocusSession? activeSession;
   final FocusAnalytics? analytics;
@@ -446,6 +450,10 @@ class FocusNotifier extends StateNotifier<FocusState> {
     return _ref.read(focusAmbientSoundServiceProvider).stop();
   }
 
+  /// Algorithm: Modular Counting
+  /// Used for: Deciding when a Pomodoro cycle should start a long break.
+  /// Complexity: O(n) over completed sessions in memory.
+  /// Notes: Every N completed focus sessions triggers a long break.
   bool _shouldStartLongBreak(FocusSession completed) {
     if (_isBreakSession(completed.sessionType)) return false;
     final completedFocusIds = state.sessions

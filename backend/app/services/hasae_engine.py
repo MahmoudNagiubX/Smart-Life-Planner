@@ -33,6 +33,11 @@ OVERLOAD_THRESHOLD = 0.85  # 85% capacity = overloaded
 
 def is_task_eligible(task: dict, completed_task_ids: set[str]) -> bool:
     """
+    Algorithm: Rule-Based Filtering
+    Used for: H-ASAE scheduling eligibility.
+    Complexity: O(d), where d is the number of dependencies.
+    Notes: Excludes completed/deleted tasks and tasks with unmet prerequisites.
+
     A task is eligible for scheduling only if:
     1. It is not completed or deleted
     2. All its prerequisites are completed
@@ -55,6 +60,11 @@ def is_task_eligible(task: dict, completed_task_ids: set[str]) -> bool:
 
 def calculate_urgency(due_at: Optional[datetime], now: datetime) -> float:
     """
+    Algorithm: Rule-Based Classification
+    Used for: Deadline urgency scoring.
+    Complexity: O(1)
+    Notes: Maps remaining time windows to urgency scores.
+
     Returns urgency score 0.0 to 1.0.
     Higher = more urgent.
     """
@@ -137,6 +147,11 @@ def score_task(
     available_minutes: int,
 ) -> dict:
     """
+    Algorithm: Weighted Scoring
+    Used for: Smart task ranking in H-ASAE.
+    Complexity: O(1) per task.
+    Notes: Combines priority, urgency, energy fit, duration fit, and flexibility.
+
     Computes a weighted execution score for a task.
     Returns the score and a plain-language explanation.
 
@@ -211,6 +226,11 @@ def rank_tasks(
     completed_task_ids: set[str],
 ) -> list[dict]:
     """
+    Algorithm: Ranking by Weighted Score
+    Used for: H-ASAE ranked task recommendations.
+    Complexity: O(n log n) after O(n) filtering and scoring.
+    Notes: Sorts eligible tasks from highest score to lowest score.
+
     Filters eligible tasks, scores them, and returns ranked list
     highest score first.
     """
@@ -226,6 +246,11 @@ def detect_overload(
     already_scheduled_minutes: int = 0,
 ) -> dict:
     """
+    Algorithm: Aggregation and Threshold Classification
+    Used for: Daily schedule overload detection.
+    Complexity: O(n)
+    Notes: Sums pending task durations and compares load against capacity.
+
     Detects if the user's pending tasks exceed daily capacity.
     Returns overload state and message.
     """
@@ -272,6 +297,11 @@ def get_next_best_action(
     completed_task_ids: set[str],
 ) -> dict:
     """
+    Algorithm: Greedy Selection
+    Used for: Choosing the best next task before the next prayer window.
+    Complexity: O(p + n log n), where p is prayers and n is tasks.
+    Notes: Picks the highest ranked currently eligible task.
+
     Returns the single best task to do right now using H-ASAE scoring.
     Respects upcoming prayer times as hard constraints.
     """
@@ -346,6 +376,11 @@ def get_replan_candidates(
     trigger_event: str = "task_completed",
 ) -> dict:
     """
+    Algorithm: Rule-Based Classification
+    Used for: Future-only replanning candidate detection.
+    Complexity: O(n)
+    Notes: Finds eligible tasks and classifies high-urgency candidates.
+
     After an automation event, identifies which tasks need replanning.
     ONLY touches future schedule — never modifies past blocks.
     """

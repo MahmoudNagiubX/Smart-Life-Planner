@@ -19,6 +19,11 @@ def _strip_prefix(text: str, prefixes: tuple[str, ...]) -> str:
 
 
 def _extract_checklist_items(text: str) -> list[str]:
+    """Algorithm: Rule-Based Information Extraction
+    Used for: Checklist item extraction from quick capture text.
+    Complexity: O(n) over input lines/text.
+    Notes: Detects list markers and comma-separated fallback items.
+    """
     items: list[str] = []
     for line in text.splitlines():
         clean = re.sub(r"^\s*(?:[-*]|\d+[.)]|\[[ xX]\])\s*", "", line).strip()
@@ -30,6 +35,11 @@ def _extract_checklist_items(text: str) -> list[str]:
 
 
 def _extract_reminder_at(text: str) -> datetime | None:
+    """Algorithm: Rule-Based Information Extraction
+    Used for: Reminder time parsing in quick capture.
+    Complexity: O(n) over the text pattern search.
+    Notes: Extracts simple today/tomorrow and clock-time expressions.
+    """
     now = datetime.now(timezone.utc)
     lowered = text.lower()
     base_date = now.date()
@@ -59,6 +69,11 @@ def _extract_reminder_at(text: str) -> datetime | None:
 
 
 def classify_quick_capture(input_text: str) -> dict:
+    """Algorithm: Rule-Based Classification
+    Used for: Quick capture task/note/reminder/checklist/journal routing.
+    Complexity: O(n) over the captured text.
+    Notes: Uses deterministic text markers before saving anything.
+    """
     text = input_text.strip()
     lowered = text.lower()
     lines = [line.strip() for line in text.splitlines() if line.strip()]

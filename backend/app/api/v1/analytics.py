@@ -124,6 +124,11 @@ async def get_weekly_analytics(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Algorithm: Aggregation
+    Used for: Weekly analytics and daily breakdown summaries.
+    Complexity: O(d) over the seven-day reporting window plus DB counts.
+    Notes: Groups activity by day, then sums totals and averages scores.
+    """
     user_id: uuid.UUID = current_user.id
     today = _today_utc()
     week_start = _week_start()
@@ -339,6 +344,11 @@ def _calculate_productivity_score(
     total_habits: int,
     prayers_completed: int,
 ) -> int:
+    """Algorithm: Weighted Scoring
+    Used for: Daily productivity score.
+    Complexity: O(1)
+    Notes: Combines capped task, focus, habit, and prayer score components.
+    """
     task_score = min(tasks_completed * 10, 30)
     focus_score = min(int(focus_minutes / 2), 25)
     habit_score = int((habits_completed / max(total_habits, 1)) * 25)
