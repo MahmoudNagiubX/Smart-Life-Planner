@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../routes/app_routes.dart';
 import '../../../features/auth/providers/auth_provider.dart';
+
+const _kNavClearance = 138.0;
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -16,6 +22,8 @@ class ProfileScreen extends ConsumerWidget {
     final provider = user?['auth_provider'] as String? ?? 'email';
     final isVerified = user?['is_verified'] == true;
     final isActive = user?['is_active'] != false;
+    final fullName = user?['full_name'] as String? ?? '';
+    final email = user?['email'] as String? ?? '';
 
     Future<void> showDeleteDialog() async {
       final controller = TextEditingController();
@@ -90,286 +98,375 @@ class ProfileScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-              Text(
-                'Profile',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+      backgroundColor: AppColors.bgApp,
+      body: CustomScrollView(
+        slivers: [
+          // Header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH, 56, AppSpacing.screenH, 0,
               ),
-              const SizedBox(height: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Profile', style: AppTextStyles.h1Light),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Manage your account and preferences.',
+                    style: AppTextStyles.bodySmallLight,
+                  ),
+                ],
+              ),
+            ),
+          ),
 
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: AppColors.primary.withValues(
-                            alpha: 0.2,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            size: 28,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user?['full_name'] as String? ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                user?['email'] as String? ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: AppColors.textSecondary),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _StatusChip(
-                          icon: Icons.login_outlined,
-                          label: _providerLabel(provider),
-                          color: AppColors.primary,
-                        ),
-                        _StatusChip(
-                          icon: isVerified
-                              ? Icons.verified_outlined
-                              : Icons.mark_email_unread_outlined,
-                          label: isVerified ? 'Verified' : 'Unverified',
-                          color: isVerified
-                              ? AppColors.success
-                              : AppColors.warning,
-                        ),
-                        _StatusChip(
-                          icon: isActive
-                              ? Icons.check_circle_outline
-                              : Icons.block_outlined,
-                          label: isActive ? 'Active' : 'Inactive',
-                          color: isActive ? AppColors.success : AppColors.error,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+          // Profile hero card
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH, AppSpacing.s20,
+                AppSpacing.screenH, 0,
               ),
-              const SizedBox(height: 20),
+              child: _ProfileHeroCard(
+                fullName: fullName,
+                email: email,
+                provider: provider,
+                isVerified: isVerified,
+                isActive: isActive,
+              ),
+            ),
+          ),
 
-              // Menu items
-              _MenuItem(
-                icon: Icons.analytics_outlined,
-                label: 'Analytics & Insights',
-                color: AppColors.primary,
-                onTap: () => context.push('/home/analytics'),
+          // Account section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH, AppSpacing.s24,
+                AppSpacing.screenH, 0,
               ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.task_alt,
-                label: 'My Tasks',
-                color: AppColors.success,
-                onTap: () => context.go('/home/tasks'),
+              child: _SettingsSection(
+                label: 'Account',
+                rows: [
+                  _SettingsRow(
+                    icon: Icons.lock_outlined,
+                    iconColor: AppColors.textBody,
+                    iconBg: AppColors.bgSurfaceLavender,
+                    label: 'Change Password',
+                    onTap: () => context.push(AppRoutes.changePassword),
+                  ),
+                  _SettingsRow(
+                    icon: Icons.settings_outlined,
+                    iconColor: AppColors.textBody,
+                    iconBg: AppColors.bgSurfaceLavender,
+                    label: 'App Settings',
+                    onTap: () => context.push(AppRoutes.settings),
+                  ),
+                  _SettingsRow(
+                    icon: Icons.language,
+                    iconColor: AppColors.featJournal,
+                    iconBg: AppColors.featJournalSoft,
+                    label: 'Language',
+                    value: 'English',
+                    onTap: () => context.push(AppRoutes.languageSettings),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.track_changes_outlined,
-                label: 'My Habits',
-                color: AppColors.warning,
-                onTap: () => context.go('/home/habits'),
+            ),
+          ),
+
+          // Productivity section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH, AppSpacing.s20,
+                AppSpacing.screenH, 0,
               ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.notes_outlined,
-                label: 'My Notes',
-                color: AppColors.prayerGold,
-                onTap: () => context.push('/home/notes'),
+              child: _SettingsSection(
+                label: 'Productivity',
+                rows: [
+                  _SettingsRow(
+                    icon: Icons.calendar_today_outlined,
+                    iconColor: AppColors.brandPrimary,
+                    iconBg: AppColors.featTasksSoft,
+                    label: 'AI Daily Plan',
+                    onTap: () => context.push(AppRoutes.dailyPlan),
+                  ),
+                  _SettingsRow(
+                    icon: Icons.analytics_outlined,
+                    iconColor: AppColors.featAnalytics,
+                    iconBg: AppColors.featAnalyticsSoft,
+                    label: 'Analytics & Insights',
+                    onTap: () => context.push(AppRoutes.analytics),
+                  ),
+                  _SettingsRow(
+                    icon: Icons.task_alt,
+                    iconColor: AppColors.featTasks,
+                    iconBg: AppColors.featTasksSoft,
+                    label: 'My Tasks',
+                    onTap: () => context.go(AppRoutes.tasks),
+                  ),
+                  _SettingsRow(
+                    icon: Icons.track_changes_outlined,
+                    iconColor: AppColors.featHabits,
+                    iconBg: AppColors.featHabitsSoft,
+                    label: 'My Habits',
+                    onTap: () => context.go(AppRoutes.habits),
+                  ),
+                  _SettingsRow(
+                    icon: Icons.notes_outlined,
+                    iconColor: AppColors.featNotes,
+                    iconBg: AppColors.featNotesSoft,
+                    label: 'My Notes',
+                    onTap: () => context.push(AppRoutes.notes),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.calendar_today_outlined,
-                label: 'AI Daily Plan',
-                color: AppColors.primary,
-                onTap: () => context.push('/home/daily-plan'),
+            ),
+          ),
+
+          // Notifications section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH, AppSpacing.s20,
+                AppSpacing.screenH, 0,
               ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.lock_outlined,
-                label: 'Change Password',
-                color: AppColors.textSecondary,
-                onTap: () => context.push(AppRoutes.changePassword),
+              child: _SettingsSection(
+                label: 'Notifications',
+                rows: [
+                  _SettingsRow(
+                    icon: Icons.notifications_active_outlined,
+                    iconColor: AppColors.brandPrimary,
+                    iconBg: AppColors.featTasksSoft,
+                    label: 'Notification Center',
+                    onTap: () => context.push(AppRoutes.notificationCenter),
+                  ),
+                  _SettingsRow(
+                    icon: Icons.notifications_outlined,
+                    iconColor: AppColors.warningColor,
+                    iconBg: AppColors.featNotesSoft,
+                    label: 'Notification Settings',
+                    onTap: () => context.push(AppRoutes.notificationSettings),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.settings_outlined,
-                label: 'Settings',
-                color: AppColors.textSecondary,
-                onTap: () => context.push(AppRoutes.settings),
+            ),
+          ),
+
+          // Spiritual section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH, AppSpacing.s20,
+                AppSpacing.screenH, 0,
               ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.notifications_active_outlined,
-                label: 'Notification Center',
-                color: AppColors.primary,
-                onTap: () => context.push(AppRoutes.notificationCenter),
+              child: _SettingsSection(
+                label: 'Spiritual',
+                rows: [
+                  _SettingsRow(
+                    icon: Icons.mosque_outlined,
+                    iconColor: AppColors.brandViolet,
+                    iconBg: AppColors.featPrayerSoft,
+                    label: 'Prayer Settings',
+                    onTap: () => context.push(AppRoutes.prayerSettings),
+                  ),
+                  _SettingsRow(
+                    icon: Icons.menu_book_outlined,
+                    iconColor: AppColors.brandViolet,
+                    iconBg: AppColors.bgSurfaceLavender,
+                    label: 'Quran Goal',
+                    onTap: () => context.push(AppRoutes.quranGoal),
+                  ),
+                  _SettingsRow(
+                    icon: Icons.explore_outlined,
+                    iconColor: AppColors.warningColor,
+                    iconBg: AppColors.featNotesSoft,
+                    label: 'Qibla',
+                    onTap: () => context.push(AppRoutes.qibla),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.notifications_outlined,
-                label: 'Notification Settings',
-                color: AppColors.warning,
-                onTap: () => context.push(AppRoutes.notificationSettings),
+            ),
+          ),
+
+          // Support section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH, AppSpacing.s20,
+                AppSpacing.screenH, 0,
               ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.language,
-                label: 'Language',
-                color: AppColors.success,
-                onTap: () => context.push(AppRoutes.languageSettings),
-              ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.mosque_outlined,
-                label: 'Prayer Settings',
-                color: AppColors.prayerGold,
-                onTap: () => context.push(AppRoutes.prayerSettings),
-              ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.support_agent_outlined,
+              child: _SettingsSection(
                 label: 'Support',
-                color: AppColors.primary,
-                onTap: () => context.push(AppRoutes.support),
+                rows: [
+                  _SettingsRow(
+                    icon: Icons.support_agent_outlined,
+                    iconColor: AppColors.infoColor,
+                    iconBg: AppColors.infoSoft,
+                    label: 'Help & Support',
+                    onTap: () => context.push(AppRoutes.support),
+                  ),
+                  _SettingsRow(
+                    icon: Icons.info_outline,
+                    iconColor: AppColors.textBody,
+                    iconBg: AppColors.bgSurfaceLavender,
+                    label: 'About',
+                    onTap: () => context.push(AppRoutes.about),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              _MenuItem(
-                icon: Icons.info_outline,
-                label: 'About',
-                color: AppColors.textSecondary,
-                onTap: () => context.push(AppRoutes.about),
+            ),
+          ),
+
+          // Sign out
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH, AppSpacing.s32,
+                AppSpacing.screenH, 0,
               ),
-
-              const SizedBox(height: 32),
-
-              // Sign out
-              ElevatedButton.icon(
-                onPressed: () async {
+              child: _OutlineActionButton(
+                icon: Icons.logout,
+                label: 'Sign Out',
+                onTap: () async {
                   final confirmed = await confirmDestructiveAction(
                     context: context,
                     title: 'Sign Out',
-                    message: 'Sign out of Smart Life Planner on this device?',
+                    message:
+                        'Sign out of Smart Life Planner on this device?',
                     confirmLabel: 'Sign Out',
                   );
                   if (!confirmed) return;
                   await ref.read(authProvider.notifier).logout();
                 },
-                icon: const Icon(Icons.logout),
-                label: const Text('Sign Out'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.red,
-                  elevation: 0,
-                  side: const BorderSide(color: Colors.red),
-                ),
               ),
-
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 16),
-
-              // Danger Zone
-              Text(
-                'Danger Zone',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: showDeleteDialog,
-                icon: const Icon(Icons.delete_forever),
-                label: const Text('Delete Account'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+
+          // Danger zone
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH, AppSpacing.s20,
+                AppSpacing.screenH, 0,
+              ),
+              child: _DangerZone(onDeleteAccount: showDeleteDialog),
+            ),
+          ),
+
+          const SliverToBoxAdapter(
+            child: SizedBox(height: _kNavClearance),
+          ),
+        ],
       ),
     );
   }
 }
 
+// ── Provider label helper ─────────────────────────────────────────────────────
+
 String _providerLabel(String provider) {
   return switch (provider) {
-    'google' => 'Google account',
-    'apple' => 'Apple account',
-    _ => 'Email account',
+    'google' => 'Google',
+    'apple' => 'Apple',
+    _ => 'Email',
   };
 }
 
-class _StatusChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
+// ── Profile Hero Card ─────────────────────────────────────────────────────────
 
-  const _StatusChip({
-    required this.icon,
-    required this.label,
-    required this.color,
+class _ProfileHeroCard extends StatelessWidget {
+  final String fullName;
+  final String email;
+  final String provider;
+  final bool isVerified;
+  final bool isActive;
+
+  const _ProfileHeroCard({
+    required this.fullName,
+    required this.email,
+    required this.provider,
+    required this.isVerified,
+    required this.isActive,
   });
 
   @override
   Widget build(BuildContext context) {
+    final initial =
+        fullName.isNotEmpty ? fullName.trim()[0].toUpperCase() : '';
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardBr,
+        boxShadow: AppShadows.soft,
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+          // Avatar circle
+          Container(
+            width: 56,
+            height: 56,
+            decoration: const BoxDecoration(
+              color: AppColors.bgSurfaceLavender,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: initial.isNotEmpty
+                  ? Text(initial, style: AppTextStyles.h2(AppColors.brandPrimary))
+                  : const Icon(Icons.person,
+                      color: AppColors.brandPrimary, size: 28),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fullName.isNotEmpty ? fullName : 'User',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.h4Light,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.captionLight,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _StatusBadge(
+                      icon: Icons.login_outlined,
+                      label: _providerLabel(provider),
+                      color: AppColors.brandPrimary,
+                    ),
+                    _StatusBadge(
+                      icon: isVerified
+                          ? Icons.verified_outlined
+                          : Icons.mark_email_unread_outlined,
+                      label: isVerified ? 'Verified' : 'Unverified',
+                      color: isVerified
+                          ? AppColors.successColor
+                          : AppColors.warningColor,
+                    ),
+                    if (!isActive)
+                      _StatusBadge(
+                        icon: Icons.block_outlined,
+                        label: 'Inactive',
+                        color: AppColors.errorColor,
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -378,16 +475,171 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-class _MenuItem extends StatelessWidget {
+class _StatusBadge extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  final VoidCallback onTap;
 
-  const _MenuItem({
+  const _StatusBadge({
     required this.icon,
     required this.label,
     required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Settings Section ──────────────────────────────────────────────────────────
+
+class _SettingsSection extends StatelessWidget {
+  final String label;
+  final List<_SettingsRow> rows;
+
+  const _SettingsSection({
+    required this.label,
+    required this.rows,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: GoogleFonts.manrope(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textHint,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s8),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.bgSurface,
+            borderRadius: AppRadius.cardBr,
+            boxShadow: AppShadows.soft,
+          ),
+          child: ClipRRect(
+            borderRadius: AppRadius.cardBr,
+            child: Column(
+              children: [
+                for (int i = 0; i < rows.length; i++) ...[
+                  rows[i],
+                  if (i < rows.length - 1)
+                    Divider(
+                      height: 1,
+                      color: AppColors.dividerColor,
+                      indent: 62,
+                      endIndent: 0,
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String label;
+  final String? value;
+  final VoidCallback onTap;
+
+  const _SettingsRow({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.label,
+    required this.onTap,
+    this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s16,
+          vertical: 13,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Icon(icon, size: 18, color: iconColor),
+            ),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.body(AppColors.textHeading),
+              ),
+            ),
+            if (value != null) ...[
+              Text(value!, style: AppTextStyles.body(AppColors.textHint)),
+              const SizedBox(width: 4),
+            ],
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: AppColors.textHint,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Sign Out Button ───────────────────────────────────────────────────────────
+
+class _OutlineActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _OutlineActionButton({
+    required this.icon,
+    required this.label,
     required this.onTap,
   });
 
@@ -396,25 +648,77 @@ class _MenuItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        height: AppButtonHeight.primary,
         decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.bgSurface,
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          border: Border.all(
+            color: AppColors.errorColor.withValues(alpha: 0.4),
+          ),
+          boxShadow: AppShadows.soft,
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-            ),
-            Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 20),
+            Icon(icon, color: AppColors.errorColor, size: 20),
+            const SizedBox(width: 8),
+            Text(label, style: AppTextStyles.button(AppColors.errorColor)),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Danger Zone ───────────────────────────────────────────────────────────────
+
+class _DangerZone extends StatelessWidget {
+  final VoidCallback onDeleteAccount;
+
+  const _DangerZone({required this.onDeleteAccount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'DANGER ZONE',
+          style: GoogleFonts.manrope(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.errorColor,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s8),
+        GestureDetector(
+          onTap: onDeleteAccount,
+          child: Container(
+            height: AppButtonHeight.secondary,
+            decoration: BoxDecoration(
+              color: AppColors.bgSurface,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(
+                color: AppColors.errorColor.withValues(alpha: 0.4),
+              ),
+              boxShadow: AppShadows.soft,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.delete_forever,
+                    color: AppColors.errorColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Delete Account',
+                  style: AppTextStyles.button(AppColors.errorColor),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
