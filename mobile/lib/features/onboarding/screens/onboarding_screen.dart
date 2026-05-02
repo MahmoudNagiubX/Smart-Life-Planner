@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../routes/app_routes.dart';
 import '../models/onboarding_data.dart';
 import '../providers/onboarding_provider.dart';
@@ -30,11 +33,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   ];
 
   static const _goals = [
-    _Choice('study', 'Study'),
-    _Choice('work', 'Work'),
-    _Choice('self_improvement', 'Self Improvement'),
-    _Choice('fitness', 'Fitness'),
-    _Choice('spiritual_growth', 'Spiritual Growth'),
+    _Choice('study', 'Study', icon: Icons.menu_book_outlined),
+    _Choice('work', 'Work', icon: Icons.work_outline),
+    _Choice('self_improvement', 'Self improvement', icon: Icons.spa_outlined),
+    _Choice('fitness', 'Fitness', icon: Icons.fitness_center_outlined),
+    _Choice(
+      'spiritual_growth',
+      'Spiritual growth',
+      icon: Icons.mosque_outlined,
+    ),
   ];
 
   @override
@@ -83,7 +90,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Could not save onboarding. Please try again.'),
-        backgroundColor: AppColors.error,
+        backgroundColor: AppColors.errorColor,
       ),
     );
   }
@@ -137,12 +144,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final notifier = ref.read(onboardingProvider.notifier);
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       body: SafeArea(
         child: Column(
           children: [
             _ProgressHeader(
               currentStep: _currentPage + 1,
               totalSteps: _totalSteps,
+              canGoBack: _currentPage > 0,
+              onBack: _back,
             ),
             Expanded(
               child: PageView(
@@ -332,6 +342,7 @@ class _LocationStepState extends State<_LocationStep> {
           TextField(
             controller: _countryController,
             textInputAction: TextInputAction.next,
+            style: AppTextStyles.body(AppColors.textHeading),
             decoration: const InputDecoration(
               labelText: 'Country',
               prefixIcon: Icon(Icons.public_outlined),
@@ -344,6 +355,7 @@ class _LocationStepState extends State<_LocationStep> {
           TextField(
             controller: _cityController,
             textInputAction: TextInputAction.done,
+            style: AppTextStyles.body(AppColors.textHeading),
             decoration: const InputDecoration(
               labelText: 'City',
               prefixIcon: Icon(Icons.location_city_outlined),
@@ -411,23 +423,27 @@ class _GoalsStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return _StepScaffold(
       title: 'Main Goals',
-      subtitle: 'Choose what you want the app to help with first.',
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: goals.map((goal) {
+      subtitle:
+          "Pick everything that matters. We'll personalize your dashboard.",
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: goals.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: AppSpacing.s12,
+          crossAxisSpacing: AppSpacing.s12,
+          childAspectRatio: 1.55,
+        ),
+        itemBuilder: (context, index) {
+          final goal = goals[index];
           final selected = data.goals.contains(goal.value);
-          return FilterChip(
+          return _GoalCard(
+            goal: goal,
             selected: selected,
-            label: Text(goal.label),
-            avatar: Icon(
-              selected ? Icons.check_circle : Icons.add_circle_outline,
-              color: selected ? AppColors.primary : AppColors.textSecondary,
-              size: 18,
-            ),
-            onSelected: (value) {
+            onTap: () {
               final next = [...data.goals];
-              if (value && !next.contains(goal.value)) {
+              if (!selected && !next.contains(goal.value)) {
                 next.add(goal.value);
               } else {
                 next.remove(goal.value);
@@ -435,7 +451,7 @@ class _GoalsStep extends StatelessWidget {
               onChanged(next);
             },
           );
-        }).toList(),
+        },
       ),
     );
   }
@@ -509,7 +525,17 @@ class _PermissionStep extends StatelessWidget {
             onTap: onAllow,
           ),
           const SizedBox(height: 16),
-          OutlinedButton(onPressed: onSkip, child: const Text('Skip for now')),
+          OutlinedButton(
+            onPressed: onSkip,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.brandPrimary,
+              side: const BorderSide(color: AppColors.borderSoft),
+              minimumSize: const Size.fromHeight(AppButtonHeight.secondary),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.pillBr),
+              backgroundColor: AppColors.bgSurface,
+            ),
+            child: const Text('Skip for now'),
+          ),
         ],
       ),
     );
@@ -609,27 +635,36 @@ class _AiRecommendationPreview extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardBr,
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.auto_awesome, color: AppColors.primary),
-              SizedBox(width: 12),
+              Container(
+                width: AppIconSize.avatar,
+                height: AppIconSize.avatar,
+                decoration: BoxDecoration(
+                  gradient: AppGradients.action,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: const Icon(Icons.auto_awesome, color: Colors.white),
+              ),
+              const SizedBox(width: AppSpacing.s12),
               Expanded(
                 child: Text(
                   'AI recommendation preview',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: AppTextStyles.h4Light,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Text(_previewText(), style: Theme.of(context).textTheme.bodyMedium),
+          Text(_previewText(), style: AppTextStyles.bodyLight),
           if (labels.isNotEmpty) ...[
             const SizedBox(height: 12),
             Wrap(
@@ -640,6 +675,8 @@ class _AiRecommendationPreview extends StatelessWidget {
                     (label) => Chip(
                       label: Text(label),
                       visualDensity: VisualDensity.compact,
+                      backgroundColor: AppColors.bgSurfaceLavender,
+                      side: BorderSide.none,
                     ),
                   )
                   .toList(),
@@ -648,9 +685,7 @@ class _AiRecommendationPreview extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Stored seed: goal tags and daily rhythm only.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.captionLight,
           ),
         ],
       ),
@@ -661,35 +696,70 @@ class _AiRecommendationPreview extends StatelessWidget {
 class _ProgressHeader extends StatelessWidget {
   final int currentStep;
   final int totalSteps;
+  final bool canGoBack;
+  final VoidCallback onBack;
 
-  const _ProgressHeader({required this.currentStep, required this.totalSteps});
+  const _ProgressHeader({
+    required this.currentStep,
+    required this.totalSteps,
+    required this.canGoBack,
+    required this.onBack,
+  });
 
   @override
   Widget build(BuildContext context) {
     final progress = currentStep / totalSteps;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenH,
+        AppSpacing.s16,
+        AppSpacing.screenH,
+        AppSpacing.listGap,
+      ),
+      child: Row(
         children: [
-          Text(
-            'Step $currentStep of $totalSteps',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 6,
-              backgroundColor: AppColors.textSecondary.withValues(alpha: 0.18),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.primary,
+          Material(
+            color: AppColors.bgSurface,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              onTap: canGoBack ? onBack : null,
+              child: Container(
+                width: AppButtonHeight.icon,
+                height: AppButtonHeight.icon,
+                decoration: BoxDecoration(
+                  color: AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.borderSoft),
+                  boxShadow: AppShadows.soft,
+                ),
+                child: Icon(
+                  Icons.chevron_left,
+                  color: canGoBack
+                      ? AppColors.textHeading
+                      : AppColors.textHint.withValues(alpha: 0.35),
+                ),
               ),
             ),
+          ),
+          const SizedBox(width: AppSpacing.s16),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: AppRadius.pillBr,
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 6,
+                backgroundColor: AppColors.borderSoft,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.brandPrimary,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s12),
+          Text(
+            'Step $currentStep of $totalSteps',
+            style: AppTextStyles.label(AppColors.textHint),
           ),
         ],
       ),
@@ -711,24 +781,19 @@ class _StepScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenH,
+        AppSpacing.s20,
+        AppSpacing.screenH,
+        AppSpacing.s24,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 28),
+          Text(title, style: AppTextStyles.h1Light),
+          const SizedBox(height: AppSpacing.s8),
+          Text(subtitle, style: AppTextStyles.bodyLargeLight),
+          const SizedBox(height: AppSpacing.s28),
           child,
         ],
       ),
@@ -754,48 +819,56 @@ class _ChoiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderColor = selected
-        ? AppColors.primary
-        : AppColors.textSecondary.withValues(alpha: 0.22);
+        ? AppColors.brandPrimary
+        : AppColors.borderSoft;
     final backgroundColor = selected
-        ? AppColors.primary.withValues(alpha: 0.12)
-        : Theme.of(context).cardTheme.color;
+        ? AppColors.bgSurfaceLavender
+        : AppColors.bgSurface;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(16),
+        borderRadius: AppRadius.cardBr,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.all(AppSpacing.s16),
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: borderColor),
+            borderRadius: AppRadius.cardBr,
+            border: Border.all(color: borderColor, width: selected ? 2 : 1),
+            boxShadow: selected ? AppShadows.glowPurple : AppShadows.soft,
           ),
           child: Row(
             children: [
-              Icon(icon, color: selected ? AppColors.primary : null),
-              const SizedBox(width: 14),
+              Container(
+                width: AppIconSize.avatar,
+                height: AppIconSize.avatar,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? AppColors.brandPrimary.withValues(alpha: 0.14)
+                      : AppColors.bgSurfaceLavender,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Icon(
+                  icon,
+                  color: selected ? AppColors.brandPrimary : AppColors.textHint,
+                  size: AppIconSize.cardHeader,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
+                    Text(title, style: AppTextStyles.h4Light),
+                    const SizedBox(height: AppSpacing.s4),
+                    Text(subtitle, style: AppTextStyles.captionLight),
                   ],
                 ),
               ),
               if (selected)
-                const Icon(Icons.check_circle, color: AppColors.primary),
+                const Icon(Icons.check_circle, color: AppColors.brandPrimary),
             ],
           ),
         ),
@@ -814,23 +887,20 @@ class _SummaryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: AppSpacing.listGap),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardBr,
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(label, style: AppTextStyles.captionLight),
+          const SizedBox(height: AppSpacing.s4),
+          Text(value, style: AppTextStyles.h4Light),
         ],
       ),
     );
@@ -854,37 +924,36 @@ class _BottomControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenH,
+        AppSpacing.s12,
+        AppSpacing.screenH,
+        AppSpacing.s24,
+      ),
+      decoration: const BoxDecoration(color: AppColors.bgApp),
       child: Row(
         children: [
           if (!isFirstStep)
-            TextButton(
+            OutlinedButton(
               onPressed: isLoading ? null : onBack,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.brandPrimary,
+                backgroundColor: AppColors.bgSurface,
+                side: const BorderSide(color: AppColors.borderSoft),
+                minimumSize: const Size(92, AppButtonHeight.secondary),
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.pillBr),
+              ),
               child: const Text('Back'),
             )
           else
-            const SizedBox(width: 72),
-          const Spacer(),
-          SizedBox(
-            width: isLastStep ? 180 : 120,
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(0, 52),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-              ),
-              onPressed: isLoading ? null : onNext,
-              child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(
-                      isLastStep ? 'Start Using App' : 'Next',
-                      textAlign: TextAlign.center,
-                    ),
+            const SizedBox(width: 92),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: _GradientButton(
+              label: isLastStep ? 'Start Using App' : 'Next',
+              isLoading: isLoading,
+              onTap: isLoading ? null : onNext,
             ),
           ),
         ],
@@ -893,11 +962,148 @@ class _BottomControls extends StatelessWidget {
   }
 }
 
+class _GoalCard extends StatelessWidget {
+  final _Choice goal;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _GoalCard({
+    required this.goal,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: AppRadius.cardBr,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.all(AppSpacing.s16),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.bgSurfaceLavender : AppColors.bgSurface,
+            borderRadius: AppRadius.cardBr,
+            border: Border.all(
+              color: selected ? AppColors.brandPrimary : AppColors.borderSoft,
+              width: selected ? 2 : 1,
+            ),
+            boxShadow: selected ? AppShadows.glowPurple : AppShadows.soft,
+          ),
+          child: Stack(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(
+                    goal.icon,
+                    color: selected
+                        ? AppColors.brandPrimary
+                        : AppColors.textHeading,
+                    size: 30,
+                  ),
+                  Text(
+                    goal.label,
+                    style: AppTextStyles.h4Light,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+              if (selected)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: const BoxDecoration(
+                      color: AppColors.brandPrimary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 15,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GradientButton extends StatelessWidget {
+  final String label;
+  final bool isLoading;
+  final VoidCallback? onTap;
+
+  const _GradientButton({
+    required this.label,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: AppButtonHeight.primary,
+      decoration: BoxDecoration(
+        gradient: onTap == null ? null : AppGradients.action,
+        color: onTap == null ? AppColors.borderSoft : null,
+        borderRadius: AppRadius.pillBr,
+        boxShadow: onTap == null ? null : AppShadows.glowPurple,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: AppRadius.pillBr,
+          onTap: onTap,
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(label, style: AppTextStyles.buttonLight),
+                      const SizedBox(width: AppSpacing.s8),
+                      const Icon(
+                        Icons.arrow_forward,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Choice {
   final String value;
   final String label;
+  final IconData icon;
 
-  const _Choice(this.value, this.label);
+  const _Choice(
+    this.value,
+    this.label, {
+    this.icon = Icons.check_circle_outline,
+  });
 }
 
 extension _EmptyStringFallback on String {
