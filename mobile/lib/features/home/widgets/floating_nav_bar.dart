@@ -139,18 +139,42 @@ class _FloatingNavBarState extends ConsumerState<FloatingNavBar>
                   ),
                   child: Row(
                     children: [
-                      for (int i = 0; i < _kTabs.length; i++) ...[
-                        if (i == 2) const SizedBox(width: _kFabSize + 4),
-                        Expanded(
-                          child: _NavTabItem(
-                            tab: _kTabs[i],
-                            isActive: widget.currentIndex == i,
-                            activeColor: activeC,
-                            inactiveColor: inactiveC,
-                            onTap: () => widget.onTap(i),
-                          ),
+                      // Left group: Home (0), Tasks (1) — equal halves of nav
+                      Expanded(
+                        child: Row(
+                          children: [
+                            for (int i = 0; i < 2; i++)
+                              Expanded(
+                                child: _NavTabItem(
+                                  tab: _kTabs[i],
+                                  isActive: widget.currentIndex == i,
+                                  activeColor: activeC,
+                                  inactiveColor: inactiveC,
+                                  onTap: () => widget.onTap(i),
+                                ),
+                              ),
+                          ],
                         ),
-                      ],
+                      ),
+                      // Center FAB reserved slot — matches FAB width exactly
+                      const SizedBox(width: _kFabSize + 4),
+                      // Right group: Focus (2), Prayer (3), Profile (4)
+                      Expanded(
+                        child: Row(
+                          children: [
+                            for (int i = 2; i < _kTabs.length; i++)
+                              Expanded(
+                                child: _NavTabItem(
+                                  tab: _kTabs[i],
+                                  isActive: widget.currentIndex == i,
+                                  activeColor: activeC,
+                                  inactiveColor: inactiveC,
+                                  onTap: () => widget.onTap(i),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),

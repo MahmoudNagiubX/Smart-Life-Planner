@@ -334,7 +334,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                         ),
                         gradientColors: const [
                           AppColors.brandPink,
-                          Color(0xFFFFB547),
+                          AppColors.brandViolet,
                         ],
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -792,7 +792,7 @@ class _MainFocusCard extends StatelessWidget {
             size: 200,
             strokeWidth: 12,
             trackColor: Colors.white.withValues(alpha: 0.2),
-            gradientColors: const [Colors.white, AppColors.brandGold],
+            gradientColors: const [Colors.white, AppColors.brandViolet],
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1185,7 +1185,7 @@ class _AnalyticsRow extends StatelessWidget {
             label: 'Completion',
             value: '${analytics.completionRatePercent}%',
             sub: '${analytics.completedSessions} done',
-            color: AppColors.brandGold,
+            color: AppColors.brandViolet,
           ),
         ),
         const SizedBox(width: 10),
@@ -1476,8 +1476,8 @@ class _FocusReadinessCard extends StatelessWidget {
     final readiness = state.readiness;
     final label = readiness?.predictedFocusReadiness ?? 'unknown';
     final color = switch (label) {
-      'high' => AppColors.successColor,
-      'medium' => AppColors.warningColor,
+      'high' => AppColors.brandPrimary,
+      'medium' => AppColors.brandViolet,
       _ => AppColors.textBody,
     };
 

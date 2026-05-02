@@ -84,8 +84,8 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
                   if (state.isSavingLocation) ...[
                     const SizedBox(height: AppSpacing.s12),
                     LinearProgressIndicator(
-                      color: AppColors.brandGold,
-                      backgroundColor: AppColors.brandGold.withValues(
+                      color: AppColors.brandPrimary,
+                      backgroundColor: AppColors.brandPrimary.withValues(
                         alpha: 0.18,
                       ),
                     ),
@@ -148,14 +148,14 @@ class _QiblaCompass extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.brandGold.withValues(alpha: 0.08),
+                  color: AppColors.brandViolet.withValues(alpha: 0.08),
                   border: Border.all(
-                    color: AppColors.brandGold.withValues(alpha: 0.35),
+                    color: AppColors.brandViolet.withValues(alpha: 0.35),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.brandGold.withValues(alpha: 0.10),
+                      color: AppColors.brandViolet.withValues(alpha: 0.10),
                       blurRadius: 28,
                       offset: const Offset(0, 12),
                     ),
@@ -184,14 +184,14 @@ class _QiblaCompass extends StatelessWidget {
                     Icon(
                       Icons.navigation,
                       size: 88,
-                      color: AppColors.brandGold,
+                      color: AppColors.brandViolet,
                     ),
                     const SizedBox(height: 8),
                     Container(
                       width: 10,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: AppColors.brandGold.withValues(alpha: 0.55),
+                        color: AppColors.brandViolet.withValues(alpha: 0.55),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
@@ -202,7 +202,7 @@ class _QiblaCompass extends StatelessWidget {
                 width: 14,
                 height: 14,
                 decoration: const BoxDecoration(
-                  color: AppColors.brandGold,
+                  color: AppColors.brandViolet,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -211,7 +211,7 @@ class _QiblaCompass extends StatelessWidget {
                   bottom: 58,
                   child: Text(
                     '${direction!.displayDegrees} ${direction!.compassLabel}',
-                    style: AppTextStyles.label(AppColors.brandGold),
+                    style: AppTextStyles.label(AppColors.brandViolet),
                   ),
                 ),
               if (headingDegrees != null)
@@ -237,7 +237,7 @@ class _CompassLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(label, style: AppTextStyles.h4(AppColors.brandGold));
+    return Text(label, style: AppTextStyles.h4(AppColors.brandViolet));
   }
 }
 
@@ -263,7 +263,7 @@ class _DirectionCard extends StatelessWidget {
     return _QiblaInfoCard(
       icon: Icons.explore_outlined,
       title: 'Direction',
-      accentColor: AppColors.brandGold,
+      accentColor: AppColors.brandViolet,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -321,8 +321,8 @@ class _ManualFallbackCard extends StatelessWidget {
           : Icons.add_location_alt_outlined,
       title: 'Manual Location Fallback',
       accentColor: hasSavedFallback
-          ? AppColors.successColor
-          : AppColors.warningColor,
+          ? AppColors.brandPrimary
+          : AppColors.brandPink,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -380,14 +380,14 @@ class _BearingSummary extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.s12),
       decoration: BoxDecoration(
-        color: AppColors.brandGold.withValues(alpha: 0.10),
+        color: AppColors.brandViolet.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.place_outlined,
-            color: AppColors.brandGold,
+            color: AppColors.brandViolet,
             size: 20,
           ),
           const SizedBox(width: AppSpacing.s8),

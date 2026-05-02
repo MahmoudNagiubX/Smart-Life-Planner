@@ -246,7 +246,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                 Divider(color: AppColors.dividerColor, height: 1),
                 _StatusOption(
                   icon: Icons.check_circle_outline,
-                  iconColor: AppColors.successColor,
+                  iconColor: AppColors.brandViolet,
                   label: 'Prayed On Time',
                   onTap: () {
                     ref.read(prayerProvider.notifier).setPrayerStatus(
@@ -676,7 +676,7 @@ class _PrayerRow extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: isCompleted
-                            ? AppColors.successColor
+                            ? AppColors.brandViolet
                             : isNext
                             ? AppColors.brandPrimary
                             : Colors.transparent,
@@ -786,7 +786,7 @@ class _SpiritualProgressCard extends StatelessWidget {
                       ? 'All prayers completed today!'
                       : 'Keep going, you\'re doing great!',
                   style: AppTextStyles.caption(
-                    allDone ? AppColors.successColor : AppColors.textHint,
+                    allDone ? AppColors.brandViolet : AppColors.textHint,
                   ),
                 ),
                 if (missedCount > 0) ...[

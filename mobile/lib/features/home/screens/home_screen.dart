@@ -18,7 +18,7 @@ import '../widgets/progress_ring.dart';
 
 // ── Layout ────────────────────────────────────────────────────────────────────
 // Bottom nav clearance: compact floating nav + FAB overhang + breathing room.
-const double _kNavClearance = 118.0;
+const double _kNavClearance = 140.0;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // HomeScreen
@@ -276,18 +276,20 @@ class _HomeHeader extends StatelessWidget {
               Text(
                 greeting,
                 style: GoogleFonts.manrope(
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textHeading,
                   letterSpacing: -0.3,
                   height: 1.2,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
               Text(
                 dateLabel,
                 style: GoogleFonts.manrope(
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: AppColors.textHint,
                 ),
@@ -317,11 +319,11 @@ class _HomeHeader extends StatelessWidget {
                   color: AppColors.textHeading,
                 ),
                 Positioned(
-                  top: 10,
-                  right: 10,
+                  top: 9,
+                  right: 9,
                   child: Container(
-                    width: 8,
-                    height: 8,
+                    width: 9,
+                    height: 9,
                     decoration: BoxDecoration(
                       color: AppColors.errorColor,
                       shape: BoxShape.circle,
@@ -399,7 +401,7 @@ class _DashboardBody extends StatelessWidget {
           pendingCount: data.pendingCount,
           onViewDay: () => context.go(AppRoutes.tasks),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
 
         // Prayer + Focus row
         IntrinsicHeight(
@@ -412,7 +414,7 @@ class _DashboardBody extends StatelessWidget {
                   onTap: () => context.go(AppRoutes.prayer),
                 ),
               ),
-              const SizedBox(width: AppSpacing.s12),
+              const SizedBox(width: AppSpacing.s16),
               Expanded(
                 child: _FocusSessionCard(
                   suggestedMinutes: p.focusShortcut.suggestedMinutes,
@@ -422,7 +424,7 @@ class _DashboardBody extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
 
         // Today's tasks
         _TodayTasksCard(
@@ -430,7 +432,7 @@ class _DashboardBody extends StatelessWidget {
           onCompleteTask: onCompleteTask,
           onViewAll: () => context.go(AppRoutes.tasks),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
 
         // Habits + AI row
         IntrinsicHeight(
@@ -443,7 +445,7 @@ class _DashboardBody extends StatelessWidget {
                   onTap: () => context.go(AppRoutes.habits),
                 ),
               ),
-              const SizedBox(width: AppSpacing.s12),
+              const SizedBox(width: AppSpacing.s16),
               Expanded(
                 child: _AiSuggestionCard(
                   plan: p.aiPlanCard,
@@ -510,61 +512,83 @@ class _DailySummaryCard extends StatelessWidget {
     }
 
     return Container(
+      constraints: const BoxConstraints(minHeight: 178),
       decoration: BoxDecoration(
         gradient: AppGradients.brand,
         borderRadius: BorderRadius.circular(AppRadius.xl3),
         boxShadow: [
           BoxShadow(
-            color: AppColors.brandPrimary.withValues(alpha: 0.32),
-            blurRadius: 32,
-            offset: const Offset(0, 16),
+            color: AppColors.brandPrimary.withValues(alpha: 0.35),
+            blurRadius: 36,
+            offset: const Offset(0, 18),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(AppSpacing.s20),
+      padding: const EdgeInsets.fromLTRB(22, 22, 18, 22),
       child: Stack(
         children: [
+          // Decorative circles
           Positioned(
-            right: -30,
-            bottom: -34,
+            right: -20,
+            bottom: -30,
             child: Container(
               width: 130,
               height: 130,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                color: Colors.white.withValues(alpha: 0.07),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 50,
+            top: -20,
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
               ),
             ),
           ),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Left: text + button
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     headlineWidget,
-                    const SizedBox(height: AppSpacing.s8),
+                    const SizedBox(height: 8),
                     Text(
                       "Keep going! You're building\nconsistency that matters.",
                       style: GoogleFonts.manrope(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.92),
+                        color: Colors.white.withValues(alpha: 0.90),
                         height: 1.5,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.s16),
+                    const SizedBox(height: 18),
                     GestureDetector(
                       onTap: onViewDay,
                       child: Container(
-                        height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        height: 42,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(AppRadius.pill),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.10),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -579,8 +603,8 @@ class _DailySummaryCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             const Icon(
-                              Icons.arrow_forward_rounded,
-                              size: 14,
+                              Icons.chevron_right_rounded,
+                              size: 18,
                               color: AppColors.brandPrimary,
                             ),
                           ],
@@ -590,12 +614,12 @@ class _DailySummaryCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.s12),
+              const SizedBox(width: 14),
 
               // Right: progress ring
               ProgressRing(
                 value: progress,
-                size: 108,
+                size: 112,
                 strokeWidth: 9,
                 trackColor: Colors.white.withValues(alpha: 0.22),
                 gradientColors: [AppColors.brandGold, Colors.white],
@@ -615,7 +639,7 @@ class _DailySummaryCard extends StatelessWidget {
                     Text(
                       'Day Progress',
                       style: GoogleFonts.manrope(
-                        fontSize: 10,
+                        fontSize: 9,
                         fontWeight: FontWeight.w600,
                         color: Colors.white.withValues(alpha: 0.85),
                       ),
@@ -658,7 +682,7 @@ class _NextPrayerCard extends StatelessWidget {
         border: Border.all(color: AppColors.borderSoft),
         boxShadow: AppShadows.card,
       ),
-      padding: const EdgeInsets.all(AppSpacing.s16),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -677,7 +701,7 @@ class _NextPrayerCard extends StatelessWidget {
                   color: AppColors.brandViolet,
                 ),
               ),
-              const SizedBox(width: AppSpacing.s8),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Next Prayer',
@@ -692,48 +716,32 @@ class _NextPrayerCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.s12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textHeading,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s4),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        timeStr,
-                        style: GoogleFonts.manrope(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.brandPrimary,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s8),
-              _MiniMasjidIcon(
-                color: AppColors.brandViolet.withValues(alpha: 0.18),
-              ),
-            ],
+          const SizedBox(height: 10),
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.manrope(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textHeading,
+            ),
           ),
-          const SizedBox(height: AppSpacing.s4),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              timeStr,
+              style: GoogleFonts.manrope(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.brandPrimary,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
           Text(
             countdown,
             maxLines: 1,
@@ -742,6 +750,14 @@ class _NextPrayerCard extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w500,
               color: AppColors.textHint,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: _MiniMasjidIcon(
+              color: AppColors.brandViolet.withValues(alpha: 0.22),
+              size: 70,
             ),
           ),
           const Spacer(),
@@ -759,7 +775,7 @@ class _NextPrayerCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Prayer Times',
+                    'View Prayer Times',
                     style: GoogleFonts.manrope(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -768,8 +784,8 @@ class _NextPrayerCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 12,
+                    Icons.chevron_right_rounded,
+                    size: 14,
                     color: AppColors.brandPrimary,
                   ),
                 ],
@@ -813,12 +829,20 @@ class _FocusSessionCard extends StatelessWidget {
           // Label
           Row(
             children: [
-              const Icon(
-                Icons.timer_rounded,
-                size: 16,
-                color: AppColors.brandPink,
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppColors.featFocusSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(
+                  Icons.gps_fixed_rounded,
+                  size: 16,
+                  color: AppColors.brandPink,
+                ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Text(
                 'Focus Session',
                 style: GoogleFonts.manrope(
@@ -875,7 +899,7 @@ class _FocusSessionCard extends StatelessWidget {
               onTap();
             },
             child: Container(
-              height: 40,
+              height: 42,
               decoration: BoxDecoration(
                 gradient: AppGradients.action,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -884,12 +908,20 @@ class _FocusSessionCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 16,
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Text(
                     'Start Focus',
                     style: GoogleFonts.manrope(
@@ -934,7 +966,7 @@ class _TodayTasksCard extends StatelessWidget {
         border: Border.all(color: AppColors.borderSoft),
         boxShadow: AppShadows.card,
       ),
-      padding: const EdgeInsets.all(AppSpacing.s16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -942,15 +974,15 @@ class _TodayTasksCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 30,
-                height: 30,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
                   color: AppColors.featTasksSoft,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: const Icon(
                   Icons.task_alt_rounded,
-                  size: 16,
+                  size: 17,
                   color: AppColors.featTasks,
                 ),
               ),
@@ -1060,8 +1092,8 @@ class _TaskRow extends StatelessWidget {
 
   String _priorityLabel(String p) {
     if (p == 'high') return 'High Priority';
-    if (p == 'medium') return 'Medium';
-    return 'Normal';
+    if (p == 'medium') return 'Medium Priority';
+    return 'Normal Priority';
   }
 
   String _statusLabel(String status) {
@@ -1089,20 +1121,20 @@ class _TaskRow extends StatelessWidget {
         if (showDivider)
           Divider(height: 1, thickness: 1, color: AppColors.dividerColor),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 11),
           child: Row(
             children: [
               // Icon bubble
               Container(
-                width: 38,
-                height: 38,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: _bubbleBg(task.priority),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(13),
                 ),
                 child: Icon(
                   _bubbleIcon(task.priority),
-                  size: 18,
+                  size: 19,
                   color: _bubbleColor(task.priority),
                 ),
               ),
@@ -1118,7 +1150,7 @@ class _TaskRow extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.manrope(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textHeading,
                       ),
@@ -1127,7 +1159,7 @@ class _TaskRow extends StatelessWidget {
                     Text(
                       _priorityLabel(task.priority),
                       style: GoogleFonts.manrope(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: AppColors.textHint,
                       ),
@@ -1137,7 +1169,7 @@ class _TaskRow extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.s8),
 
-              // Badge + check
+              // Status badge
               Container(
                 height: 26,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -1215,10 +1247,11 @@ class _HabitsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header
             Row(
               children: [
                 const Icon(
-                  Icons.insights_rounded,
+                  Icons.bar_chart_rounded,
                   size: 16,
                   color: AppColors.brandPrimary,
                 ),
@@ -1234,25 +1267,39 @@ class _HabitsCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const Icon(
+                  Icons.more_horiz_rounded,
+                  size: 16,
+                  color: AppColors.textHint,
+                ),
               ],
             ),
             const SizedBox(height: 12),
+            // Ring + stats
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Ring
+                // Streak ring
                 ProgressRing(
                   value: ratio,
-                  size: 60,
+                  size: 64,
                   strokeWidth: 6,
                   trackColor: AppColors.bgSurfaceLavender,
                   gradientColors: [AppColors.brandPink, AppColors.brandPrimary],
-                  child: Text(
-                    '$completed',
-                    style: GoogleFonts.manrope(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textHeading,
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$completed',
+                        style: GoogleFonts.manrope(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textHeading,
+                          height: 1.0,
+                        ),
+                      ),
+                      const Text('🔥', style: TextStyle(fontSize: 9)),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1271,9 +1318,10 @@ class _HabitsCard extends StatelessWidget {
                       Text(
                         '$completed / $active',
                         style: GoogleFonts.manrope(
-                          fontSize: 17,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                           color: AppColors.textHeading,
+                          height: 1.1,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1290,7 +1338,7 @@ class _HabitsCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Today',
+                        'This Week',
                         style: GoogleFonts.manrope(
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
@@ -1421,57 +1469,67 @@ class _AiSuggestionCard extends StatelessWidget {
 
 class _MiniMasjidIcon extends StatelessWidget {
   final Color color;
+  final double size;
 
-  const _MiniMasjidIcon({required this.color});
+  const _MiniMasjidIcon({required this.color, this.size = 54});
 
   @override
   Widget build(BuildContext context) {
+    final w = size;
+    final h = size * 0.85;
     return SizedBox(
-      width: 54,
-      height: 46,
+      width: w,
+      height: h,
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
+          // Main body
           Positioned(
             bottom: 0,
-            left: 8,
-            right: 8,
+            left: w * 0.14,
+            right: w * 0.14,
             child: Container(
-              height: 18,
+              height: h * 0.40,
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppRadius.lg),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(w * 0.18),
                 ),
               ),
             ),
           ),
+          // Dome
           Positioned(
-            bottom: 14,
+            bottom: h * 0.34,
             child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              width: w * 0.50,
+              height: w * 0.50,
+              decoration: BoxDecoration(
+                color: AppColors.brandGold.withValues(alpha: 0.70),
+                shape: BoxShape.circle,
+              ),
             ),
           ),
+          // Left minaret
           Positioned(
             bottom: 0,
             left: 0,
             child: Container(
-              width: 7,
-              height: 38,
+              width: w * 0.12,
+              height: h * 0.72,
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
             ),
           ),
+          // Right minaret
           Positioned(
             bottom: 0,
             right: 0,
             child: Container(
-              width: 7,
-              height: 32,
+              width: w * 0.12,
+              height: h * 0.60,
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
