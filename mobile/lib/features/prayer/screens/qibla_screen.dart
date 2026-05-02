@@ -121,80 +121,109 @@ class _QiblaCompass extends StatelessWidget {
     final arrowRotation = rotationDegrees ?? 0;
     final compassRotation = -(headingDegrees ?? 0);
 
-    return Center(
-      child: SizedBox(
-        width: 260,
-        height: 260,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.brandGold.withValues(alpha: 0.08),
-                border: Border.all(
-                  color: AppColors.brandGold.withValues(alpha: 0.35),
-                  width: 2,
-                ),
-              ),
-            ),
-            Transform.rotate(
-              angle: compassRotation * math.pi / 180,
-              child: const SizedBox.expand(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Positioned(top: 18, child: _CompassLabel('N')),
-                    Positioned(right: 22, child: _CompassLabel('E')),
-                    Positioned(bottom: 18, child: _CompassLabel('S')),
-                    Positioned(left: 22, child: _CompassLabel('W')),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.bgSurface,
+            AppColors.bgSurfaceSoft,
+            AppColors.bgSurfaceLavender,
+          ],
+        ),
+        borderRadius: AppRadius.cardBr,
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
+      ),
+      child: Center(
+        child: SizedBox(
+          width: 260,
+          height: 260,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.brandGold.withValues(alpha: 0.08),
+                  border: Border.all(
+                    color: AppColors.brandGold.withValues(alpha: 0.35),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.brandGold.withValues(alpha: 0.10),
+                      blurRadius: 28,
+                      offset: const Offset(0, 12),
+                    ),
                   ],
                 ),
               ),
-            ),
-            Transform.rotate(
-              angle: arrowRotation * math.pi / 180,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.navigation, size: 88, color: AppColors.brandGold),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 10,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: AppColors.brandGold.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+              Transform.rotate(
+                angle: compassRotation * math.pi / 180,
+                child: const SizedBox.expand(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Positioned(top: 18, child: _CompassLabel('N')),
+                      Positioned(right: 22, child: _CompassLabel('E')),
+                      Positioned(bottom: 18, child: _CompassLabel('S')),
+                      Positioned(left: 22, child: _CompassLabel('W')),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            Container(
-              width: 14,
-              height: 14,
-              decoration: const BoxDecoration(
-                color: AppColors.brandGold,
-                shape: BoxShape.circle,
-              ),
-            ),
-            if (direction != null)
-              Positioned(
-                bottom: 58,
-                child: Text(
-                  '${direction!.displayDegrees} ${direction!.compassLabel}',
-                  style: AppTextStyles.label(AppColors.brandGold),
                 ),
               ),
-            if (headingDegrees != null)
-              Positioned(
-                top: 58,
-                child: Text(
-                  'Heading ${headingDegrees!.toStringAsFixed(0)} deg',
-                  style: AppTextStyles.caption(AppColors.textSecondary),
+              Transform.rotate(
+                angle: arrowRotation * math.pi / 180,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.navigation,
+                      size: 88,
+                      color: AppColors.brandGold,
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 10,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: AppColors.brandGold.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-          ],
+              Container(
+                width: 14,
+                height: 14,
+                decoration: const BoxDecoration(
+                  color: AppColors.brandGold,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              if (direction != null)
+                Positioned(
+                  bottom: 58,
+                  child: Text(
+                    '${direction!.displayDegrees} ${direction!.compassLabel}',
+                    style: AppTextStyles.label(AppColors.brandGold),
+                  ),
+                ),
+              if (headingDegrees != null)
+                Positioned(
+                  top: 58,
+                  child: Text(
+                    'Heading ${headingDegrees!.toStringAsFixed(0)} deg',
+                    style: AppTextStyles.caption(AppColors.textBody),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -249,7 +278,7 @@ class _DirectionCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.s8),
           Text(
             guidanceMessage,
-            style: AppTextStyles.caption(AppColors.textSecondary),
+            style: AppTextStyles.caption(AppColors.textBody),
           ),
           if (direction != null) ...[
             const SizedBox(height: AppSpacing.s12),
@@ -308,7 +337,7 @@ class _ManualFallbackCard extends StatelessWidget {
             hasSavedFallback
                 ? 'Qibla can still calculate a respectful bearing if live location is denied or unavailable.'
                 : 'Add a manual city with latitude and longitude so Qibla works without live device location.',
-            style: AppTextStyles.caption(AppColors.textSecondary),
+            style: AppTextStyles.caption(AppColors.textBody),
           ),
           const SizedBox(height: AppSpacing.s12),
           OutlinedButton.icon(
@@ -397,7 +426,7 @@ class _PermissionCard extends ConsumerWidget {
           const SizedBox(height: AppSpacing.s8),
           Text(
             _permissionMessage,
-            style: AppTextStyles.caption(AppColors.textSecondary),
+            style: AppTextStyles.caption(AppColors.textBody),
           ),
           if (permissionState != QiblaLocationPermissionState.granted) ...[
             const SizedBox(height: AppSpacing.s16),
@@ -538,7 +567,7 @@ class _SensorStatusCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.s8),
           Text(
             state.compassMessage,
-            style: AppTextStyles.caption(AppColors.textSecondary),
+            style: AppTextStyles.caption(AppColors.textBody),
           ),
           if (isReady) ...[
             const SizedBox(height: AppSpacing.s12),

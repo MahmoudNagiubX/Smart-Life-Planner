@@ -80,7 +80,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Email verified. You can sign in now.'),
-          backgroundColor: AppColors.success,
+          backgroundColor: AppColors.successColor,
         ),
       );
       context.go(AppRoutes.signIn);
@@ -89,7 +89,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(friendlyAuthError(error, 'Could not verify email.')),
-          backgroundColor: AppColors.error,
+          backgroundColor: AppColors.errorColor,
         ),
       );
     } finally {
@@ -116,14 +116,14 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
         if (code != null) _codeController.text = code;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: AppColors.success),
+        SnackBar(content: Text(message), backgroundColor: AppColors.successColor),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(friendlyAuthError(error, 'Could not resend code.')),
-          backgroundColor: AppColors.error,
+          backgroundColor: AppColors.errorColor,
         ),
       );
     } finally {
@@ -199,7 +199,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
                           'assets/images/app_logo.png',
                           width: 56,
                           height: 56,
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(
                             width: 56,
                             height: 56,

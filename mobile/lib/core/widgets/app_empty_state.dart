@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
+import '../theme/app_tokens.dart';
 
 class AppEmptyState extends StatelessWidget {
   final IconData icon;
@@ -13,7 +16,7 @@ class AppEmptyState extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.message,
-    this.accentColor = AppColors.primary,
+    this.accentColor = AppColors.brandPrimary,
     this.action,
   });
 
@@ -21,7 +24,7 @@ class AppEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.s24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Column(
@@ -39,24 +42,22 @@ class AppEmptyState extends StatelessWidget {
                 ),
                 child: Icon(icon, color: accentColor, size: 34),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.s20),
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: AppTextStyles.h3Light,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s8),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.45,
-                ),
+                style: AppTextStyles.body(AppColors.textBody),
               ),
-              if (action != null) ...[const SizedBox(height: 20), action!],
+              if (action != null) ...[
+                const SizedBox(height: AppSpacing.s20),
+                action!,
+              ],
             ],
           ),
         ),

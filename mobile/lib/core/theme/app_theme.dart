@@ -19,7 +19,10 @@ class AppTheme {
         onSurface: AppColors.textHeading,
         onError: Colors.white,
       ),
-      textTheme: _buildTextTheme(ThemeData.light().textTheme, AppColors.textHeading),
+      textTheme: _buildTextTheme(
+        ThemeData.light().textTheme,
+        AppColors.textHeading,
+      ),
       dividerColor: AppColors.dividerColor,
       cardTheme: CardThemeData(
         color: AppColors.bgSurface,
@@ -31,13 +34,36 @@ class AppTheme {
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.bgApp,
+        foregroundColor: AppColors.textHeading,
         elevation: 0,
         centerTitle: false,
         iconTheme: const IconThemeData(color: AppColors.textHeading),
+        actionsIconTheme: const IconThemeData(color: AppColors.textHeading),
         titleTextStyle: GoogleFonts.manrope(
           fontSize: 18,
           fontWeight: FontWeight.w700,
           color: AppColors.textHeading,
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor: AppColors.textHeading,
+          disabledForegroundColor: AppColors.textHint.withValues(alpha: 0.45),
+        ),
+      ),
+      dropdownMenuTheme: DropdownMenuThemeData(
+        textStyle: GoogleFonts.manrope(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textHeading,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.bgSurfaceSoft,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            borderSide: const BorderSide(color: AppColors.borderSoft),
+          ),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -114,7 +140,10 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          borderSide: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.brandPrimary,
+            width: 1.5,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -177,7 +206,10 @@ class AppTheme {
         onSurface: AppColors.darkTextPrimary,
         onError: Colors.white,
       ),
-      textTheme: _buildTextTheme(ThemeData.dark().textTheme, AppColors.darkTextPrimary),
+      textTheme: _buildTextTheme(
+        ThemeData.dark().textTheme,
+        AppColors.darkTextPrimary,
+      ),
       dividerColor: AppColors.darkDivider,
       cardTheme: CardThemeData(
         color: AppColors.darkCard,
@@ -272,7 +304,10 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          borderSide: const BorderSide(color: AppColors.darkPrimary, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.darkPrimary,
+            width: 1.5,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -323,8 +358,7 @@ class AppTheme {
   }
 
   static TextTheme _buildTextTheme(TextTheme base, Color textColor) =>
-      GoogleFonts.manropeTextTheme(base).apply(
-        bodyColor: textColor,
-        displayColor: textColor,
-      );
+      GoogleFonts.manropeTextTheme(
+        base,
+      ).apply(bodyColor: textColor, displayColor: textColor);
 }

@@ -115,7 +115,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(friendlyAuthError(error, 'Password reset failed.')),
-          backgroundColor: AppColors.error,
+          backgroundColor: AppColors.errorColor,
         ),
       );
     } finally {
@@ -125,7 +125,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
 
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppColors.success),
+      SnackBar(content: Text(message), backgroundColor: AppColors.successColor),
     );
   }
 
@@ -228,7 +228,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                           'assets/images/app_logo.png',
                           width: 56,
                           height: 56,
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(
                             width: 56,
                             height: 56,

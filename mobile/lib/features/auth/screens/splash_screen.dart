@@ -24,9 +24,10 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 900),
     );
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: 0.82, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
+    _scale = Tween<double>(
+      begin: 0.82,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
     _ctrl.forward();
   }
 
@@ -153,7 +154,7 @@ class _AppLogo extends StatelessWidget {
           'assets/images/app_logo.png',
           width: size,
           height: size,
-          fit: BoxFit.contain,
+          fit: BoxFit.cover,
           errorBuilder: (_, _, _) => _FallbackLogo(size: size),
         ),
       ),
@@ -231,7 +232,9 @@ class _PulsingDotsState extends State<_PulsingDots>
               // Each dot pulses with a phase offset
               final phase = (i / 3.0);
               final t = ((_ctrl.value + phase) % 1.0);
-              final pulse = Curves.easeInOut.transform(t < 0.5 ? t * 2 : (1 - t) * 2);
+              final pulse = Curves.easeInOut.transform(
+                t < 0.5 ? t * 2 : (1 - t) * 2,
+              );
               final opacity = baseOpacity + pulse * 0.20;
               return Opacity(
                 opacity: opacity.clamp(0.0, 1.0),
@@ -264,10 +267,7 @@ class _GlowBlob extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
   }
 }

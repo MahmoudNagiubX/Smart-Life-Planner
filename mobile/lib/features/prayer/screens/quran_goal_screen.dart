@@ -182,8 +182,7 @@ class _QuranGoalScreenState extends ConsumerState<QuranGoalScreen> {
           ? AppErrorState(
               title: 'Quran goal could not load',
               message: state.error!,
-              onRetry: () =>
-                  ref.read(quranGoalProvider.notifier).loadSummary(),
+              onRetry: () => ref.read(quranGoalProvider.notifier).loadSummary(),
             )
           : RefreshIndicator(
               color: AppColors.brandGold,
@@ -192,8 +191,10 @@ class _QuranGoalScreenState extends ConsumerState<QuranGoalScreen> {
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenH, AppSpacing.s8,
-                  AppSpacing.screenH, AppSpacing.s32,
+                  AppSpacing.screenH,
+                  AppSpacing.s8,
+                  AppSpacing.screenH,
+                  AppSpacing.s32,
                 ),
                 children: [
                   _DailyTargetCard(
@@ -408,8 +409,10 @@ class _WeeklySummaryCard extends StatelessWidget {
           ClipRRect(
             borderRadius: AppRadius.pillBr,
             child: LinearProgressIndicator(
-              value: ((summary?.weeklyCompletionPercent ?? 0) / 100)
-                  .clamp(0.0, 1.0),
+              value: ((summary?.weeklyCompletionPercent ?? 0) / 100).clamp(
+                0.0,
+                1.0,
+              ),
               minHeight: 8,
               backgroundColor: AppColors.brandGold.withValues(alpha: 0.15),
               valueColor: const AlwaysStoppedAnimation<Color>(
@@ -485,19 +488,14 @@ class _MetricChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.brandGold.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(
-          color: AppColors.brandGold.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: AppColors.brandGold.withValues(alpha: 0.25)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: AppTextStyles.captionLight.copyWith(fontSize: 10)),
-          Text(
-            value,
-            style: AppTextStyles.label(AppColors.brandGold),
-          ),
+          Text(value, style: AppTextStyles.label(AppColors.brandGold)),
         ],
       ),
     );
@@ -553,8 +551,9 @@ class _WeeklyDayPill extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 child: Text(
                   '${item.pagesCompleted}/${item.targetPages}',
-                  style: AppTextStyles.label(AppColors.brandGold)
-                      .copyWith(fontSize: 11),
+                  style: AppTextStyles.label(
+                    AppColors.brandGold,
+                  ).copyWith(fontSize: 11),
                 ),
               ),
             ),
@@ -619,7 +618,14 @@ class _QuranCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.s12),
-              Text(title, style: AppTextStyles.h4Light),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.h4Light,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.s16),

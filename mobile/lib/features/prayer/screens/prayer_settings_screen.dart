@@ -113,9 +113,7 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
     if ((lat != null && (lat < -90 || lat > 90)) ||
         (lng != null && (lng < -180 || lng > 180))) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Location coordinates are out of range.'),
-        ),
+        const SnackBar(content: Text('Location coordinates are out of range.')),
       );
       return;
     }
@@ -137,9 +135,9 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
         );
         await _soundPreviewPlayer.play();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Playing Athan preview.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Playing Athan preview.')));
         return;
       }
 
@@ -196,8 +194,10 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenH, AppSpacing.s8,
-                  AppSpacing.screenH, AppSpacing.s32,
+                  AppSpacing.screenH,
+                  AppSpacing.s8,
+                  AppSpacing.screenH,
+                  AppSpacing.s32,
                 ),
                 children: [
                   _MethodCard(
@@ -236,9 +236,7 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
                   ),
                   if (state.isSaving) ...[
                     const SizedBox(height: AppSpacing.s16),
-                    const LinearProgressIndicator(
-                      color: AppColors.featPrayer,
-                    ),
+                    const LinearProgressIndicator(color: AppColors.featPrayer),
                   ],
                   if (state.error != null && settings != null) ...[
                     const SizedBox(height: AppSpacing.s12),
@@ -288,6 +286,7 @@ class _MethodCard extends StatelessWidget {
       title: 'Calculation Method',
       color: AppColors.featPrayer,
       child: DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue: settings.prayerCalculationMethod,
         decoration: const InputDecoration(labelText: 'Prayer calculation'),
         items: methods.entries
@@ -452,6 +451,7 @@ class _PrayerSoundCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: selectedSound,
             decoration: const InputDecoration(
               labelText: 'Prayer reminder sound',
@@ -575,7 +575,14 @@ class _PrayerSettingsCard extends StatelessWidget {
                 child: Icon(icon, color: color, size: AppIconSize.cardHeader),
               ),
               const SizedBox(width: AppSpacing.s12),
-              Text(title, style: AppTextStyles.h4Light),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.h4Light,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.s16),

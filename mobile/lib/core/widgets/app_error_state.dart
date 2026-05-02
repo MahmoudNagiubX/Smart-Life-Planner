@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
+import '../theme/app_tokens.dart';
 import 'app_empty_state.dart';
 
 class AppErrorState extends StatelessWidget {
@@ -20,13 +22,19 @@ class AppErrorState extends StatelessWidget {
       icon: Icons.error_outline,
       title: title,
       message: message,
-      accentColor: AppColors.error,
+      accentColor: AppColors.errorColor,
       action: onRetry == null
           ? null
           : OutlinedButton.icon(
               onPressed: () => onRetry!(),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.errorColor,
+                side: const BorderSide(color: AppColors.errorColor),
+                shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.pillBr),
+              ),
             ),
     );
   }

@@ -22,8 +22,8 @@ class AppSettingsScreen extends ConsumerStatefulWidget {
 
 class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
   static const _themeOptions = {
-    'dark': 'Dark',
     'light': 'Light',
+    'dark': 'Dark',
     'system': 'System',
   };
   static const _timeOptions = [
@@ -45,7 +45,7 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
   final _cityController = TextEditingController();
   final _timezoneController = TextEditingController();
   String? _settingsKey;
-  String _theme = 'dark';
+  String _theme = 'light';
   String _wakeTime = '06:00';
   String _sleepTime = '22:00';
   bool _notificationsEnabled = true;
@@ -85,7 +85,9 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
     _countryController.text = settings.country ?? '';
     _cityController.text = settings.city ?? '';
     _timezoneController.text = settings.timezone;
-    _theme = _themeOptions.containsKey(settings.theme) ? settings.theme : 'dark';
+    _theme = _themeOptions.containsKey(settings.theme)
+        ? settings.theme
+        : 'light';
     _wakeTime = _safeTime(settings.wakeTime, '06:00');
     _sleepTime = _safeTime(settings.sleepTime, '22:00');
     _notificationsEnabled = settings.notificationsEnabled;
@@ -164,8 +166,10 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenH, AppSpacing.s8,
-                  AppSpacing.screenH, AppSpacing.s32,
+                  AppSpacing.screenH,
+                  AppSpacing.s8,
+                  AppSpacing.screenH,
+                  AppSpacing.s32,
                 ),
                 children: [
                   // Appearance
@@ -184,6 +188,7 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                         const _Divider(),
                         const SizedBox(height: AppSpacing.s8),
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: _theme,
                           decoration: const InputDecoration(
                             labelText: 'Theme mode',
@@ -329,7 +334,8 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                         _NavRow(
                           icon: Icons.timer_outlined,
                           title: 'Focus preferences',
-                          value: settings?.focusSummary ??
+                          value:
+                              settings?.focusSummary ??
                               'Focus reminder preferences',
                           onTap: () =>
                               context.push(AppRoutes.notificationSettings),
@@ -415,7 +421,14 @@ class _SettingsCard extends StatelessWidget {
                 child: Icon(icon, color: color, size: AppIconSize.cardHeader),
               ),
               const SizedBox(width: AppSpacing.s12),
-              Text(title, style: AppTextStyles.h4Light),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.h4Light,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.s16),
@@ -598,6 +611,7 @@ class _TimeDropdown extends StatelessWidget {
         ? value
         : '06:00';
     return DropdownButtonFormField<String>(
+      isExpanded: true,
       initialValue: safeValue,
       decoration: InputDecoration(labelText: label),
       items: _AppSettingsScreenState._timeOptions

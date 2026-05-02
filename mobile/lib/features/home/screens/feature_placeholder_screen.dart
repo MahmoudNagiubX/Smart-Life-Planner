@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_empty_state.dart';
 
@@ -18,7 +21,7 @@ class FeaturePlaceholderScreen extends StatelessWidget {
     required this.title,
     required this.description,
     required this.icon,
-    this.accentColor = AppColors.primary,
+    this.accentColor = AppColors.brandPrimary,
     this.destructiveActionLabel,
     this.destructiveActionTitle,
     this.destructiveActionMessage,
@@ -28,7 +31,14 @@ class FeaturePlaceholderScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      backgroundColor: AppColors.bgApp,
+      appBar: AppBar(
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Text(title, style: AppTextStyles.h2Light),
+      ),
       body: SafeArea(
         child: AppEmptyState(
           icon: icon,
@@ -39,8 +49,10 @@ class FeaturePlaceholderScreen extends StatelessWidget {
               ? null
               : OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error),
+                    foregroundColor: AppColors.errorColor,
+                    side: const BorderSide(color: AppColors.errorColor),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: AppRadius.pillBr),
                   ),
                   onPressed: () async {
                     final confirmed = await confirmDestructiveAction(
@@ -58,6 +70,9 @@ class FeaturePlaceholderScreen extends StatelessWidget {
                           destructiveActionDoneMessage ??
                               'Action confirmed. This feature is not active yet.',
                         ),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: AppRadius.pillBr),
                       ),
                     );
                   },

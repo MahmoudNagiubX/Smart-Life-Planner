@@ -11,11 +11,11 @@ import '../../../core/theme/app_tokens.dart';
 import '../../dashboard/widgets/quick_capture_sheet.dart';
 
 // ── Layout constants matching Claude Design tokens ──────────────────────────
-const double _kNavHeight = 66;
-const double _kNavBottomMargin = 12;
-const double _kNavSideMargin = 18;
-const double _kFabSize = 54;
-const double _kFabBorderWidth = 4;
+const double _kNavHeight = 62;
+const double _kNavBottomMargin = 10;
+const double _kNavSideMargin = 20;
+const double _kFabSize = 52;
+const double _kFabBorderWidth = 3;
 // FAB protrudes this many px above nav pill top (matches tokens.css top:-22px)
 const double _kFabOverhang = 16;
 
@@ -81,16 +81,13 @@ class _FloatingNavBarState extends ConsumerState<FloatingNavBar>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final safeArea = MediaQuery.of(context).padding.bottom;
     final totalH = _totalHeight(safeArea);
 
-    final navBg = isDark
-        ? AppColors.darkSurface.withValues(alpha: 0.92)
-        : AppColors.bgSurface.withValues(alpha: 0.86);
-    final borderC = isDark ? AppColors.darkBorder : AppColors.borderSoft;
-    final activeC = isDark ? AppColors.darkPrimary : AppColors.brandPrimary;
-    final inactiveC = isDark ? AppColors.darkTextMuted : AppColors.textHint;
+    final navBg = AppColors.bgSurface.withValues(alpha: 0.92);
+    final borderC = Colors.white.withValues(alpha: 0.78);
+    final activeC = AppColors.brandPrimary;
+    final inactiveC = AppColors.textBody;
 
     // FAB bottom (from container bottom):
     //   nav_top_from_bottom - fab_overhang + fab_height
@@ -135,8 +132,8 @@ class _FloatingNavBarState extends ConsumerState<FloatingNavBar>
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.textHeading.withValues(alpha: 0.10),
-                        blurRadius: 24,
-                        offset: const Offset(0, 10),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
@@ -320,7 +317,7 @@ class _NavTabItem extends StatelessWidget {
               Text(
                 tab.label,
                 style: GoogleFonts.manrope(
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
                   color: isActive ? activeColor : inactiveColor,
                   height: 1.0,

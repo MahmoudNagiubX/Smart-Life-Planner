@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../providers/hasae_provider.dart';
 
 class OverloadWarningCard extends ConsumerWidget {
@@ -24,11 +27,12 @@ class OverloadWarningCard extends ConsumerWidget {
     final overloadStr = hours > 0 ? '${hours}h ${mins}m' : '${mins}m';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+        color: AppColors.warningColor.withValues(alpha: 0.10),
+        borderRadius: AppRadius.circular(AppRadius.md),
+        border: Border.all(
+            color: AppColors.warningColor.withValues(alpha: 0.40)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -36,50 +40,45 @@ class OverloadWarningCard extends ConsumerWidget {
           Row(
             children: [
               const Text('⚠️', style: TextStyle(fontSize: 18)),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.s8),
               Text(
                 'Overload Detected',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColors.warning,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTextStyles.h4(AppColors.warningColor),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s8, vertical: AppSpacing.s4),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.warningColor.withValues(alpha: 0.20),
+                  borderRadius: AppRadius.pillBr,
                 ),
                 child: Text(
                   '$loadPercent% load',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.warning,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.caption(AppColors.warningColor),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s8),
           Text(
             'Your schedule is overloaded by $overloadStr. '
             'Consider deferring low-priority tasks.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.warning.withValues(alpha: 0.9),
-            ),
+            style: AppTextStyles.bodySmall(
+                AppColors.warningColor.withValues(alpha: 0.9)),
           ),
-          const SizedBox(height: 10),
-          // Load bar
+          const SizedBox(height: AppSpacing.s12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: AppRadius.pillBr,
             child: LinearProgressIndicator(
               value: overload.loadRatio.clamp(0.0, 1.0),
               minHeight: 6,
-              backgroundColor: AppColors.warning.withValues(alpha: 0.15),
+              backgroundColor:
+                  AppColors.warningColor.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation<Color>(
-                overload.loadRatio > 1.0 ? AppColors.error : AppColors.warning,
+                overload.loadRatio > 1.0
+                    ? AppColors.errorColor
+                    : AppColors.warningColor,
               ),
             ),
           ),

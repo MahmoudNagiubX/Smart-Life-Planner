@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
+import '../theme/app_tokens.dart';
 
 Future<bool> confirmDestructiveAction({
   required BuildContext context,
@@ -10,6 +12,7 @@ Future<bool> confirmDestructiveAction({
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.cardBr),
       title: Text(title),
       content: Text(message),
       actions: [
@@ -19,8 +22,9 @@ Future<bool> confirmDestructiveAction({
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.error,
+            backgroundColor: AppColors.errorColor,
             foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.pillBr),
           ),
           onPressed: () => Navigator.of(context).pop(true),
           child: Text(confirmLabel),

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../models/prayer_model.dart';
@@ -81,7 +84,7 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      showDragHandle: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => _FastingLogEditorSheet(
         current: ref.read(ramadanFastingProvider).summary?.today,
       ),
@@ -96,11 +99,13 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
     final settings = ramadanState.settings;
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        title: const Text(
-          'Ramadan Mode',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Text('Ramadan Mode', style: AppTextStyles.h2Light),
       ),
       body: ramadanState.isLoading && settings == null
           ? const AppLoadingState(message: 'Loading Ramadan settings...')
@@ -111,10 +116,16 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
               onRetry: _reload,
             )
           : RefreshIndicator(
+              color: AppColors.brandGold,
               onRefresh: _reload,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH,
+                  AppSpacing.s8,
+                  AppSpacing.screenH,
+                  AppSpacing.s32,
+                ),
                 children: [
                   _FastingStatusCard(
                     settings: settings ?? _fallbackSettings,
@@ -160,13 +171,13 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
                   ),
                   if (ramadanState.isSaving) ...[
                     const SizedBox(height: 16),
-                    const LinearProgressIndicator(color: AppColors.prayerGold),
+                    const LinearProgressIndicator(color: AppColors.brandGold),
                   ],
                   if (ramadanState.error != null && settings != null) ...[
                     const SizedBox(height: 16),
                     Text(
                       ramadanState.error!,
-                      style: const TextStyle(color: AppColors.error),
+                      style: AppTextStyles.caption(AppColors.errorColor),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -175,7 +186,7 @@ class _RamadanModeScreenState extends ConsumerState<RamadanModeScreen> {
                     const SizedBox(height: 16),
                     Text(
                       fastingState.error!,
-                      style: const TextStyle(color: AppColors.error),
+                      style: AppTextStyles.caption(AppColors.errorColor),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -211,24 +222,16 @@ class _FastingStatusCard extends StatelessWidget {
       icon: Icons.nights_stay_outlined,
       title: 'Fasting Status',
       accentColor: settings.ramadanModeEnabled
-          ? AppColors.prayerGold
-          : AppColors.textSecondary,
+          ? AppColors.brandGold
+          : AppColors.textBody,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            status.title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
+          Text(status.title, style: AppTextStyles.h4Light),
           const SizedBox(height: 6),
           Text(
             status.message,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.45,
-            ),
+            style: AppTextStyles.bodySmall(AppColors.textBody),
           ),
           const SizedBox(height: 14),
           _RamadanDetailRow(
@@ -347,11 +350,11 @@ class _RamadanModeToggle extends StatelessWidget {
     return _RamadanCard(
       icon: Icons.toggle_on_outlined,
       title: 'Ramadan Mode',
-      accentColor: AppColors.prayerGold,
+      accentColor: AppColors.brandGold,
       child: SwitchListTile(
         contentPadding: EdgeInsets.zero,
         value: settings.ramadanModeEnabled,
-        activeThumbColor: AppColors.prayerGold,
+        activeThumbColor: AppColors.brandGold,
         title: const Text('Enable Ramadan mode'),
         subtitle: const Text(
           'Shows fasting status, Suhoor preference, and Iftar from Maghrib.',
@@ -395,31 +398,26 @@ class _FastingLogCard extends StatelessWidget {
     return _RamadanCard(
       icon: Icons.check_circle_outline,
       title: 'Today\'s Fast',
-      accentColor: trackerEnabled ? AppColors.success : AppColors.textSecondary,
+      accentColor: trackerEnabled ? AppColors.successColor : AppColors.textBody,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (state.isLoading && summary == null)
             const AppLoadingState(message: 'Loading fasting log...')
           else if (state.error != null && summary == null)
-            Text(state.error!, style: const TextStyle(color: AppColors.error))
+            Text(
+              state.error!,
+              style: AppTextStyles.caption(AppColors.errorColor),
+            )
           else ...[
             Text(
               trackerEnabled
                   ? statusText
                   : 'Enable Ramadan mode and fasting tracker to log today.',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              style: AppTextStyles.body(AppColors.textHeading),
             ),
             const SizedBox(height: 8),
-            Text(
-              monthText,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.45,
-              ),
-            ),
+            Text(monthText, style: AppTextStyles.bodySmall(AppColors.textBody)),
             if (today?.note != null || today?.makeupForDate != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -428,10 +426,7 @@ class _FastingLogCard extends StatelessWidget {
                     'Makeup for ${today!.makeupForDate}',
                   if (today?.note != null) today!.note!,
                 ].join(' - '),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.45,
-                ),
+                style: AppTextStyles.bodySmall(AppColors.textBody),
               ),
             ],
             const SizedBox(height: 14),
@@ -446,7 +441,7 @@ class _FastingLogCard extends StatelessWidget {
                     label: const Text('Fasted'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: today?.fasted == true
-                          ? AppColors.success
+                          ? AppColors.successColor
                           : null,
                     ),
                   ),
@@ -476,7 +471,7 @@ class _FastingLogCard extends StatelessWidget {
             ),
             if (state.isSaving) ...[
               const SizedBox(height: 12),
-              const LinearProgressIndicator(color: AppColors.prayerGold),
+              const LinearProgressIndicator(color: AppColors.brandGold),
             ],
           ],
         ],
@@ -526,81 +521,113 @@ class _FastingLogEditorSheetState
     final bottom = MediaQuery.of(context).viewInsets.bottom;
 
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 8, 20, bottom + 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Fasting details',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Fasted today'),
-              value: _fasted,
-              onChanged: (value) => setState(() => _fasted = value),
-            ),
-            DropdownButtonFormField<String>(
-              initialValue: _fastType,
-              decoration: const InputDecoration(labelText: 'Fast type'),
-              items: const [
-                DropdownMenuItem(value: 'ramadan', child: Text('Ramadan')),
-                DropdownMenuItem(value: 'voluntary', child: Text('Voluntary')),
-                DropdownMenuItem(value: 'makeup', child: Text('Makeup')),
-              ],
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() {
-                  _fastType = value;
-                  if (_fastType != 'makeup') _makeupForDate = null;
-                });
-              },
-            ),
-            if (_fastType == 'makeup') ...[
-              const SizedBox(height: 8),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.event_repeat_outlined),
-                title: const Text('Makeup for date'),
-                subtitle: Text(
-                  _makeupForDate == null
-                      ? 'Optional'
-                      : _dateText(_makeupForDate!),
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgSurface,
+          borderRadius: AppRadius.sheetBr,
+          boxShadow: AppShadows.floating,
+        ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
                 ),
-                onTap: _pickMakeupDate,
+              ),
+              const SizedBox(height: AppSpacing.s16),
+              Text('Fasting details', style: AppTextStyles.h3Light),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.bgSurfaceSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.borderSoft),
+                ),
+                child: SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s12,
+                  ),
+                  activeThumbColor: AppColors.brandGold,
+                  title: Text(
+                    'Fasted today',
+                    style: AppTextStyles.body(AppColors.textHeading),
+                  ),
+                  value: _fasted,
+                  onChanged: (value) => setState(() => _fasted = value),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: _fastType,
+                decoration: const InputDecoration(labelText: 'Fast type'),
+                items: const [
+                  DropdownMenuItem(value: 'ramadan', child: Text('Ramadan')),
+                  DropdownMenuItem(
+                    value: 'voluntary',
+                    child: Text('Voluntary'),
+                  ),
+                  DropdownMenuItem(value: 'makeup', child: Text('Makeup')),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _fastType = value;
+                    if (_fastType != 'makeup') _makeupForDate = null;
+                  });
+                },
+              ),
+              if (_fastType == 'makeup') ...[
+                const SizedBox(height: 8),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.event_repeat_outlined),
+                  title: const Text('Makeup for date'),
+                  subtitle: Text(
+                    _makeupForDate == null
+                        ? 'Optional'
+                        : _dateText(_makeupForDate!),
+                  ),
+                  onTap: _pickMakeupDate,
+                ),
+              ],
+              const SizedBox(height: 8),
+              TextField(
+                controller: _noteController,
+                decoration: const InputDecoration(
+                  labelText: 'Note',
+                  hintText: 'Optional reflection or makeup note',
+                ),
+                minLines: 1,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: state.isSaving ? null : _save,
+                  icon: state.isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: const Text('Save fasting log'),
+                ),
               ),
             ],
-            const SizedBox(height: 8),
-            TextField(
-              controller: _noteController,
-              decoration: const InputDecoration(
-                labelText: 'Note',
-                hintText: 'Optional reflection or makeup note',
-              ),
-              minLines: 1,
-              maxLines: 3,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: state.isSaving ? null : _save,
-                icon: state.isSaving
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_outlined),
-                label: const Text('Save fasting log'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -651,7 +678,7 @@ class _SuhoorReminderCard extends StatelessWidget {
     return _RamadanCard(
       icon: Icons.alarm_outlined,
       title: 'Suhoor Reminder',
-      accentColor: AppColors.primary,
+      accentColor: AppColors.brandPrimary,
       child: Column(
         children: [
           SwitchListTile(
@@ -723,23 +750,18 @@ class _IftarTimeCard extends StatelessWidget {
     return _RamadanCard(
       icon: Icons.restaurant_outlined,
       title: 'Iftar Time',
-      accentColor: AppColors.success,
+      accentColor: AppColors.successColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             maghrib == null ? '--:--' : _formatTime(maghrib),
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.success,
-            ),
+            style: AppTextStyles.h2(AppColors.successColor),
           ),
           const SizedBox(height: 6),
           Text(
             'Iftar uses today\'s Maghrib prayer time.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.bodySmall(AppColors.textBody),
           ),
           const SizedBox(height: 12),
           SwitchListTile(
@@ -784,7 +806,7 @@ class _RamadanTrackingCard extends StatelessWidget {
     return _RamadanCard(
       icon: Icons.flag_outlined,
       title: 'Ramadan Tracking',
-      accentColor: AppColors.warning,
+      accentColor: AppColors.warningColor,
       child: Column(
         children: [
           SwitchListTile(
@@ -821,23 +843,11 @@ class _RamadanDetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s8),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-            ),
-          ),
-          Text(
-            value,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
+          Expanded(child: Text(label, style: AppTextStyles.captionLight)),
+          Text(value, style: AppTextStyles.label(AppColors.textHeading)),
         ],
       ),
     );
@@ -881,37 +891,32 @@ class _RamadanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardBr,
         border: Border.all(color: accentColor.withValues(alpha: 0.22)),
+        boxShadow: AppShadows.soft,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: AppIconSize.avatar,
+            height: AppIconSize.avatar,
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: Icon(icon, color: accentColor),
+            child: Icon(icon, color: accentColor, size: AppIconSize.cardHeader),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: AppSpacing.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: accentColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
+                Text(title, style: AppTextStyles.h4(accentColor)),
+                const SizedBox(height: AppSpacing.s8),
                 child,
               ],
             ),

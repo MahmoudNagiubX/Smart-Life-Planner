@@ -153,20 +153,15 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                  child: Text(
-                    'Choose a task',
-                    style: AppTextStyles.h3Light,
-                  ),
+                  child: Text('Choose a task', style: AppTextStyles.h3Light),
                 ),
                 Flexible(
                   child: ListView.separated(
                     shrinkWrap: true,
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                     itemCount: candidates.length,
-                    separatorBuilder: (_, _) => Container(
-                      height: 1,
-                      color: AppColors.borderSoft,
-                    ),
+                    separatorBuilder: (_, _) =>
+                        Container(height: 1, color: AppColors.borderSoft),
                     itemBuilder: (context, index) {
                       final task = candidates[index];
                       final estimate = task.estimatedMinutes == null
@@ -183,8 +178,9 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                                 height: 36,
                                 decoration: BoxDecoration(
                                   color: AppColors.featTasksSoft,
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.sm),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.sm,
+                                  ),
                                 ),
                                 child: const Icon(
                                   Icons.task_alt,
@@ -202,9 +198,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                                       style: AppTextStyles.h4Light,
                                     ),
                                     Text(
-                                      '${task.priority} priority · $estimate',
-                                      style:
-                                          AppTextStyles.captionLight,
+                                      '${task.priority} priority - $estimate',
+                                      style: AppTextStyles.captionLight,
                                     ),
                                   ],
                                 ),
@@ -308,8 +303,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                         ),
                         _ImmersiveIconBtn(
                           icon: Icons.more_horiz_rounded,
-                          onTap: () =>
-                              context.push(AppRoutes.focusSettings),
+                          onTap: () => context.push(AppRoutes.focusSettings),
                         ),
                       ],
                     ),
@@ -335,8 +329,9 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                         value: progress,
                         size: 260,
                         strokeWidth: 14,
-                        trackColor:
-                            AppColors.brandPrimary.withValues(alpha: 0.06),
+                        trackColor: AppColors.brandPrimary.withValues(
+                          alpha: 0.06,
+                        ),
                         gradientColors: const [
                           AppColors.brandPink,
                           Color(0xFFFFB547),
@@ -355,8 +350,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                             ),
                             if (activeTask != null)
                               Padding(
-                                padding:
-                                    const EdgeInsets.only(top: 4),
+                                padding: const EdgeInsets.only(top: 4),
                                 child: Text(
                                   activeTask.title,
                                   maxLines: 1,
@@ -401,9 +395,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                           label: 'Done',
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            ref
-                                .read(focusProvider.notifier)
-                                .completeSession();
+                            ref.read(focusProvider.notifier).completeSession();
                           },
                         ),
                       ],
@@ -489,9 +481,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                   sessionLabel: hasActive
                       ? _sessionLabel(state.activeSession!.sessionType)
                       : null,
-                  onStart: () => ref
-                      .read(focusProvider.notifier)
-                      .startFocusSession(),
+                  onStart: () =>
+                      ref.read(focusProvider.notifier).startFocusSession(),
                   onCancel: () =>
                       ref.read(focusProvider.notifier).cancelSession(),
                   onComplete: () =>
@@ -579,8 +570,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                     onAccept: () => ref
                         .read(focusProvider.notifier)
                         .startRecommendedFocus(),
-                    onChooseAnother: () =>
-                        _showTaskChooser(tasksState.tasks),
+                    onChooseAnother: () => _showTaskChooser(tasksState.tasks),
                     onRefresh: () =>
                         ref.read(focusProvider.notifier).loadRecommendation(),
                   ),
@@ -657,9 +647,7 @@ class _ImmersiveIconBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.6),
           shape: BoxShape.circle,
-          border: Border.all(
-            color: AppColors.borderSoft,
-          ),
+          border: Border.all(color: AppColors.borderSoft),
         ),
         child: Icon(icon, size: 18, color: AppColors.textHeading),
       ),
@@ -694,9 +682,7 @@ class _ControlBtn extends StatelessWidget {
                   ? AppColors.textHeading
                   : Colors.white.withValues(alpha: 0.7),
               shape: BoxShape.circle,
-              border: filled
-                  ? null
-                  : Border.all(color: AppColors.borderSoft),
+              border: filled ? null : Border.all(color: AppColors.borderSoft),
               boxShadow: filled ? AppShadows.soft : null,
             ),
             child: Icon(
@@ -770,8 +756,8 @@ class _MainFocusCard extends StatelessWidget {
         ? (sessionLabel ?? 'Focus session')
         : 'Focus Time';
     final cardLabel = hasActive
-        ? (isBreak ? 'Break session' : 'Pomodoro · Round 1 of 4')
-        : 'Pomodoro · Round 1 of 4';
+        ? (isBreak ? 'Break session' : 'Pomodoro - Round 1 of 4')
+        : 'Pomodoro - Round 1 of 4';
 
     return Container(
       width: double.infinity,
@@ -915,7 +901,7 @@ class _MainFocusCard extends StatelessWidget {
               GestureDetector(
                 onTap: onSkipBreak,
                 child: Text(
-                  'Skip break →',
+                  'Skip break',
                   style: GoogleFonts.manrope(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1069,10 +1055,7 @@ class _QuickPresets extends StatelessWidget {
   final int currentFocusMin;
   final void Function(_Preset) onSelect;
 
-  const _QuickPresets({
-    required this.currentFocusMin,
-    required this.onSelect,
-  });
+  const _QuickPresets({required this.currentFocusMin, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
@@ -1088,17 +1071,12 @@ class _QuickPresets extends StatelessWidget {
         return GestureDetector(
           onTap: () => onSelect(p),
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.bgSurface,
               borderRadius: BorderRadius.circular(AppRadius.xl),
               border: Border.all(
-                color: selected
-                    ? AppColors.brandPink
-                    : AppColors.borderSoft,
+                color: selected ? AppColors.brandPink : AppColors.borderSoft,
                 width: selected ? 2 : 1,
               ),
               boxShadow: selected ? AppShadows.glowPink : AppShadows.soft,
@@ -1107,10 +1085,7 @@ class _QuickPresets extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  p.title,
-                  style: AppTextStyles.h4Light,
-                ),
+                Text(p.title, style: AppTextStyles.h4Light),
                 const SizedBox(height: 2),
                 Text(p.subtitle, style: AppTextStyles.captionLight),
               ],
@@ -1132,10 +1107,7 @@ class _TodayStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (
-        _minutesToLabel(analytics.todayMinutes),
-        'Focused',
-      ),
+      (_minutesToLabel(analytics.todayMinutes), 'Focused'),
       ('${analytics.todaySessions}', 'Sessions'),
       ('${analytics.currentStreakDays}d', 'Streak'),
     ];
@@ -1147,10 +1119,7 @@ class _TodayStats extends StatelessWidget {
         return Expanded(
           child: Container(
             margin: EdgeInsets.only(left: i == 0 ? 0 : 8),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 14,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
             decoration: BoxDecoration(
               color: AppColors.bgSurface,
               borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -1216,7 +1185,7 @@ class _AnalyticsRow extends StatelessWidget {
             label: 'Completion',
             value: '${analytics.completionRatePercent}%',
             sub: '${analytics.completedSessions} done',
-            color: AppColors.prayerGold,
+            color: AppColors.brandGold,
           ),
         ),
         const SizedBox(width: 10),
@@ -1247,9 +1216,7 @@ class _ActivePomodoroProgress extends StatelessWidget {
     final label = estimate > 0
         ? '$completed / $estimate Pomodoros'
         : '$completed Pomodoro${completed == 1 ? '' : 's'} completed';
-    final value = estimate > 0
-        ? (completed / estimate).clamp(0.0, 1.0)
-        : 0.0;
+    final value = estimate > 0 ? (completed / estimate).clamp(0.0, 1.0) : 0.0;
 
     return Container(
       width: double.infinity,
@@ -1296,9 +1263,7 @@ class _ActivePomodoroProgress extends StatelessWidget {
               value: estimate > 0 ? value : null,
               minHeight: 6,
               backgroundColor: AppColors.brandPrimary.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                AppColors.brandPrimary,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.brandPrimary),
             ),
           ),
           const SizedBox(height: 6),
@@ -1357,14 +1322,10 @@ class _FocusRecommendationCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  'Recommended Focus',
-                  style: AppTextStyles.h4Light,
-                ),
+                child: Text('Recommended Focus', style: AppTextStyles.h4Light),
               ),
               GestureDetector(
-                onTap:
-                    state.isRecommendationLoading ? null : onRefresh,
+                onTap: state.isRecommendationLoading ? null : onRefresh,
                 child: Icon(
                   Icons.refresh_rounded,
                   size: 20,
@@ -1418,8 +1379,7 @@ class _FocusRecommendationCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 _InfoChip(
-                  label:
-                      '${recommendation.recommendedDurationMinutes} min',
+                  label: '${recommendation.recommendedDurationMinutes} min',
                   icon: Icons.timer_outlined,
                 ),
                 _InfoChip(
@@ -1454,8 +1414,7 @@ class _FocusRecommendationCard extends StatelessWidget {
                         height: AppButtonHeight.small,
                         decoration: BoxDecoration(
                           gradient: AppGradients.action,
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.xl),
+                          borderRadius: BorderRadius.circular(AppRadius.xl),
                           boxShadow: AppShadows.glowPurple,
                         ),
                         child: Center(
@@ -1468,10 +1427,7 @@ class _FocusRecommendationCard extends StatelessWidget {
                                 color: Colors.white,
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                'Accept',
-                                style: AppTextStyles.buttonLight,
-                              ),
+                              Text('Accept', style: AppTextStyles.buttonLight),
                             ],
                           ),
                         ),
@@ -1492,9 +1448,7 @@ class _FocusRecommendationCard extends StatelessWidget {
                       child: Center(
                         child: Text(
                           'Choose task',
-                          style: AppTextStyles.button(
-                            AppColors.brandPrimary,
-                          ),
+                          style: AppTextStyles.button(AppColors.brandPrimary),
                         ),
                       ),
                     ),
@@ -1515,10 +1469,7 @@ class _FocusReadinessCard extends StatelessWidget {
   final FocusState state;
   final VoidCallback onRefresh;
 
-  const _FocusReadinessCard({
-    required this.state,
-    required this.onRefresh,
-  });
+  const _FocusReadinessCard({required this.state, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -1559,10 +1510,7 @@ class _FocusReadinessCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  'Focus Readiness',
-                  style: AppTextStyles.h4Light,
-                ),
+                child: Text('Focus Readiness', style: AppTextStyles.h4Light),
               ),
               GestureDetector(
                 onTap: state.isReadinessLoading ? null : onRefresh,
@@ -1635,33 +1583,35 @@ class _FocusReadinessCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            ...readiness.reasons.take(3).map(
-              (reason) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2, right: 6),
-                      child: Container(
-                        width: 5,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
+            ...readiness.reasons
+                .take(3)
+                .map(
+                  (reason) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2, right: 6),
+                          child: Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
                         ),
-                      ),
+                        Expanded(
+                          child: Text(
+                            reason,
+                            style: AppTextStyles.captionLight,
+                          ),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: Text(
-                        reason,
-                        style: AppTextStyles.captionLight,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
           ],
         ],
       ),
@@ -1880,9 +1830,7 @@ class _DurationSlider extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(
-              child: Text(label, style: AppTextStyles.bodySmallLight),
-            ),
+            Expanded(child: Text(label, style: AppTextStyles.bodySmallLight)),
             Text(
               '$value$suffix',
               style: AppTextStyles.label(AppColors.brandPrimary),
@@ -1892,11 +1840,9 @@ class _DurationSlider extends StatelessWidget {
         SliderTheme(
           data: SliderThemeData(
             activeTrackColor: AppColors.brandPrimary,
-            inactiveTrackColor:
-                AppColors.brandPrimary.withValues(alpha: 0.12),
+            inactiveTrackColor: AppColors.brandPrimary.withValues(alpha: 0.12),
             thumbColor: AppColors.brandPrimary,
-            overlayColor:
-                AppColors.brandPrimary.withValues(alpha: 0.1),
+            overlayColor: AppColors.brandPrimary.withValues(alpha: 0.1),
           ),
           child: Slider(
             value: value.toDouble(),
@@ -1918,10 +1864,7 @@ class _EstimatedPomodoros extends ConsumerWidget {
   final List<TaskModel> tasks;
   final int focusMinutes;
 
-  const _EstimatedPomodoros({
-    required this.tasks,
-    required this.focusMinutes,
-  });
+  const _EstimatedPomodoros({required this.tasks, required this.focusMinutes});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -2134,9 +2077,7 @@ class _SessionTile extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: isCompleted
-                  ? AppColors.successSoft
-                  : AppColors.errorSoft,
+              color: isCompleted ? AppColors.successSoft : AppColors.errorSoft,
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -2156,9 +2097,7 @@ class _SessionTile extends StatelessWidget {
             ),
           ),
           Text(
-            isCompleted
-                ? '${session.actualMinutes ?? 0}m done'
-                : 'cancelled',
+            isCompleted ? '${session.actualMinutes ?? 0}m done' : 'cancelled',
             style: AppTextStyles.captionLight,
           ),
         ],

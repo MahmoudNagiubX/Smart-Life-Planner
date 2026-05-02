@@ -220,7 +220,7 @@ class _HeroCard extends StatelessWidget {
                   'assets/images/app_logo.png',
                   width: 180,
                   height: 180,
-                  fit: BoxFit.contain,
+                  fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => Container(
                     width: 180,
                     height: 180,

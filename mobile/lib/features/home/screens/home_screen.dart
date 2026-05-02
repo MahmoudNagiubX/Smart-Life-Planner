@@ -254,7 +254,7 @@ class _HomeHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             child: Image.asset(
               'assets/images/app_logo.png',
-              fit: BoxFit.contain,
+              fit: BoxFit.cover,
               errorBuilder: (_, _, _) => Container(
                 decoration: const BoxDecoration(gradient: AppGradients.action),
                 child: const Icon(
@@ -1805,85 +1805,195 @@ class _DashboardCustomizeSheetState
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.s20,
-          AppSpacing.s16,
-          AppSpacing.s20,
-          AppSpacing.s24,
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgSurface,
+          borderRadius: AppRadius.sheetBr,
+          boxShadow: AppShadows.floating,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Customize Dashboard',
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textHeading,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'Close',
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: AppColors.textBody,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.s8),
-            SizedBox(
-              height: 420,
-              child: ReorderableListView.builder(
-                itemCount: _orderedWidgets.length,
-                onReorder: (oldIndex, newIndex) {
-                  setState(() {
-                    if (newIndex > oldIndex) newIndex -= 1;
-                    final item = _orderedWidgets.removeAt(oldIndex);
-                    _orderedWidgets.insert(newIndex, item);
-                  });
-                },
-                itemBuilder: (context, index) {
-                  final id = _orderedWidgets[index];
-                  return SwitchListTile(
-                    key: ValueKey(id),
-                    value: _enabledWidgets.contains(id),
-                    secondary: Icon(_dashboardWidgetIcon(id)),
-                    title: Text(
-                      _dashboardWidgetLabel(id),
-                      style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.s20,
+            AppSpacing.s16,
+            AppSpacing.s20,
+            AppSpacing.s24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      gradient: AppGradients.action,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      boxShadow: AppShadows.glowPurple,
                     ),
-                    subtitle: const Text('Drag to reorder'),
-                    onChanged: (enabled) {
-                      setState(() {
-                        if (enabled) {
-                          _enabledWidgets.add(id);
-                        } else {
-                          _enabledWidgets.remove(id);
-                        }
-                      });
-                    },
-                  );
-                },
+                    child: const Icon(
+                      Icons.dashboard_customize_outlined,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s12),
+                  Expanded(
+                    child: Text(
+                      'Customize Dashboard',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.manrope(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textHeading,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.bgSurfaceSoft,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textBody,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s16),
+              SizedBox(
+                height: 420,
+                child: ReorderableListView.builder(
+                  itemCount: _orderedWidgets.length,
+                  onReorder: (oldIndex, newIndex) {
+                    setState(() {
+                      if (newIndex > oldIndex) newIndex -= 1;
+                      final item = _orderedWidgets.removeAt(oldIndex);
+                      _orderedWidgets.insert(newIndex, item);
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    final id = _orderedWidgets[index];
+                    final enabled = _enabledWidgets.contains(id);
+                    return Container(
+                      key: ValueKey(id),
+                      margin: const EdgeInsets.only(bottom: AppSpacing.s8),
+                      decoration: BoxDecoration(
+                        color: enabled
+                            ? AppColors.bgSurfaceLavender
+                            : AppColors.bgSurfaceSoft,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        border: Border.all(
+                          color: enabled
+                              ? AppColors.brandPrimary.withValues(alpha: 0.25)
+                              : AppColors.borderSoft,
+                        ),
+                      ),
+                      child: SwitchListTile(
+                        value: enabled,
+                        activeThumbColor: Colors.white,
+                        activeTrackColor: AppColors.brandPrimary,
+                        secondary: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.72),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Icon(
+                            _dashboardWidgetIcon(id),
+                            color: enabled
+                                ? AppColors.brandPrimary
+                                : AppColors.textBody,
+                            size: 19,
+                          ),
+                        ),
+                        title: Text(
+                          _dashboardWidgetLabel(id),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textHeading,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Drag to reorder',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textHint,
+                          ),
+                        ),
+                        onChanged: (enabled) {
+                          setState(() {
+                            if (enabled) {
+                              _enabledWidgets.add(id);
+                            } else {
+                              _enabledWidgets.remove(id);
+                            }
+                          });
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              _isSaving
+                  ? const CircularProgressIndicator()
+                  : _DashboardSheetButton(onPressed: _save),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardSheetButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _DashboardSheetButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: AppButtonHeight.primary,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: AppGradients.action,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.glowPurple,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            onTap: onPressed,
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.save_outlined, color: Colors.white),
+                  const SizedBox(width: AppSpacing.s8),
+                  Text(
+                    'Save',
+                    style: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: AppSpacing.s12),
-            _isSaving
-                ? const CircularProgressIndicator()
-                : SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _save,
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('Save'),
-                    ),
-                  ),
-          ],
+          ),
         ),
       ),
     );

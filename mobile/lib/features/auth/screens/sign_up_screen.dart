@@ -72,7 +72,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authState.error!),
-            backgroundColor: AppColors.error,
+            backgroundColor: AppColors.errorColor,
           ),
         );
       } else {
@@ -82,7 +82,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
               successMessage ??
                   'Account created. Check your email for the code.',
             ),
-            backgroundColor: AppColors.success,
+            backgroundColor: AppColors.successColor,
           ),
         );
         final developmentCode = _extractDevelopmentCode(successMessage);
@@ -167,7 +167,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                           'assets/images/app_logo.png',
                           width: 56,
                           height: 56,
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(
                             width: 56,
                             height: 56,

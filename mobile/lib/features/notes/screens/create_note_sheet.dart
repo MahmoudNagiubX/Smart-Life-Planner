@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../models/app_template_library.dart';
 import '../providers/note_provider.dart';
 import '../models/note_model.dart';
@@ -313,7 +316,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Image is too large.'),
-            backgroundColor: AppColors.error,
+            backgroundColor: AppColors.errorColor,
           ),
         );
         return;
@@ -332,7 +335,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Image could not be added.'),
-          backgroundColor: AppColors.error,
+          backgroundColor: AppColors.errorColor,
         ),
       );
     }
@@ -421,7 +424,7 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -431,269 +434,366 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textSecondary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Header row with voice button
-            Row(
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgSurface,
+          borderRadius: AppRadius.sheetBr,
+          boxShadow: AppShadows.floating,
+        ),
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: AppSpacing.s20,
+            right: AppSpacing.s20,
+            top: AppSpacing.s16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.s24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _isEditing ? 'Edit Note' : '📝 New Note',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                // 🎙️ Voice note button
-                GestureDetector(
-                  onTap: _openVoiceNote,
+                // Handle bar
+                Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.mic, color: AppColors.primary, size: 16),
-                        SizedBox(width: 6),
-                        Text(
-                          'Voice',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                      color: AppColors.borderSoft,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.s20),
 
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Title (optional)'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _headingController,
-              decoration: const InputDecoration(
-                labelText: 'Heading block',
-                prefixIcon: Icon(Icons.title),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(
-                  value: 'text',
-                  icon: Icon(Icons.notes),
-                  label: Text('Text'),
-                ),
-                ButtonSegment(
-                  value: 'checklist',
-                  icon: Icon(Icons.checklist),
-                  label: Text('Checklist'),
-                ),
-              ],
-              selected: {_noteType},
-              onSelectionChanged: (selection) {
-                setState(() {
-                  _noteType = selection.first;
-                  if (_noteType == 'checklist' && _checklistItems.isEmpty) {
-                    _checklistItems.add(
-                      _ChecklistDraftItem(
-                        id: 'item_${DateTime.now().microsecondsSinceEpoch}',
-                      ),
-                    );
-                  }
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            if (_noteType == 'text')
-              TextField(
-                controller: _contentController,
-                autofocus: true,
-                maxLines: 5,
-                minLines: 3,
-                decoration: const InputDecoration(labelText: 'Note content'),
-              )
-            else
-              _ChecklistEditor(
-                items: _checklistItems,
-                onAdd: _addChecklistItem,
-                onChanged: () => setState(() {}),
-                onRemove: (item) {
-                  setState(() {
-                    _checklistItems.remove(item);
-                    item.controller.dispose();
-                  });
-                },
-              ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _bulletController,
-              minLines: 2,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Bullet list',
-                hintText: 'One bullet per line',
-                prefixIcon: Icon(Icons.format_list_bulleted),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              secondary: const Icon(Icons.horizontal_rule),
-              title: const Text('Divider block'),
-              value: _dividerEnabled,
-              onChanged: (value) => setState(() => _dividerEnabled = value),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _tagsController,
-              onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                labelText: 'Tags',
-                hintText: 'study, ideas, reflection',
-                prefixIcon: Icon(Icons.label_outline),
-              ),
-            ),
-            if (_parseTags().isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _parseTags()
-                    .map(
-                      (tag) => Chip(
-                        avatar: const Icon(Icons.label_outline, size: 15),
-                        label: Text('#$tag'),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ActionChip(
-                  avatar: const Icon(Icons.notifications_outlined, size: 18),
-                  label: Text(
-                    _reminderAt == null
-                        ? 'Reminder'
-                        : _reminderAt!.toLocal().toString().substring(0, 16),
-                  ),
-                  onPressed: _pickReminder,
-                ),
-                if (_reminderAt != null)
-                  ActionChip(
-                    avatar: const Icon(Icons.close, size: 18),
-                    label: const Text('Clear reminder'),
-                    onPressed: () => setState(() => _reminderAt = null),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _linkedTaskController,
-              decoration: const InputDecoration(
-                labelText: 'Linked task block (optional)',
-                hintText: 'Task title or reference',
-                prefixIcon: Icon(Icons.task_alt),
-              ),
-            ),
-            const SizedBox(height: 12),
-            _AttachmentEditor(
-              attachments: _attachments,
-              onAdd: _pickImage,
-              onRemove: (attachment) {
-                setState(() => _attachments.remove(attachment));
-              },
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _noteColorOptions
-                  .map(
-                    (option) => Tooltip(
-                      message: option.label,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () =>
-                            setState(() => _selectedColorKey = option.key),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: option.color ?? Theme.of(context).cardColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: _selectedColorKey == option.key
-                                  ? AppColors.primary
-                                  : AppColors.textSecondary.withValues(
-                                      alpha: 0.35,
-                                    ),
-                              width: _selectedColorKey == option.key ? 2 : 1,
+                // Header row with voice button
+                Row(
+                  children: [
+                    Text(
+                      _isEditing ? 'Edit Note' : 'New Note',
+                      style: AppTextStyles.h3Light,
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _openVoiceNote,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.bgSurfaceLavender,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                          border: Border.all(
+                            color: AppColors.brandPrimary.withValues(
+                              alpha: 0.22,
                             ),
                           ),
-                          child: _selectedColorKey == option.key
-                              ? const Icon(
-                                  Icons.check,
-                                  color: AppColors.primary,
-                                  size: 18,
-                                )
-                              : null,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.mic,
+                              color: AppColors.brandPrimary,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Voice',
+                              style: AppTextStyles.label(
+                                AppColors.brandPrimary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: 20),
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _submit,
-                    child: Text(_isEditing ? 'Update Note' : 'Save Note'),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.s16),
+
+                TextField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title (optional)',
                   ),
-          ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _headingController,
+                  decoration: const InputDecoration(
+                    labelText: 'Heading block',
+                    prefixIcon: Icon(Icons.title),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<String>(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith((states) {
+                      return states.contains(WidgetState.selected)
+                          ? AppColors.bgSurfaceLavender
+                          : AppColors.bgSurfaceSoft;
+                    }),
+                    foregroundColor: WidgetStateProperty.resolveWith((states) {
+                      return states.contains(WidgetState.selected)
+                          ? AppColors.brandPrimary
+                          : AppColors.textBody;
+                    }),
+                    side: WidgetStateProperty.all(
+                      const BorderSide(color: AppColors.borderSoft),
+                    ),
+                    textStyle: WidgetStateProperty.all(
+                      AppTextStyles.label(AppColors.textHeading),
+                    ),
+                  ),
+                  segments: const [
+                    ButtonSegment(
+                      value: 'text',
+                      icon: Icon(Icons.notes),
+                      label: Text('Text'),
+                    ),
+                    ButtonSegment(
+                      value: 'checklist',
+                      icon: Icon(Icons.checklist),
+                      label: Text('Checklist'),
+                    ),
+                  ],
+                  selected: {_noteType},
+                  onSelectionChanged: (selection) {
+                    setState(() {
+                      _noteType = selection.first;
+                      if (_noteType == 'checklist' && _checklistItems.isEmpty) {
+                        _checklistItems.add(
+                          _ChecklistDraftItem(
+                            id: 'item_${DateTime.now().microsecondsSinceEpoch}',
+                          ),
+                        );
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                if (_noteType == 'text')
+                  TextField(
+                    controller: _contentController,
+                    autofocus: true,
+                    maxLines: 5,
+                    minLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Note content',
+                    ),
+                  )
+                else
+                  _ChecklistEditor(
+                    items: _checklistItems,
+                    onAdd: _addChecklistItem,
+                    onChanged: () => setState(() {}),
+                    onRemove: (item) {
+                      setState(() {
+                        _checklistItems.remove(item);
+                        item.controller.dispose();
+                      });
+                    },
+                  ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _bulletController,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Bullet list',
+                    hintText: 'One bullet per line',
+                    prefixIcon: Icon(Icons.format_list_bulleted),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSurfaceSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: AppColors.borderSoft),
+                  ),
+                  child: SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s12,
+                    ),
+                    secondary: const Icon(
+                      Icons.horizontal_rule,
+                      color: AppColors.brandPrimary,
+                    ),
+                    title: Text(
+                      'Divider block',
+                      style: AppTextStyles.body(AppColors.textHeading),
+                    ),
+                    activeThumbColor: AppColors.brandPrimary,
+                    value: _dividerEnabled,
+                    onChanged: (value) =>
+                        setState(() => _dividerEnabled = value),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _tagsController,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    labelText: 'Tags',
+                    hintText: 'study, ideas, reflection',
+                    prefixIcon: Icon(Icons.label_outline),
+                  ),
+                ),
+                if (_parseTags().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: _parseTags()
+                        .map(
+                          (tag) => Chip(
+                            avatar: const Icon(Icons.label_outline, size: 15),
+                            label: Text('#$tag'),
+                            labelStyle: AppTextStyles.caption(
+                              AppColors.brandPrimary,
+                            ),
+                            backgroundColor: AppColors.bgSurfaceLavender,
+                            side: const BorderSide(color: AppColors.borderSoft),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ActionChip(
+                      avatar: const Icon(
+                        Icons.notifications_outlined,
+                        size: 18,
+                      ),
+                      backgroundColor: AppColors.bgSurfaceSoft,
+                      side: const BorderSide(color: AppColors.borderSoft),
+                      label: Text(
+                        _reminderAt == null
+                            ? 'Reminder'
+                            : _reminderAt!.toLocal().toString().substring(
+                                0,
+                                16,
+                              ),
+                      ),
+                      onPressed: _pickReminder,
+                    ),
+                    if (_reminderAt != null)
+                      ActionChip(
+                        avatar: const Icon(Icons.close, size: 18),
+                        backgroundColor: AppColors.bgSurfaceSoft,
+                        side: const BorderSide(color: AppColors.borderSoft),
+                        label: const Text('Clear reminder'),
+                        onPressed: () => setState(() => _reminderAt = null),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _linkedTaskController,
+                  decoration: const InputDecoration(
+                    labelText: 'Linked task block (optional)',
+                    hintText: 'Task title or reference',
+                    prefixIcon: Icon(Icons.task_alt),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _AttachmentEditor(
+                  attachments: _attachments,
+                  onAdd: _pickImage,
+                  onRemove: (attachment) {
+                    setState(() => _attachments.remove(attachment));
+                  },
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _noteColorOptions
+                      .map(
+                        (option) => Tooltip(
+                          message: option.label,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () =>
+                                setState(() => _selectedColorKey = option.key),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: option.color ?? AppColors.bgSurfaceSoft,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: _selectedColorKey == option.key
+                                      ? AppColors.brandPrimary
+                                      : AppColors.borderSoft,
+                                  width: _selectedColorKey == option.key
+                                      ? 2
+                                      : 1,
+                                ),
+                              ),
+                              child: _selectedColorKey == option.key
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: AppColors.brandPrimary,
+                                      size: 18,
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: AppSpacing.s20),
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _SheetPrimaryButton(
+                        label: _isEditing ? 'Update Note' : 'Save Note',
+                        onPressed: _submit,
+                      ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetPrimaryButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+
+  const _SheetPrimaryButton({required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: AppButtonHeight.primary,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: AppGradients.action,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.glowPurple,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            onTap: onPressed,
+            child: Center(
+              child: Text(label, style: AppTextStyles.button(Colors.white)),
+            ),
+          ),
         ),
       ),
     );
@@ -737,6 +837,7 @@ class _ChecklistEditor extends StatelessWidget {
             child: Row(
               children: [
                 Checkbox(
+                  activeColor: AppColors.brandPrimary,
                   value: item.isCompleted,
                   onChanged: (value) {
                     item.isCompleted = value ?? false;
@@ -814,8 +915,11 @@ class _AttachmentEditor extends StatelessWidget {
                           ? Container(
                               width: 92,
                               height: 92,
-                              color: AppColors.cardDark,
-                              child: const Icon(Icons.broken_image_outlined),
+                              color: AppColors.bgSurfaceLavender,
+                              child: const Icon(
+                                Icons.broken_image_outlined,
+                                color: AppColors.textHint,
+                              ),
                             )
                           : Image.file(
                               File(path),
@@ -826,9 +930,10 @@ class _AttachmentEditor extends StatelessWidget {
                                   Container(
                                     width: 92,
                                     height: 92,
-                                    color: AppColors.cardDark,
+                                    color: AppColors.bgSurfaceLavender,
                                     child: const Icon(
                                       Icons.broken_image_outlined,
+                                      color: AppColors.textHint,
                                     ),
                                   ),
                             ),

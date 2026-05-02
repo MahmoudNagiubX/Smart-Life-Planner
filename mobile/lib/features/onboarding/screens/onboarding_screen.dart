@@ -341,11 +341,16 @@ class _LocationStepState extends State<_LocationStep> {
         children: [
           TextField(
             controller: _countryController,
+            textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
             style: AppTextStyles.body(AppColors.textHeading),
             decoration: const InputDecoration(
               labelText: 'Country',
-              prefixIcon: Icon(Icons.public_outlined),
+              hintText: 'Egypt, United States...',
+              prefixIcon: Icon(
+                Icons.public_outlined,
+                color: AppColors.brandPrimary,
+              ),
             ),
             onChanged: (value) => widget.notifier.updateData(
               widget.data.copyWith(country: value),
@@ -354,11 +359,16 @@ class _LocationStepState extends State<_LocationStep> {
           const SizedBox(height: 16),
           TextField(
             controller: _cityController,
+            textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.done,
             style: AppTextStyles.body(AppColors.textHeading),
             decoration: const InputDecoration(
               labelText: 'City',
-              prefixIcon: Icon(Icons.location_city_outlined),
+              hintText: 'Cairo, New York...',
+              prefixIcon: Icon(
+                Icons.location_city_outlined,
+                color: AppColors.brandPrimary,
+              ),
             ),
             onChanged: (value) =>
                 widget.notifier.updateData(widget.data.copyWith(city: value)),
@@ -433,7 +443,7 @@ class _GoalsStep extends StatelessWidget {
           crossAxisCount: 2,
           mainAxisSpacing: AppSpacing.s12,
           crossAxisSpacing: AppSpacing.s12,
-          childAspectRatio: 1.55,
+          mainAxisExtent: 126,
         ),
         itemBuilder: (context, index) {
           final goal = goals[index];
@@ -982,7 +992,7 @@ class _GoalCard extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.all(AppSpacing.s16),
+          padding: const EdgeInsets.all(AppSpacing.s12),
           decoration: BoxDecoration(
             color: selected ? AppColors.bgSurfaceLavender : AppColors.bgSurface,
             borderRadius: AppRadius.cardBr,
@@ -996,20 +1006,28 @@ class _GoalCard extends StatelessWidget {
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(
-                    goal.icon,
-                    color: selected
-                        ? AppColors.brandPrimary
-                        : AppColors.textHeading,
-                    size: 30,
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: selected ? AppGradients.action : null,
+                      color: selected ? null : AppColors.bgSurfaceLavender,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Icon(
+                      goal.icon,
+                      color: selected ? Colors.white : AppColors.brandPrimary,
+                      size: 23,
+                    ),
                   ),
+                  const Spacer(),
                   Text(
                     goal.label,
                     style: AppTextStyles.h4Light,
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    overflow: TextOverflow.fade,
+                    softWrap: true,
                   ),
                 ],
               ),

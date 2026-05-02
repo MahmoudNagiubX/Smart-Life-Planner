@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../providers/ai_provider.dart';
@@ -34,9 +36,10 @@ class _NextActionCardState extends ConsumerState<NextActionCard> {
             SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: AppColors.brandPrimary),
             ),
-            SizedBox(width: 12),
+            SizedBox(width: AppSpacing.s12),
             Text('AI is thinking...'),
           ],
         ),
@@ -50,18 +53,19 @@ class _NextActionCardState extends ConsumerState<NextActionCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _NextActionHeader(
-              onRefresh: () => ref.read(aiProvider.notifier).loadNextAction(),
+              onRefresh: () =>
+                  ref.read(aiProvider.notifier).loadNextAction(),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.s8),
             Text(
               aiState.error ?? 'No next action loaded yet.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: aiState.error == null
-                    ? AppColors.textSecondary
-                    : AppColors.error,
+              style: AppTextStyles.caption(
+                aiState.error == null
+                    ? AppColors.textBody
+                    : AppColors.errorColor,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s12),
             Row(
               children: [
                 Expanded(
@@ -70,14 +74,26 @@ class _NextActionCardState extends ConsumerState<NextActionCard> {
                         ref.read(aiProvider.notifier).loadNextAction(),
                     icon: const Icon(Icons.refresh, size: 18),
                     label: const Text('Refresh'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.brandPrimary,
+                      side: const BorderSide(color: AppColors.brandPrimary),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.pillBr),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.s8),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => context.push('/home/daily-plan'),
                     icon: const Icon(Icons.calendar_today, size: 18),
                     label: const Text('Full Plan'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.brandPrimary,
+                      side: const BorderSide(color: AppColors.brandPrimary),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.pillBr),
+                    ),
                   ),
                 ),
               ],
@@ -95,21 +111,20 @@ class _NextActionCardState extends ConsumerState<NextActionCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _NextActionHeader(
-            onRefresh: () => ref.read(aiProvider.notifier).loadNextAction(),
+            onRefresh: () =>
+                ref.read(aiProvider.notifier).loadNextAction(),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s8),
           Text(
             hasTask ? next.title ?? 'Untitled task' : 'All caught up',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            style: AppTextStyles.h4Light,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.s4),
           Text(
             next.reason,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.caption(AppColors.textBody),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           Row(
             children: [
               Expanded(
@@ -122,23 +137,35 @@ class _NextActionCardState extends ConsumerState<NextActionCard> {
                           await ref
                               .read(dashboardProvider.notifier)
                               .loadDashboard();
-                          await ref.read(aiProvider.notifier).loadNextAction();
+                          await ref
+                              .read(aiProvider.notifier)
+                              .loadNextAction();
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandPrimary,
+                    foregroundColor: Colors.white,
                     minimumSize: const Size(0, 38),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.s12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: AppRadius.pillBr),
                   ),
                   child: const Text('Mark Done'),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.s8),
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => context.push('/home/daily-plan'),
                   style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.brandPrimary,
+                    side: const BorderSide(color: AppColors.brandPrimary),
                     minimumSize: const Size(0, 38),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.s12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: AppRadius.pillBr),
                   ),
                   child: const Text('Full Plan'),
                 ),
@@ -151,6 +178,8 @@ class _NextActionCardState extends ConsumerState<NextActionCard> {
   }
 }
 
+// ── Card shell ────────────────────────────────────────────────────────────────
+
 class _NextActionShell extends StatelessWidget {
   final Widget child;
   final bool highlighted;
@@ -160,28 +189,30 @@ class _NextActionShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: highlighted ? null : Theme.of(context).cardTheme.color,
+        color: highlighted ? null : AppColors.bgSurface,
         gradient: highlighted
             ? LinearGradient(
                 colors: [
-                  AppColors.primary.withValues(alpha: 0.15),
-                  AppColors.primary.withValues(alpha: 0.05),
+                  AppColors.brandPrimary.withValues(alpha: 0.15),
+                  AppColors.brandPrimary.withValues(alpha: 0.05),
                 ],
               )
             : null,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.circular(AppRadius.md),
         border: Border.all(
           color: highlighted
-              ? AppColors.primary.withValues(alpha: 0.3)
-              : AppColors.primary.withValues(alpha: 0.2),
+              ? AppColors.brandPrimary.withValues(alpha: 0.30)
+              : AppColors.borderSoft,
         ),
       ),
       child: child,
     );
   }
 }
+
+// ── Header row ────────────────────────────────────────────────────────────────
 
 class _NextActionHeader extends StatelessWidget {
   final VoidCallback onRefresh;
@@ -192,14 +223,11 @@ class _NextActionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
-        const SizedBox(width: 8),
+        const Icon(Icons.auto_awesome, size: 16, color: AppColors.brandPrimary),
+        const SizedBox(width: AppSpacing.s8),
         Text(
           'Next Best Action',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.primary,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTextStyles.label(AppColors.brandPrimary),
         ),
         const Spacer(),
         IconButton(
@@ -207,7 +235,8 @@ class _NextActionHeader extends StatelessWidget {
           padding: EdgeInsets.zero,
           tooltip: 'Refresh next action',
           onPressed: onRefresh,
-          icon: const Icon(Icons.refresh, size: 16, color: AppColors.primary),
+          icon: const Icon(Icons.refresh,
+              size: 16, color: AppColors.brandPrimary),
         ),
       ],
     );

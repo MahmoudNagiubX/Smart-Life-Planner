@@ -63,7 +63,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
-    await ref.read(authProvider.notifier).login(
+    await ref
+        .read(authProvider.notifier)
+        .login(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
@@ -192,7 +194,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.brandPrimary.withValues(alpha: 0.22),
+                            color: AppColors.brandPrimary.withValues(
+                              alpha: 0.22,
+                            ),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -204,7 +208,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                           'assets/images/app_logo.png',
                           width: 56,
                           height: 56,
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(
                             width: 56,
                             height: 56,
@@ -282,8 +286,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                         color: AppColors.textHint,
                       ),
                       suffixIcon: GestureDetector(
-                        onTap: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        onTap: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.only(right: 14),
                           child: Icon(
@@ -296,7 +301,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                         ),
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Password is required';
+                        if (v == null || v.isEmpty) {
+                          return 'Password is required';
+                        }
                         if (v.length < 8) return 'Minimum 8 characters';
                         return null;
                       },
@@ -306,8 +313,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                     Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
-                        onTap:
-                            _isLoading ? null : () => context.go(AppRoutes.forgotPassword),
+                        onTap: _isLoading
+                            ? null
+                            : () => context.go(AppRoutes.forgotPassword),
                         child: Padding(
                           padding: const EdgeInsets.only(top: 10, bottom: 4),
                           child: Text(
@@ -335,7 +343,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                     Row(
                       children: [
                         const Expanded(
-                          child: Divider(color: AppColors.borderSoft, thickness: 1),
+                          child: Divider(
+                            color: AppColors.borderSoft,
+                            thickness: 1,
+                          ),
                         ),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -349,7 +360,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                           ),
                         ),
                         const Expanded(
-                          child: Divider(color: AppColors.borderSoft, thickness: 1),
+                          child: Divider(
+                            color: AppColors.borderSoft,
+                            thickness: 1,
+                          ),
                         ),
                       ],
                     ),

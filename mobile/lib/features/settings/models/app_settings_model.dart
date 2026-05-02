@@ -40,7 +40,7 @@ class AppSettingsModel {
   factory AppSettingsModel.fromJson(Map<String, dynamic> json) {
     return AppSettingsModel(
       language: json['language'] as String? ?? 'en',
-      theme: json['theme'] as String? ?? 'dark',
+      theme: json['theme'] as String? ?? 'light',
       notificationsEnabled: json['notifications_enabled'] as bool? ?? true,
       country: json['country'] as String?,
       city: json['city'] as String?,
@@ -67,7 +67,8 @@ class AppSettingsModel {
     return switch (theme) {
       'light' => ThemeMode.light,
       'system' => ThemeMode.system,
-      _ => ThemeMode.dark,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.light,
     };
   }
 

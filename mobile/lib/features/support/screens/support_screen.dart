@@ -76,8 +76,10 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
-          AppSpacing.screenH, AppSpacing.s8,
-          AppSpacing.screenH, AppSpacing.s32,
+          AppSpacing.screenH,
+          AppSpacing.s8,
+          AppSpacing.screenH,
+          AppSpacing.s32,
         ),
         children: [
           Container(
@@ -107,11 +109,19 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.s12),
-                    Text('Send Feedback', style: AppTextStyles.h4Light),
+                    Expanded(
+                      child: Text(
+                        'Send Feedback',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.h4Light,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.s20),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _category,
                   decoration: const InputDecoration(
                     labelText: 'Category',
