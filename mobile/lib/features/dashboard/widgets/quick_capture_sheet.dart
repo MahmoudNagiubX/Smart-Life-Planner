@@ -220,7 +220,7 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: AppColors.bgApp,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.sheetBr),
       builder: (_) => const VoiceNoteSheet(),
     );

@@ -103,7 +103,7 @@ class _NotificationCenterScreenState
                   AppSpacing.screenH,
                   AppSpacing.s16,
                   AppSpacing.screenH,
-                  AppSpacing.s32,
+                  138,
                 ),
                 children: [
                   _InboxSummary(state: state),

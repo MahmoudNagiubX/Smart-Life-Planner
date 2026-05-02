@@ -90,7 +90,7 @@ class AiLifeCoachScreen extends StatelessWidget {
           AppSpacing.screenH,
           AppSpacing.s16,
           AppSpacing.screenH,
-          AppSpacing.s32,
+          138,
         ),
         children: [
           const _AiHeaderCard(),
