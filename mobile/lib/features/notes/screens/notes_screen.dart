@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
@@ -50,11 +53,12 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     final selectedTag = state.selectedTag;
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        title: const Text(
-          '📝 Notes',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        title: Text('Notes', style: AppTextStyles.h2Light),
         actions: [
           IconButton(
             tooltip: 'Templates',
@@ -89,32 +93,65 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Capture ideas before they disappear.',
+                style: AppTextStyles.bodySmall(AppColors.textHint),
+              ),
+            ),
+          ),
           // Search bar
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search notes...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          ref.read(notesProvider.notifier).loadNotes();
-                        },
-                      )
-                    : null,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenH,
+              AppSpacing.s4,
+              AppSpacing.screenH,
+              0,
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: AppRadius.pillBr,
+                border: Border.all(color: AppColors.borderSoft),
+                boxShadow: AppShadows.soft,
               ),
-              onChanged: (value) {
-                ref
-                    .read(notesProvider.notifier)
-                    .loadNotes(
-                      search: value.isEmpty ? null : value,
-                      tag: selectedTag,
-                    );
-              },
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search notes...',
+                  hintStyle: AppTextStyles.bodySmall(AppColors.textHint),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AppColors.textHint,
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          color: AppColors.textHint,
+                          onPressed: () {
+                            _searchController.clear();
+                            ref.read(notesProvider.notifier).loadNotes();
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.s16,
+                  ),
+                ),
+                style: AppTextStyles.body(AppColors.textBody),
+                onChanged: (value) {
+                  ref
+                      .read(notesProvider.notifier)
+                      .loadNotes(
+                        search: value.isEmpty ? null : value,
+                        tag: selectedTag,
+                      );
+                },
+              ),
             ),
           ),
           if (state.availableTags.isNotEmpty || selectedTag != null) ...[
@@ -128,10 +165,11 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   if (selectedTag != null)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: ActionChip(
-                        avatar: const Icon(Icons.close, size: 16),
-                        label: Text('#$selectedTag'),
-                        onPressed: () => ref
+                      child: _NotesFilterChip(
+                        label: '#$selectedTag',
+                        icon: Icons.close,
+                        selected: true,
+                        onTap: () => ref
                             .read(notesProvider.notifier)
                             .loadNotes(
                               search: _searchController.text.trim().isEmpty
@@ -143,10 +181,10 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   ...state.availableTags.map(
                     (tag) => Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text('#$tag'),
+                      child: _NotesFilterChip(
+                        label: '#$tag',
                         selected: tag == selectedTag,
-                        onSelected: (_) => ref
+                        onTap: () => ref
                             .read(notesProvider.notifier)
                             .loadNotes(
                               search: _searchController.text.trim().isEmpty
@@ -177,7 +215,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 ? AppEmptyState(
                     icon: state.showingArchived
                         ? Icons.archive_outlined
-                        : Icons.note_add_outlined,
+                        : Icons.edit_note_outlined,
                     title: state.showingArchived
                         ? 'No archived notes'
                         : 'No notes yet',
@@ -185,7 +223,44 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                         ? 'No notes found with #$selectedTag.'
                         : state.showingArchived
                         ? 'Archived notes will appear here.'
-                        : 'Capture a note, idea, or voice transcript when you are ready.',
+                        : 'Capture your first idea, reminder, or reflection.',
+                    accentColor: AppColors.brandPrimary,
+                    action: state.showingArchived
+                        ? null
+                        : ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.brandPrimary,
+                              foregroundColor: AppColors.bgSurface,
+                              minimumSize: const Size(0, AppButtonHeight.small),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppRadius.pillBr,
+                              ),
+                            ),
+                            onPressed: () async {
+                              await showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).scaffoldBackgroundColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: AppRadius.sheetBr,
+                                ),
+                                builder: (_) => const CreateNoteSheet(),
+                              );
+                              if (context.mounted) {
+                                ref
+                                    .read(notesProvider.notifier)
+                                    .loadNotes(
+                                      search: state.search,
+                                      tag: state.selectedTag,
+                                      isArchived: state.showingArchived,
+                                    );
+                              }
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create Note'),
+                          ),
                   )
                 : RefreshIndicator(
                     onRefresh: () => ref
@@ -196,7 +271,12 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                           isArchived: state.showingArchived,
                         ),
                     child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.screenH,
+                        AppSpacing.s8,
+                        AppSpacing.screenH,
+                        104,
+                      ),
                       itemCount: state.notes.length,
                       itemBuilder: (context, index) {
                         return _NoteCard(note: state.notes[index]);
@@ -237,7 +317,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                           );
                     }
                   },
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.7),
+                  backgroundColor: AppColors.bgSurface,
+                  foregroundColor: AppColors.brandPink,
                   child: const Icon(Icons.mic, size: 20),
                 ),
                 const SizedBox(height: 8),
@@ -267,7 +348,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                           );
                     }
                   },
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.brandPrimary,
+                  foregroundColor: AppColors.bgSurface,
                   child: const Icon(Icons.add),
                 ),
               ],
@@ -336,6 +418,62 @@ class _TemplatePickerSheet extends StatelessWidget {
   }
 }
 
+class _NotesFilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final IconData? icon;
+  final VoidCallback onTap;
+
+  const _NotesFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: AppRadius.pillBr,
+      onTap: onTap,
+      child: Container(
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
+        decoration: BoxDecoration(
+          gradient: selected ? AppGradients.action : null,
+          color: selected ? null : AppColors.bgSurface,
+          borderRadius: AppRadius.pillBr,
+          border: Border.all(
+            color: selected
+                ? AppColors.bgSurface.withValues(alpha: 0)
+                : AppColors.borderSoft,
+          ),
+          boxShadow: selected ? AppShadows.glowPurple : AppShadows.soft,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 15,
+                color: selected ? AppColors.bgSurface : AppColors.textBody,
+              ),
+              const SizedBox(width: AppSpacing.s4),
+            ],
+            Text(
+              label,
+              style: AppTextStyles.label(
+                selected ? AppColors.bgSurface : AppColors.textBody,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _NoteCard extends ConsumerWidget {
   final NoteModel note;
 
@@ -344,14 +482,15 @@ class _NoteCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: _noteBackgroundColor(context, note.colorKey),
-        borderRadius: BorderRadius.circular(12),
+        color: _noteBackgroundColor(note.colorKey),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadows.soft,
         border: note.isPinned
             ? Border.all(color: AppColors.prayerGold.withValues(alpha: 0.5))
-            : null,
+            : Border.all(color: AppColors.borderSoft),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,10 +507,7 @@ class _NoteCard extends ConsumerWidget {
               Expanded(
                 child: Text(
                   note.title ?? 'Untitled',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
+                  style: AppTextStyles.h4(AppColors.textHeading),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -481,9 +617,10 @@ class _NoteCard extends ConsumerWidget {
               note.content,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textBody,
+                height: 1.45,
+              ),
             ),
           if (note.structuredBlocks.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -534,7 +671,8 @@ class _NoteCard extends ConsumerWidget {
                 ? 'Archived ${note.archivedAt!.substring(0, 10)}'
                 : note.updatedAt.substring(0, 10),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary.withValues(alpha: 0.6),
+              color: AppColors.textHint,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -654,18 +792,11 @@ class _TagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.12),
+        color: AppColors.bgSurfaceLavender,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
+        border: Border.all(color: AppColors.borderSoft),
       ),
-      child: Text(
-        '#$tag',
-        style: const TextStyle(
-          color: AppColors.primary,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      child: Text('#$tag', style: AppTextStyles.label(AppColors.brandPrimary)),
     );
   }
 }
@@ -910,7 +1041,7 @@ class _AttachmentPreview extends StatelessWidget {
   }
 }
 
-Color _noteBackgroundColor(BuildContext context, String colorKey) {
+Color _noteBackgroundColor(String colorKey) {
   return switch (colorKey) {
     'red' => AppColors.noteRed,
     'orange' => AppColors.noteOrange,
@@ -918,7 +1049,7 @@ Color _noteBackgroundColor(BuildContext context, String colorKey) {
     'green' => AppColors.noteGreen,
     'blue' => AppColors.noteBlue,
     'purple' => AppColors.notePurple,
-    _ => Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor,
+    _ => AppColors.bgSurface,
   };
 }
 
