@@ -34,6 +34,10 @@ String friendlyAuthError(Object error, String fallback) {
           normalized.contains('web oauth client id')) {
         return 'Google sign-in is configured incorrectly. Check the Web OAuth client ID on Android and the backend GOOGLE_CLIENT_ID.';
       }
+      if (normalized.contains('email delivery') ||
+          normalized.contains('could not send email')) {
+        return 'Email sending is not configured yet. Check backend email settings or use the development code.';
+      }
       if (statusCode == 422) {
         return _validationMessage(data) ??
             'Please check the highlighted fields.';

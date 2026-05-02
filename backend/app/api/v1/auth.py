@@ -47,6 +47,7 @@ from app.schemas.user import (
     DeleteAccountRequest,
 )
 from app.services.email_service import (
+    EmailSendResult,
     send_verification_email,
     send_password_reset_email,
 )
@@ -81,6 +82,15 @@ async def _create_verification_code(
     db.add(verification)
     await db.commit()
     return code
+
+
+def _code_sent_response(message: str, email_result: EmailSendResult) -> dict:
+    response = {"message": message}
+    if email_result.development_message:
+        response["message"] = f"{message}. {email_result.development_message}"
+    if email_result.development_code:
+        response["development_code"] = email_result.development_code
+    return response
 
 
 # ── dependency ─────────────────────────────────────────────────────────────
@@ -219,8 +229,11 @@ async def resend_verification(
         )
 
     code = await _create_verification_code(db, user.id)
-    await send_verification_email(user.email, code)
-    return {"message": "If that email exists, a code was sent"}
+    email_result = await send_verification_email(user.email, code)
+    return _code_sent_response(
+        "If that email exists, a code was sent",
+        email_result,
+    )
 
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
@@ -258,8 +271,11 @@ async def forgot_password(
     db.add(reset)
     await db.commit()
 
-    await send_password_reset_email(user.email, code)
-    return {"message": "If that email exists, a reset code was sent"}
+    email_result = await send_password_reset_email(user.email, code)
+    return _code_sent_response(
+        "If that email exists, a reset code was sent",
+        email_result,
+    )
 
 
 @router.post("/verify-reset-code", status_code=status.HTTP_200_OK)

@@ -254,7 +254,7 @@ async def complete_task(db: AsyncSession, task: Task) -> Task:
             task_id=task.id,
             reason="completed",
         )
-    return task
+    return await get_task_by_id(db, task.id, task.user_id)
 
 
 async def reopen_task(db: AsyncSession, task: Task) -> Task:
@@ -272,7 +272,7 @@ async def reopen_task(db: AsyncSession, task: Task) -> Task:
     )
     await db.commit()
     await db.refresh(task)
-    return task
+    return await get_task_by_id(db, task.id, task.user_id)
 
 
 async def get_task_completion_events(

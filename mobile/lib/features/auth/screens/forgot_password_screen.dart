@@ -69,12 +69,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
     try {
       switch (_step) {
         case _ResetStep.requestCode:
-          await ref
+          final message = await ref
               .read(authServiceProvider)
               .forgotPassword(email: _emailController.text.trim());
           if (!mounted) return;
           setState(() => _step = _ResetStep.verifyCode);
-          _showSuccess('If that email exists, a reset code was sent.');
+          _showSuccess(message);
           break;
         case _ResetStep.verifyCode:
           final token = await ref
@@ -203,7 +203,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.brandPrimary.withValues(alpha: 0.22),
+                            color: AppColors.brandPrimary.withValues(
+                              alpha: 0.22,
+                            ),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -248,7 +250,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                               color: active
                                   ? AppColors.brandPrimary
                                   : AppColors.borderSoft,
-                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.pill,
+                              ),
                             ),
                           ),
                         );
@@ -362,7 +366,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                         ),
                         suffixIcon: GestureDetector(
                           onTap: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.only(right: 14),
                             child: Icon(
@@ -390,8 +395,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                         obscureText: _obscurePassword,
                         hintText: '••••••••',
                         textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) =>
-                            _isLoading ? null : _submit(),
+                        onFieldSubmitted: (_) => _isLoading ? null : _submit(),
                         prefixIcon: const Icon(
                           Icons.lock_reset_outlined,
                           size: 18,

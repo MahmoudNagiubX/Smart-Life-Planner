@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
@@ -50,6 +51,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       );
       await _syncTaskReminders(tasks);
     } on DioException catch (e) {
+      _logTaskApiError(e);
       state = state.copyWith(
         isLoading: false,
         error: friendlyApiError(e, 'Failed to load tasks'),
@@ -94,6 +96,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       await loadTasks();
       return true;
     } on DioException catch (e) {
+      _logTaskApiError(e);
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to create task'),
       );
@@ -117,7 +120,14 @@ class TasksNotifier extends StateNotifier<TasksState> {
       state = state.copyWith(
         tasks: state.tasks.map((t) => t.id == taskId ? updated : t).toList(),
       );
-    } catch (_) {}
+    } on DioException catch (e) {
+      _logTaskApiError(e);
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to complete task'),
+      );
+    } catch (_) {
+      state = state.copyWith(error: 'Failed to complete task');
+    }
   }
 
   Future<void> deleteTask(String taskId) async {
@@ -133,7 +143,14 @@ class TasksNotifier extends StateNotifier<TasksState> {
       state = state.copyWith(
         tasks: state.tasks.where((t) => t.id != taskId).toList(),
       );
-    } catch (_) {}
+    } on DioException catch (e) {
+      _logTaskApiError(e);
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to delete task'),
+      );
+    } catch (_) {
+      state = state.copyWith(error: 'Failed to delete task');
+    }
   }
 
   Future<bool> updateTask({
@@ -181,6 +198,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       );
       return true;
     } on DioException catch (e) {
+      _logTaskApiError(e);
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to update task'),
       );
@@ -222,6 +240,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       );
       return true;
     } on DioException catch (e) {
+      _logTaskApiError(e);
       state = state.copyWith(error: friendlyApiError(e, 'Failed to move task'));
       return false;
     } catch (_) {
@@ -243,6 +262,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       );
       return true;
     } on DioException catch (e) {
+      _logTaskApiError(e);
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to reorder tasks'),
       );
@@ -255,7 +275,13 @@ class TasksNotifier extends StateNotifier<TasksState> {
 
   Future<void> _syncTaskReminders(List<TaskModel> tasks) async {
     for (final task in tasks) {
-      await _syncTaskReminder(task);
+      try {
+        await _syncTaskReminder(task);
+      } on DioException catch (e) {
+        _logTaskApiError(e);
+      } catch (error) {
+        debugPrint('Task reminder sync skipped: $error');
+      }
     }
   }
 
@@ -463,6 +489,7 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
         isLoading: false,
       );
     } on DioException catch (e) {
+      _logTaskApiError(e);
       state = state.copyWith(
         isLoading: false,
         error: friendlyApiError(e, 'Failed to load calendar tasks'),
@@ -613,3 +640,11 @@ int _compareManualOrder(TaskModel left, TaskModel right) {
 }
 
 const _taskSingleReminderRule = 'source=task_reminder_at';
+
+void _logTaskApiError(DioException error) {
+  final request = error.requestOptions;
+  debugPrint(
+    'Task API error: ${request.method} ${request.uri} '
+    'status=${error.response?.statusCode} body=${error.response?.data}',
+  );
+}

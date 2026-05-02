@@ -44,7 +44,10 @@ class AuthService {
       '/auth/resend-verification',
       data: {'email': email},
     );
-    return response.data['message'] as String? ?? 'Verification code sent';
+    return _messageWithDevelopmentCode(
+      response.data,
+      fallback: 'Verification code sent',
+    );
   }
 
   Future<String> forgotPassword({required String email}) async {
@@ -52,7 +55,10 @@ class AuthService {
       '/auth/forgot-password',
       data: {'email': email},
     );
-    return response.data['message'] as String? ?? 'Reset code sent';
+    return _messageWithDevelopmentCode(
+      response.data,
+      fallback: 'Reset code sent',
+    );
   }
 
   Future<String> verifyResetCode({
@@ -117,5 +123,13 @@ class AuthService {
       data: {'password': password, 'confirmation': confirmation}
         ..removeWhere((_, v) => v == null),
     );
+  }
+
+  String _messageWithDevelopmentCode(dynamic data, {required String fallback}) {
+    if (data is! Map<String, dynamic>) return fallback;
+    final message = data['message'] as String? ?? fallback;
+    final code = data['development_code'] as String?;
+    if (code == null || code.isEmpty) return message;
+    return '$message Code: $code';
   }
 }
