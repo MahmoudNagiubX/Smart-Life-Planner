@@ -358,47 +358,58 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
 
     setState(() => _isLoading = true);
 
-    if (_isEditing) {
-      await ref
-          .read(notesProvider.notifier)
-          .updateNote(
-            noteId: widget.initialNote!.id,
-            content: content,
-            taskId: widget.linkedTaskId ?? widget.initialNote!.taskId,
-            title: _titleController.text.trim().isEmpty
-                ? null
-                : _titleController.text.trim(),
-            noteType: _noteType,
-            tags: _parseTags(),
-            checklistItems: _noteType == 'checklist' ? checklistItems : null,
-            structuredBlocks: structuredBlocks,
-            attachments: _attachments,
-            reminderAt: _reminderAt?.toUtc().toIso8601String(),
-            clearReminderAt: _reminderAt == null,
-            colorKey: _selectedColorKey,
-          );
-    } else {
-      await ref
-          .read(notesProvider.notifier)
-          .createNote(
-            content: content,
-            taskId: widget.linkedTaskId,
-            title: _titleController.text.trim().isEmpty
-                ? null
-                : _titleController.text.trim(),
-            noteType: _noteType,
-            tags: _parseTags(),
-            checklistItems: _noteType == 'checklist' ? checklistItems : null,
-            structuredBlocks: structuredBlocks,
-            attachments: _attachments,
-            reminderAt: _reminderAt?.toUtc().toIso8601String(),
-            colorKey: _selectedColorKey,
-          );
-    }
+    final saved = _isEditing
+        ? await ref
+              .read(notesProvider.notifier)
+              .updateNote(
+                noteId: widget.initialNote!.id,
+                content: content,
+                taskId: widget.linkedTaskId ?? widget.initialNote!.taskId,
+                title: _titleController.text.trim().isEmpty
+                    ? null
+                    : _titleController.text.trim(),
+                noteType: _noteType,
+                tags: _parseTags(),
+                checklistItems: _noteType == 'checklist'
+                    ? checklistItems
+                    : null,
+                structuredBlocks: structuredBlocks,
+                attachments: _attachments,
+                reminderAt: _reminderAt?.toUtc().toIso8601String(),
+                clearReminderAt: _reminderAt == null,
+                colorKey: _selectedColorKey,
+              )
+        : await ref
+              .read(notesProvider.notifier)
+              .createNote(
+                content: content,
+                taskId: widget.linkedTaskId,
+                title: _titleController.text.trim().isEmpty
+                    ? null
+                    : _titleController.text.trim(),
+                noteType: _noteType,
+                tags: _parseTags(),
+                checklistItems: _noteType == 'checklist'
+                    ? checklistItems
+                    : null,
+                structuredBlocks: structuredBlocks,
+                attachments: _attachments,
+                reminderAt: _reminderAt?.toUtc().toIso8601String(),
+                colorKey: _selectedColorKey,
+              );
 
     if (mounted) {
       setState(() => _isLoading = false);
-      Navigator.pop(context);
+      if (saved) {
+        Navigator.pop(context);
+      } else {
+        final error =
+            ref.read(notesProvider).error ??
+            'Note could not be saved. Please try again.';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+      }
     }
   }
 

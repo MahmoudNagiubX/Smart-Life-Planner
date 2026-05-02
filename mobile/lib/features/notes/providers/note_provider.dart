@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/providers.dart';
 import '../../../core/notifications/notification_scheduler.dart';
@@ -90,15 +91,22 @@ class NotesNotifier extends StateNotifier<NotesState> {
       );
       state = state.copyWith(notes: notes, isLoading: false);
       await _syncNoteReminders(notes);
-    } on DioException catch (e) {
+    } on DioException catch (e, stackTrace) {
+      _logNoteSafeError('load_notes', e, stackTrace);
       state = state.copyWith(
         isLoading: false,
         error: friendlyApiError(e, 'Failed to load notes'),
       );
+    } catch (e, stackTrace) {
+      _logNoteSafeError('load_notes_parse', e, stackTrace);
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Notes could not be loaded. Please try again.',
+      );
     }
   }
 
-  Future<void> createNote({
+  Future<bool> createNote({
     required String content,
     String? title,
     String? taskId,
@@ -127,19 +135,27 @@ class NotesNotifier extends StateNotifier<NotesState> {
         colorKey: colorKey,
       );
       await _syncNoteReminder(note);
-      await loadNotes(
-        search: state.search,
-        tag: state.selectedTag,
-        isArchived: state.showingArchived,
+      state = state.copyWith(
+        notes: _upsertVisibleNote(state.notes, note),
+        isLoading: false,
+        error: null,
       );
-    } on DioException catch (e) {
+      await _refreshNotesAfterSuccessfulSave(fallbackNote: note);
+      return true;
+    } on DioException catch (e, stackTrace) {
+      _logNoteSafeError('create_note', e, stackTrace);
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to create note'),
       );
+      return false;
+    } catch (e, stackTrace) {
+      _logNoteSafeError('create_note_parse', e, stackTrace);
+      state = state.copyWith(error: 'Note was not saved. Please try again.');
+      return false;
     }
   }
 
-  Future<void> updateNote({
+  Future<bool> updateNote({
     required String noteId,
     required String content,
     String? title,
@@ -172,15 +188,25 @@ class NotesNotifier extends StateNotifier<NotesState> {
         colorKey: colorKey,
       );
       await _syncNoteReminder(note);
-      await loadNotes(
-        search: state.search,
-        tag: state.selectedTag,
-        isArchived: state.showingArchived,
+      state = state.copyWith(
+        notes: _upsertVisibleNote(state.notes, note),
+        isLoading: false,
+        error: null,
       );
-    } on DioException catch (e) {
+      await _refreshNotesAfterSuccessfulSave(fallbackNote: note);
+      return true;
+    } on DioException catch (e, stackTrace) {
+      _logNoteSafeError('update_note', e, stackTrace);
       state = state.copyWith(
         error: friendlyApiError(e, 'Failed to update note'),
       );
+      return false;
+    } catch (e, stackTrace) {
+      _logNoteSafeError('update_note_parse', e, stackTrace);
+      state = state.copyWith(
+        error: 'Note changes were not saved. Please try again.',
+      );
+      return false;
     }
   }
 
@@ -310,20 +336,21 @@ class NotesNotifier extends StateNotifier<NotesState> {
   }
 
   Future<void> _syncNoteReminder(NoteModel note) async {
-    final scheduler = _ref.read(notificationSchedulerProvider);
-    if (note.isArchived || note.reminderAt == null) {
-      await scheduler.cancelNoteReminder(note.id);
-      await _ref
-          .read(reminderServiceProvider)
-          .dismissTargetReminders(
-            targetType: 'note',
-            targetId: note.id,
-            reminderType: 'note',
-            recurrenceRule: _noteReminderRule,
-          );
-      return;
-    }
     try {
+      final scheduler = _ref.read(notificationSchedulerProvider);
+      if (note.isArchived || note.reminderAt == null) {
+        await scheduler.cancelNoteReminder(note.id);
+        await _ref
+            .read(reminderServiceProvider)
+            .dismissTargetReminders(
+              targetType: 'note',
+              targetId: note.id,
+              reminderType: 'note',
+              recurrenceRule: _noteReminderRule,
+            );
+        return;
+      }
+
       final reminderAt = DateTime.parse(note.reminderAt!).toLocal();
       if (reminderAt.isAfter(DateTime.now())) {
         final reminder = await _ref
@@ -360,9 +387,65 @@ class NotesNotifier extends StateNotifier<NotesState> {
               recurrenceRule: _noteReminderRule,
             );
       }
-    } catch (_) {
-      await scheduler.cancelNoteReminder(note.id);
+    } on DioException catch (e, stackTrace) {
+      _logNoteSafeError('sync_note_reminder', e, stackTrace);
+      await _cancelLocalNoteReminderSafely(note.id);
+    } catch (e, stackTrace) {
+      _logNoteSafeError('sync_note_reminder_local', e, stackTrace);
+      await _cancelLocalNoteReminderSafely(note.id);
     }
+  }
+
+  Future<void> _cancelLocalNoteReminderSafely(String noteId) async {
+    try {
+      await _ref.read(notificationSchedulerProvider).cancelNoteReminder(noteId);
+    } catch (e, stackTrace) {
+      _logNoteSafeError('cancel_local_note_reminder', e, stackTrace);
+    }
+  }
+
+  Future<void> _refreshNotesAfterSuccessfulSave({
+    required NoteModel fallbackNote,
+  }) async {
+    try {
+      final service = _ref.read(noteServiceProvider);
+      final notes = await service.getNotes(
+        search: state.search,
+        tag: state.selectedTag,
+        isArchived: state.showingArchived,
+      );
+      state = state.copyWith(
+        notes: _upsertVisibleNote(notes, fallbackNote),
+        isLoading: false,
+        error: null,
+      );
+      await _syncNoteReminders(notes);
+    } on DioException catch (e, stackTrace) {
+      _logNoteSafeError('refresh_notes_after_save', e, stackTrace);
+    } catch (e, stackTrace) {
+      _logNoteSafeError('refresh_notes_after_save_parse', e, stackTrace);
+    }
+  }
+
+  List<NoteModel> _upsertVisibleNote(List<NoteModel> notes, NoteModel note) {
+    if (!_noteMatchesCurrentView(note)) {
+      return notes.where((item) => item.id != note.id).toList();
+    }
+    final withoutNote = notes.where((item) => item.id != note.id).toList();
+    return [note, ...withoutNote];
+  }
+
+  bool _noteMatchesCurrentView(NoteModel note) {
+    if (note.isArchived != state.showingArchived) return false;
+    final selectedTag = state.selectedTag;
+    if (selectedTag != null && !note.tags.contains(selectedTag)) return false;
+    final search = state.search?.trim().toLowerCase();
+    if (search != null && search.isNotEmpty) {
+      final title = note.title?.toLowerCase() ?? '';
+      final content = note.content.toLowerCase();
+      return title.contains(search) || content.contains(search);
+    }
+    return true;
   }
 }
 
@@ -371,6 +454,16 @@ final notesProvider = StateNotifierProvider<NotesNotifier, NotesState>((ref) {
 });
 
 const _noteReminderRule = 'source=note_reminder_at';
+
+void _logNoteSafeError(String action, Object error, StackTrace stackTrace) {
+  final status = error is DioException ? error.response?.statusCode : null;
+  final path = error is DioException ? error.requestOptions.path : null;
+  debugPrint(
+    'Notes hotfix: $action failed '
+    'type=${error.runtimeType} status=$status path=$path',
+  );
+  debugPrintStack(stackTrace: stackTrace, label: 'Notes hotfix stack');
+}
 
 class TaskLinkedNotesState {
   final List<NoteModel> notes;

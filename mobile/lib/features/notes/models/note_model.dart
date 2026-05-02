@@ -10,10 +10,11 @@ class ChecklistItemModel {
   });
 
   factory ChecklistItemModel.fromJson(Map<String, dynamic> json) {
+    final text = _jsonString(json['text']);
     return ChecklistItemModel(
-      id: json['id'] as String,
-      text: json['text'] as String,
-      isCompleted: json['is_completed'] as bool? ?? false,
+      id: _jsonString(json['id'], fallback: 'item_${text.hashCode}'),
+      text: text,
+      isCompleted: _jsonBool(json['is_completed']),
     );
   }
 
@@ -58,27 +59,28 @@ class NoteStructuredBlockModel {
   });
 
   factory NoteStructuredBlockModel.fromJson(Map<String, dynamic> json) {
-    final type = json['type'] as String? ?? 'paragraph';
-    final rawItems = json['items'] as List<dynamic>? ?? [];
+    final type = _jsonString(json['type'], fallback: 'paragraph');
+    final rawItems = _jsonList(json['items']);
     return NoteStructuredBlockModel(
-      id: json['id'] as String,
+      id: _jsonString(json['id'], fallback: 'block_${json.hashCode}'),
       type: type,
-      text: json['text'] as String?,
+      text: _jsonNullableString(json['text']),
       items: type == 'bullet_list'
           ? rawItems.map((item) => item.toString()).toList()
           : const [],
       checklistItems: type == 'checklist'
           ? rawItems
+                .map(_jsonMap)
                 .whereType<Map<String, dynamic>>()
                 .map(ChecklistItemModel.fromJson)
                 .toList()
           : const [],
-      imageUrl: json['image_url'] as String?,
-      localPath: json['local_path'] as String?,
-      fileType: json['file_type'] as String?,
-      reminderAt: json['reminder_at'] as String?,
-      taskId: json['task_id'] as String?,
-      taskTitle: json['task_title'] as String?,
+      imageUrl: _jsonNullableString(json['image_url']),
+      localPath: _jsonNullableString(json['local_path']),
+      fileType: _jsonNullableString(json['file_type']),
+      reminderAt: _jsonNullableString(json['reminder_at']),
+      taskId: _jsonNullableString(json['task_id']),
+      taskTitle: _jsonNullableString(json['task_title']),
     );
   }
 
@@ -124,13 +126,13 @@ class NoteAttachmentModel {
 
   factory NoteAttachmentModel.fromJson(Map<String, dynamic> json) {
     return NoteAttachmentModel(
-      id: json['id'] as String?,
-      noteId: json['note_id'] as String?,
-      fileUrl: json['file_url'] as String?,
-      localPath: json['local_path'] as String?,
-      fileType: json['file_type'] as String,
-      fileSize: json['file_size'] as int? ?? 0,
-      createdAt: json['created_at'] as String?,
+      id: _jsonNullableString(json['id']),
+      noteId: _jsonNullableString(json['note_id']),
+      fileUrl: _jsonNullableString(json['file_url']),
+      localPath: _jsonNullableString(json['local_path']),
+      fileType: _jsonString(json['file_type'], fallback: 'image/jpeg'),
+      fileSize: _jsonInt(json['file_size']),
+      createdAt: _jsonNullableString(json['created_at']),
     );
   }
 
@@ -185,40 +187,75 @@ class NoteModel {
 
   factory NoteModel.fromJson(Map<String, dynamic> json) {
     return NoteModel(
-      id: json['id'] as String,
-      taskId: json['task_id'] as String?,
-      title: json['title'] as String?,
-      content: json['content'] as String,
-      noteType: json['note_type'] as String,
-      tags:
-          (json['tags'] as List<dynamic>?)?.map((t) => t.toString()).toList() ??
-          [],
-      checklistItems:
-          (json['checklist_items'] as List<dynamic>?)
-              ?.whereType<Map<String, dynamic>>()
-              .map(ChecklistItemModel.fromJson)
-              .toList() ??
-          [],
-      structuredBlocks:
-          (json['structured_blocks'] as List<dynamic>?)
-              ?.whereType<Map<String, dynamic>>()
-              .map(NoteStructuredBlockModel.fromJson)
-              .toList() ??
-          [],
-      attachments:
-          (json['attachments'] as List<dynamic>?)
-              ?.whereType<Map<String, dynamic>>()
-              .map(NoteAttachmentModel.fromJson)
-              .toList() ??
-          [],
-      colorKey: json['color_key'] as String? ?? 'default',
-      isPinned: json['is_pinned'] as bool,
-      isArchived: json['is_archived'] as bool,
-      archivedAt: json['archived_at'] as String?,
-      reminderAt: json['reminder_at'] as String?,
-      sourceType: json['source_type'] as String? ?? 'manual',
-      createdAt: json['created_at'] as String,
-      updatedAt: json['updated_at'] as String,
+      id: _jsonString(json['id']),
+      taskId: _jsonNullableString(json['task_id']),
+      title: _jsonNullableString(json['title']),
+      content: _jsonString(json['content']),
+      noteType: _jsonString(json['note_type'], fallback: 'text'),
+      tags: _jsonList(json['tags']).map((t) => t.toString()).toList(),
+      checklistItems: _jsonList(json['checklist_items'])
+          .map(_jsonMap)
+          .whereType<Map<String, dynamic>>()
+          .map(ChecklistItemModel.fromJson)
+          .toList(),
+      structuredBlocks: _jsonList(json['structured_blocks'])
+          .map(_jsonMap)
+          .whereType<Map<String, dynamic>>()
+          .map(NoteStructuredBlockModel.fromJson)
+          .toList(),
+      attachments: _jsonList(json['attachments'])
+          .map(_jsonMap)
+          .whereType<Map<String, dynamic>>()
+          .map(NoteAttachmentModel.fromJson)
+          .toList(),
+      colorKey: _jsonString(json['color_key'], fallback: 'default'),
+      isPinned: _jsonBool(json['is_pinned']),
+      isArchived: _jsonBool(json['is_archived']),
+      archivedAt: _jsonNullableString(json['archived_at']),
+      reminderAt: _jsonNullableString(json['reminder_at']),
+      sourceType: _jsonString(json['source_type'], fallback: 'manual'),
+      createdAt: _jsonString(json['created_at']),
+      updatedAt: _jsonString(json['updated_at']),
     );
   }
+}
+
+String _jsonString(dynamic value, {String fallback = ''}) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? fallback : text;
+}
+
+String? _jsonNullableString(dynamic value) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? null : text;
+}
+
+bool _jsonBool(dynamic value, {bool fallback = false}) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  if (value is String) {
+    final clean = value.trim().toLowerCase();
+    if (clean == 'true' || clean == '1') return true;
+    if (clean == 'false' || clean == '0') return false;
+  }
+  return fallback;
+}
+
+int _jsonInt(dynamic value, {int fallback = 0}) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+List<dynamic> _jsonList(dynamic value) {
+  return value is List<dynamic> ? value : const [];
+}
+
+Map<String, dynamic>? _jsonMap(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) {
+    return value.map((key, value) => MapEntry(key.toString(), value));
+  }
+  return null;
 }

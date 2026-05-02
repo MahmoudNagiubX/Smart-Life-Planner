@@ -83,11 +83,14 @@ class _VoiceNoteSheetState extends ConsumerState<VoiceNoteSheet>
       if (!hasPermission) {
         setState(() {
           _isStartingRecording = false;
-          _error = 'Microphone permission required.';
+          _error =
+              'Microphone permission is required. Please allow microphone access and try again.';
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🎙️ Microphone permission required.'),
+            content: Text(
+              'Microphone permission is required. Please allow access and try again.',
+            ),
             backgroundColor: AppColors.error,
           ),
         );
@@ -170,7 +173,7 @@ class _VoiceNoteSheetState extends ConsumerState<VoiceNoteSheet>
 
     setState(() => _state = _VoiceNoteState.saving);
 
-    await ref
+    final saved = await ref
         .read(notesProvider.notifier)
         .createNote(
           content: content,
@@ -183,7 +186,21 @@ class _VoiceNoteSheetState extends ConsumerState<VoiceNoteSheet>
           sourceType: 'voice',
         );
 
-    if (mounted) Navigator.pop(context, true);
+    if (!mounted) return;
+    if (saved) {
+      Navigator.pop(context, true);
+    } else {
+      final error =
+          ref.read(notesProvider).error ??
+          'Voice note could not be saved. Please try again.';
+      setState(() {
+        _state = _VoiceNoteState.preview;
+        _error = error;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: AppColors.error),
+      );
+    }
   }
 
   List<ChecklistItemModel> _checklistItemsFromContent(String content) {

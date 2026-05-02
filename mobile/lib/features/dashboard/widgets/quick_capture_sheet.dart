@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -9,6 +10,8 @@ import '../../ai/widgets/ai_confirmation_sheet.dart';
 import '../../notes/models/note_model.dart';
 import '../../notes/providers/note_provider.dart';
 import '../../tasks/providers/task_provider.dart';
+import '../../voice/screens/voice_note_sheet.dart';
+import '../../../routes/app_routes.dart';
 
 class QuickCaptureSheet extends ConsumerStatefulWidget {
   const QuickCaptureSheet({super.key});
@@ -140,7 +143,7 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
   }
 
   Future<void> _createTextNote(_CaptureConfirmation capture) async {
-    await ref
+    final created = await ref
         .read(notesProvider.notifier)
         .createNote(
           title: capture.title,
@@ -152,7 +155,11 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
         );
     if (!mounted) return;
     setState(() => _isLoading = false);
-    Navigator.pop(context);
+    if (created) {
+      Navigator.pop(context);
+    } else {
+      _showNoteError('Note could not be created');
+    }
   }
 
   Future<void> _createChecklistNote(_CaptureConfirmation capture) async {
@@ -173,7 +180,7 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
         ),
     ];
 
-    await ref
+    final created = await ref
         .read(notesProvider.notifier)
         .createNote(
           title: capture.title,
@@ -184,12 +191,40 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
         );
     if (!mounted) return;
     setState(() => _isLoading = false);
-    Navigator.pop(context);
+    if (created) {
+      Navigator.pop(context);
+    } else {
+      _showNoteError('Checklist note could not be created');
+    }
   }
 
   void _showTaskError() {
     final error = ref.read(tasksProvider).error ?? 'Task could not be created';
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+  }
+
+  void _showNoteError(String fallback) {
+    final error = ref.read(notesProvider).error ?? fallback;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+  }
+
+  void _openVoiceTaskCapture() {
+    final router = GoRouter.of(context);
+    Navigator.pop(context);
+    router.push(AppRoutes.voiceCapture);
+  }
+
+  Future<void> _openVoiceNoteCapture() async {
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.sheetBr),
+      builder: (_) => const VoiceNoteSheet(),
+    );
+    if (saved == true && mounted) {
+      Navigator.pop(context);
+    }
   }
 
   void _switchToManualFallback(ParsedTask parsedTask) {
@@ -283,6 +318,23 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
                   icon: Icons.checklist_outlined,
                   selected: _type == 'checklist',
                   onTap: () => setState(() => _type = 'checklist'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s12),
+            Wrap(
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _openVoiceTaskCapture,
+                  icon: const Icon(Icons.mic, size: 18),
+                  label: const Text('Voice task'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _openVoiceNoteCapture,
+                  icon: const Icon(Icons.mic_none_outlined, size: 18),
+                  label: const Text('Voice note'),
                 ),
               ],
             ),
