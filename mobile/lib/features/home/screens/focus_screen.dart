@@ -1,12 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../routes/app_routes.dart';
 import '../../focus/models/focus_model.dart';
 import '../../focus/providers/focus_provider.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/providers/task_provider.dart';
+import '../widgets/progress_ring.dart';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const double _kNavClearance = 138.0;
+
+class _Preset {
+  final String title;
+  final String subtitle;
+  final int focusMin;
+  final int breakMin;
+
+  const _Preset(this.title, this.subtitle, this.focusMin, this.breakMin);
+}
+
+const _kPresets = [
+  _Preset('25 / 5', 'Pomodoro', 25, 5),
+  _Preset('50 / 10', 'Deep Work', 50, 10),
+  _Preset('90 min', 'Study Block', 90, 15),
+  _Preset('Custom', 'Set your own', -1, -1),
+];
+
+// ── Screen ────────────────────────────────────────────────────────────────────
 
 class FocusScreen extends ConsumerStatefulWidget {
   const FocusScreen({super.key});
@@ -101,26 +129,100 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
 
     final selected = await showModalBottomSheet<TaskModel>(
       context: context,
-      showDragHandle: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return SafeArea(
-          child: ListView.separated(
-            shrinkWrap: true,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            itemCount: candidates.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final task = candidates[index];
-              final estimate = task.estimatedMinutes == null
-                  ? 'Default focus block'
-                  : '${task.estimatedMinutes}m estimate';
-              return ListTile(
-                leading: const Icon(Icons.task_alt),
-                title: Text(task.title),
-                subtitle: Text('${task.priority} priority - $estimate'),
-                onTap: () => Navigator.of(context).pop(task),
-              );
-            },
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.bgSurface,
+            borderRadius: AppRadius.sheetBr,
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.borderSoft,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                  child: Text(
+                    'Choose a task',
+                    style: AppTextStyles.h3Light,
+                  ),
+                ),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    itemCount: candidates.length,
+                    separatorBuilder: (_, _) => Container(
+                      height: 1,
+                      color: AppColors.borderSoft,
+                    ),
+                    itemBuilder: (context, index) {
+                      final task = candidates[index];
+                      final estimate = task.estimatedMinutes == null
+                          ? 'Default focus block'
+                          : '${task.estimatedMinutes}m estimate';
+                      return InkWell(
+                        onTap: () => Navigator.of(context).pop(task),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppColors.featTasksSoft,
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.sm),
+                                ),
+                                child: const Icon(
+                                  Icons.task_alt,
+                                  size: 18,
+                                  color: AppColors.featTasks,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      task.title,
+                                      style: AppTextStyles.h4Light,
+                                    ),
+                                    Text(
+                                      '${task.priority} priority · $estimate',
+                                      style:
+                                          AppTextStyles.captionLight,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.chevron_right,
+                                size: 18,
+                                color: AppColors.textHint,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -131,6 +233,13 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
           .read(focusProvider.notifier)
           .startFocusSession(taskId: selected.id);
     }
+  }
+
+  double _ringProgress(FocusState state) {
+    if (state.activeSession == null) return 0.0;
+    final total = state.activeSession!.plannedMinutes * 60;
+    if (total == 0) return 0.0;
+    return (1.0 - state.remainingSeconds / total).clamp(0.0, 1.0);
   }
 
   @override
@@ -148,283 +257,379 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
         )
         .toList();
     final activeTask = _taskById(tasksState.tasks, state.activeSession?.taskId);
+    final progress = _ringProgress(state);
 
-    return PopScope(
-      canPop: !distractionActive,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && distractionActive) {
-          _handleBlockedPop();
-        }
-      },
-      child: Scaffold(
-        appBar: distractionActive
-            ? null
-            : AppBar(
-                title: const Text(
-                  'Focus',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                actions: [
-                  IconButton(
-                    tooltip: 'Focus settings',
-                    onPressed: () => context.push(AppRoutes.focusSettings),
-                    icon: const Icon(Icons.settings_outlined),
+    // ── Distraction-free immersive mode ───────────────────────────────────
+    if (distractionActive) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _handleBlockedPop();
+        },
+        child: Scaffold(
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFF3EFFF),
+                  Color(0xFFFDF5FF),
+                  Color(0xFFFFEAF6),
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Immersive top bar
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: Row(
+                      children: [
+                        _ImmersiveIconBtn(
+                          icon: Icons.arrow_back_rounded,
+                          onTap: _handleBlockedPop,
+                        ),
+                        Expanded(
+                          child: Text(
+                            'FOCUSING',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.manrope(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                              color: AppColors.textHeading.withValues(
+                                alpha: 0.7,
+                              ),
+                            ),
+                          ),
+                        ),
+                        _ImmersiveIconBtn(
+                          icon: Icons.more_horiz_rounded,
+                          onTap: () =>
+                              context.push(AppRoutes.focusSettings),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Session label
+                  Padding(
+                    padding: const EdgeInsets.only(top: 24),
+                    child: Text(
+                      state.activeSession != null
+                          ? _sessionLabel(state.activeSession!.sessionType)
+                          : 'Focus session',
+                      style: AppTextStyles.bodySmall(
+                        AppColors.textHeading.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+
+                  // Ring + Timer (centered in expanded area)
+                  Expanded(
+                    child: Center(
+                      child: ProgressRing(
+                        value: progress,
+                        size: 260,
+                        strokeWidth: 14,
+                        trackColor:
+                            AppColors.brandPrimary.withValues(alpha: 0.06),
+                        gradientColors: const [
+                          AppColors.brandPink,
+                          Color(0xFFFFB547),
+                        ],
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _formatTime(state.remainingSeconds),
+                              style: GoogleFonts.manrope(
+                                fontSize: 56,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textHeading,
+                                letterSpacing: -2,
+                              ),
+                            ),
+                            if (activeTask != null)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  activeTask.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.captionLight,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Bottom controls
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        if (_isBreakSession(
+                          state.activeSession?.sessionType ?? '',
+                        ))
+                          _ControlBtn(
+                            icon: Icons.skip_next_rounded,
+                            label: 'Skip',
+                            onTap: () =>
+                                ref.read(focusProvider.notifier).skipBreak(),
+                          )
+                        else
+                          const SizedBox(width: 64),
+                        _ControlBtn(
+                          icon: Icons.stop_rounded,
+                          label: 'End',
+                          filled: true,
+                          onTap: () {
+                            HapticFeedback.mediumImpact();
+                            ref.read(focusProvider.notifier).cancelSession();
+                          },
+                        ),
+                        _ControlBtn(
+                          icon: Icons.check_rounded,
+                          label: 'Done',
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            ref
+                                .read(focusProvider.notifier)
+                                .completeSession();
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (state.analytics != null && !distractionActive) ...[
-                _AnalyticsGrid(analytics: state.analytics!),
-                const SizedBox(height: 24),
-              ],
-              if (!distractionActive) ...[
-                _FocusReadinessCard(
-                  state: state,
-                  onRefresh: () =>
-                      ref.read(focusProvider.notifier).loadReadiness(),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // ── Normal / non-distraction mode ─────────────────────────────────────
+    return PopScope(
+      canPop: true,
+      child: Scaffold(
+        backgroundColor: AppColors.bgApp,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenH,
+              AppSpacing.s20,
+              AppSpacing.screenH,
+              _kNavClearance,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header ───────────────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Focus', style: AppTextStyles.h1Light),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Build deep work one session at a time.',
+                            style: AppTextStyles.bodySmallLight,
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.push(AppRoutes.focusSettings),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.bgSurface,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.borderSoft),
+                        ),
+                        child: const Icon(
+                          Icons.settings_outlined,
+                          size: 20,
+                          color: AppColors.textHeading,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-              ],
-              AnimatedOpacity(
-                opacity: distractionActive ? 0.96 : 1,
-                duration: const Duration(milliseconds: 180),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(distractionActive ? 28 : 32),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardTheme.color,
-                    borderRadius: BorderRadius.circular(
-                      distractionActive ? 0 : 20,
+                const SizedBox(height: AppSpacing.s20),
+
+                // ── Analytics row (if loaded) ─────────────────────────
+                if (state.analytics != null) ...[
+                  _AnalyticsRow(analytics: state.analytics!),
+                  const SizedBox(height: AppSpacing.s16),
+                ],
+
+                // ── Main focus card ───────────────────────────────────
+                _MainFocusCard(
+                  state: state,
+                  hasActive: hasActive,
+                  progress: progress,
+                  activeTask: activeTask,
+                  formatTime: _formatTime,
+                  isBreak: hasActive
+                      ? _isBreakSession(state.activeSession!.sessionType)
+                      : false,
+                  sessionLabel: hasActive
+                      ? _sessionLabel(state.activeSession!.sessionType)
+                      : null,
+                  onStart: () => ref
+                      .read(focusProvider.notifier)
+                      .startFocusSession(),
+                  onCancel: () =>
+                      ref.read(focusProvider.notifier).cancelSession(),
+                  onComplete: () =>
+                      ref.read(focusProvider.notifier).completeSession(),
+                  onSkipBreak: () =>
+                      ref.read(focusProvider.notifier).skipBreak(),
+                  onShortBreak: () => ref
+                      .read(focusProvider.notifier)
+                      .startBreakSession(longBreak: false),
+                  onLongBreak: () => ref
+                      .read(focusProvider.notifier)
+                      .startBreakSession(longBreak: true),
+                  isLoading: state.isLoading,
+                  error: state.error,
+                  focusMinutes: state.focusMinutes,
+                  shortBreakMinutes: state.shortBreakMinutes,
+                  longBreakMinutes: state.longBreakMinutes,
+                ),
+
+                // ── Error ─────────────────────────────────────────────
+                if (state.error != null && !hasActive) ...[
+                  const SizedBox(height: AppSpacing.s12),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.s12),
+                    decoration: BoxDecoration(
+                      color: AppColors.errorSoft,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      border: Border.all(
+                        color: AppColors.errorColor.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      state.error!,
+                      style: AppTextStyles.body(AppColors.errorColor),
                     ),
                   ),
-                  child: Column(
-                    children: [
-                      if (hasActive) ...[
-                        Icon(
-                          _isBreakSession(state.activeSession!.sessionType)
-                              ? Icons.self_improvement
-                              : Icons.timer,
-                          color: AppColors.primary,
-                          size: 44,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _formatTime(state.remainingSeconds),
-                          style: Theme.of(context).textTheme.displayLarge
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                                fontSize: distractionActive ? 84 : 72,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _sessionLabel(state.activeSession!.sessionType),
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppColors.textSecondary),
-                        ),
-                        if (distractionActive) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            'Distraction-free mode',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppColors.textSecondary),
-                          ),
-                        ],
-                        if (activeTask != null) ...[
-                          const SizedBox(height: 12),
-                          _ActivePomodoroProgress(task: activeTask),
-                        ],
-                        const SizedBox(height: 8),
-                        LinearProgressIndicator(
-                          value: state.activeSession != null
-                              ? state.remainingSeconds /
-                                    (state.activeSession!.plannedMinutes * 60)
-                              : 0,
-                          backgroundColor: AppColors.primary.withValues(
-                            alpha: 0.2,
-                          ),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppColors.primary,
-                          ),
-                          minHeight: 6,
-                        ),
-                        const SizedBox(height: 32),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => ref
-                                    .read(focusProvider.notifier)
-                                    .cancelSession(),
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: AppColors.error,
-                                ),
-                                label: const Text(
-                                  'Cancel',
-                                  style: TextStyle(color: AppColors.error),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(
-                                    color: AppColors.error,
-                                  ),
-                                  minimumSize: const Size(0, 48),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => ref
-                                    .read(focusProvider.notifier)
-                                    .completeSession(),
-                                icon: const Icon(Icons.check),
-                                label: const Text('Done'),
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(0, 48),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_isBreakSession(
-                          state.activeSession!.sessionType,
-                        )) ...[
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: TextButton.icon(
-                              onPressed: () =>
-                                  ref.read(focusProvider.notifier).skipBreak(),
-                              icon: const Icon(Icons.skip_next),
-                              label: const Text('Skip break'),
-                            ),
-                          ),
-                        ],
-                      ] else ...[
-                        const Icon(
-                          Icons.track_changes,
-                          size: 56,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Start a Focus Session',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 24),
-                        state.isLoading
-                            ? const CircularProgressIndicator()
-                            : Column(
-                                children: [
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () => ref
-                                          .read(focusProvider.notifier)
-                                          .startFocusSession(),
-                                      icon: const Icon(Icons.play_arrow),
-                                      label: Text(
-                                        'Start ${state.focusMinutes} min focus',
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          onPressed: () => ref
-                                              .read(focusProvider.notifier)
-                                              .startBreakSession(
-                                                longBreak: false,
-                                              ),
-                                          icon: const Icon(Icons.coffee),
-                                          label: Text(
-                                            '${state.shortBreakMinutes}m break',
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          onPressed: () => ref
-                                              .read(focusProvider.notifier)
-                                              .startBreakSession(
-                                                longBreak: true,
-                                              ),
-                                          icon: const Icon(Icons.weekend),
-                                          label: Text(
-                                            '${state.longBreakMinutes}m long',
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                        if (state.error != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            state.error!,
-                            style: const TextStyle(color: AppColors.error),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              if (!distractionActive) ...[
+                ],
+
+                // ── Quick presets (only when idle) ────────────────────
                 if (!hasActive) ...[
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.s24),
+                  Text('Quick presets', style: AppTextStyles.h3Light),
+                  const SizedBox(height: AppSpacing.s12),
+                  _QuickPresets(
+                    currentFocusMin: state.focusMinutes,
+                    onSelect: (p) {
+                      if (p.focusMin < 0) {
+                        context.push(AppRoutes.focusSettings);
+                        return;
+                      }
+                      HapticFeedback.selectionClick();
+                      ref
+                          .read(focusProvider.notifier)
+                          .setFocusMinutes(p.focusMin);
+                      ref
+                          .read(focusProvider.notifier)
+                          .setShortBreakMinutes(p.breakMin);
+                    },
+                  ),
+                ],
+
+                // ── Today stats row (only when idle) ──────────────────
+                if (!hasActive && state.analytics != null) ...[
+                  const SizedBox(height: AppSpacing.s24),
+                  Text('Today', style: AppTextStyles.h3Light),
+                  const SizedBox(height: AppSpacing.s12),
+                  _TodayStats(analytics: state.analytics!),
+                ],
+
+                // ── Readiness card ────────────────────────────────────
+                if (!hasActive) ...[
+                  const SizedBox(height: AppSpacing.s20),
+                  _FocusReadinessCard(
+                    state: state,
+                    onRefresh: () =>
+                        ref.read(focusProvider.notifier).loadReadiness(),
+                  ),
+                ],
+
+                // ── Recommendation card ───────────────────────────────
+                if (!hasActive) ...[
+                  const SizedBox(height: AppSpacing.s16),
                   _FocusRecommendationCard(
                     state: state,
                     onAccept: () => ref
                         .read(focusProvider.notifier)
                         .startRecommendedFocus(),
-                    onChooseAnother: () => _showTaskChooser(tasksState.tasks),
+                    onChooseAnother: () =>
+                        _showTaskChooser(tasksState.tasks),
                     onRefresh: () =>
                         ref.read(focusProvider.notifier).loadRecommendation(),
                   ),
                 ],
-                const SizedBox(height: 24),
-                _FocusSettings(state: state),
-                const SizedBox(height: 24),
-                _EstimatedPomodoros(
-                  tasks: estimatedTasks,
-                  focusMinutes: state.focusMinutes,
-                ),
-                const SizedBox(height: 24),
-                _ReportSummary(state: state),
-                if (state.sessions.isNotEmpty) ...[
-                  const SizedBox(height: 32),
-                  Text(
-                    'Recent Sessions',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+
+                // ── Task with pomodoros (active) ──────────────────────
+                if (hasActive && activeTask != null) ...[
+                  const SizedBox(height: AppSpacing.s16),
+                  _ActivePomodoroProgress(task: activeTask),
+                ],
+
+                // ── Settings ──────────────────────────────────────────
+                if (!hasActive) ...[
+                  const SizedBox(height: AppSpacing.s20),
+                  _FocusSettings(state: state),
+                ],
+
+                // ── Estimated pomodoros ───────────────────────────────
+                if (!hasActive) ...[
+                  const SizedBox(height: AppSpacing.s16),
+                  _EstimatedPomodoros(
+                    tasks: estimatedTasks,
+                    focusMinutes: state.focusMinutes,
                   ),
-                  const SizedBox(height: 12),
+                ],
+
+                // ── Report summary ────────────────────────────────────
+                const SizedBox(height: AppSpacing.s16),
+                _ReportSummary(state: state),
+
+                // ── Recent sessions ───────────────────────────────────
+                if (state.sessions.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.s24),
+                  Text('Recent Sessions', style: AppTextStyles.h3Light),
+                  const SizedBox(height: AppSpacing.s12),
                   ...state.sessions
                       .take(5)
                       .map((s) => _SessionTile(session: s)),
                 ],
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 TaskModel? _taskById(List<TaskModel> tasks, String? taskId) {
   if (taskId == null) return null;
@@ -433,6 +638,602 @@ TaskModel? _taskById(List<TaskModel> tasks, String? taskId) {
   }
   return null;
 }
+
+// ── Immersive control button ──────────────────────────────────────────────────
+
+class _ImmersiveIconBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _ImmersiveIconBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.6),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: AppColors.borderSoft,
+          ),
+        ),
+        child: Icon(icon, size: 18, color: AppColors.textHeading),
+      ),
+    );
+  }
+}
+
+class _ControlBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool filled;
+  final VoidCallback onTap;
+
+  const _ControlBtn({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: filled
+                  ? AppColors.textHeading
+                  : Colors.white.withValues(alpha: 0.7),
+              shape: BoxShape.circle,
+              border: filled
+                  ? null
+                  : Border.all(color: AppColors.borderSoft),
+              boxShadow: filled ? AppShadows.soft : null,
+            ),
+            child: Icon(
+              icon,
+              size: 26,
+              color: filled ? Colors.white : AppColors.textHeading,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: AppTextStyles.caption(
+              AppColors.textHeading.withValues(alpha: 0.6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Main focus card ───────────────────────────────────────────────────────────
+
+class _MainFocusCard extends StatelessWidget {
+  final FocusState state;
+  final bool hasActive;
+  final double progress;
+  final TaskModel? activeTask;
+  final String Function(int) formatTime;
+  final bool isBreak;
+  final String? sessionLabel;
+  final VoidCallback onStart;
+  final VoidCallback onCancel;
+  final VoidCallback onComplete;
+  final VoidCallback onSkipBreak;
+  final VoidCallback onShortBreak;
+  final VoidCallback onLongBreak;
+  final bool isLoading;
+  final String? error;
+  final int focusMinutes;
+  final int shortBreakMinutes;
+  final int longBreakMinutes;
+
+  const _MainFocusCard({
+    required this.state,
+    required this.hasActive,
+    required this.progress,
+    required this.activeTask,
+    required this.formatTime,
+    required this.isBreak,
+    required this.sessionLabel,
+    required this.onStart,
+    required this.onCancel,
+    required this.onComplete,
+    required this.onSkipBreak,
+    required this.onShortBreak,
+    required this.onLongBreak,
+    required this.isLoading,
+    required this.error,
+    required this.focusMinutes,
+    required this.shortBreakMinutes,
+    required this.longBreakMinutes,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final timerText = hasActive
+        ? formatTime(state.remainingSeconds)
+        : formatTime(focusMinutes * 60);
+    final subLabel = hasActive
+        ? (sessionLabel ?? 'Focus session')
+        : 'Focus Time';
+    final cardLabel = hasActive
+        ? (isBreak ? 'Break session' : 'Pomodoro · Round 1 of 4')
+        : 'Pomodoro · Round 1 of 4';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: AppGradients.focus,
+        borderRadius: BorderRadius.circular(AppRadius.xl3),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.brandPink.withValues(alpha: 0.30),
+            blurRadius: 32,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Session label
+          Text(
+            cardLabel,
+            style: GoogleFonts.manrope(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Progress ring with timer
+          ProgressRing(
+            value: progress,
+            size: 200,
+            strokeWidth: 12,
+            trackColor: Colors.white.withValues(alpha: 0.2),
+            gradientColors: const [Colors.white, AppColors.brandGold],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  timerText,
+                  style: GoogleFonts.manrope(
+                    fontSize: 48,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -1.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subLabel,
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Controls
+          if (hasActive) ...[
+            // Active: Cancel + Done
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.mediumImpact();
+                      onCancel();
+                    },
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppRadius.xl),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.manrope(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      onComplete();
+                    },
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppRadius.xl),
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_rounded,
+                              size: 18,
+                              color: isBreak
+                                  ? AppColors.successColor
+                                  : AppColors.brandPrimary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Done',
+                              style: GoogleFonts.manrope(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: isBreak
+                                    ? AppColors.successColor
+                                    : AppColors.brandPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Skip break
+            if (isBreak) ...[
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: onSkipBreak,
+                child: Text(
+                  'Skip break →',
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+              ),
+            ],
+          ] else if (isLoading) ...[
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Colors.white.withValues(alpha: 0.9),
+                ),
+              ),
+            ),
+          ] else ...[
+            // Idle: Start Focus button
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                onStart();
+              },
+              child: Container(
+                height: 56,
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.play_arrow_rounded,
+                      size: 20,
+                      color: AppColors.brandPink,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Start Focus',
+                      style: GoogleFonts.manrope(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.brandPink,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Break buttons
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onShortBreak,
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.coffee_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              '${shortBreakMinutes}m break',
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onLongBreak,
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.weekend_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              '${longBreakMinutes}m long',
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Quick presets ─────────────────────────────────────────────────────────────
+
+class _QuickPresets extends StatelessWidget {
+  final int currentFocusMin;
+  final void Function(_Preset) onSelect;
+
+  const _QuickPresets({
+    required this.currentFocusMin,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 2.2,
+      children: _kPresets.map((p) {
+        final selected = p.focusMin == currentFocusMin;
+        return GestureDetector(
+          onTap: () => onSelect(p),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.bgSurface,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(
+                color: selected
+                    ? AppColors.brandPink
+                    : AppColors.borderSoft,
+                width: selected ? 2 : 1,
+              ),
+              boxShadow: selected ? AppShadows.glowPink : AppShadows.soft,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  p.title,
+                  style: AppTextStyles.h4Light,
+                ),
+                const SizedBox(height: 2),
+                Text(p.subtitle, style: AppTextStyles.captionLight),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ── Today stats row ───────────────────────────────────────────────────────────
+
+class _TodayStats extends StatelessWidget {
+  final FocusAnalytics analytics;
+
+  const _TodayStats({required this.analytics});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (
+        _minutesToLabel(analytics.todayMinutes),
+        'Focused',
+      ),
+      ('${analytics.todaySessions}', 'Sessions'),
+      ('${analytics.currentStreakDays}d', 'Streak'),
+    ];
+
+    return Row(
+      children: items.asMap().entries.map((entry) {
+        final i = entry.key;
+        final item = entry.value;
+        return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(left: i == 0 ? 0 : 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 14,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.bgSurface,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(color: AppColors.borderSoft),
+              boxShadow: AppShadows.soft,
+            ),
+            child: Column(
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) =>
+                      AppGradients.action.createShader(bounds),
+                  child: Text(
+                    item.$1,
+                    style: GoogleFonts.manrope(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(item.$2, style: AppTextStyles.captionLight),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _minutesToLabel(int minutes) {
+    if (minutes >= 60) {
+      final h = minutes ~/ 60;
+      final m = minutes % 60;
+      return m == 0 ? '${h}h' : '${h}h ${m}m';
+    }
+    return '${minutes}m';
+  }
+}
+
+// ── Analytics grid ────────────────────────────────────────────────────────────
+
+class _AnalyticsRow extends StatelessWidget {
+  final FocusAnalytics analytics;
+
+  const _AnalyticsRow({required this.analytics});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _StatCard(
+            label: 'This week',
+            value: '${analytics.weekMinutes}m',
+            sub: '${analytics.weekSessions} sessions',
+            color: AppColors.successColor,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StatCard(
+            label: 'Completion',
+            value: '${analytics.completionRatePercent}%',
+            sub: '${analytics.completedSessions} done',
+            color: AppColors.prayerGold,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StatCard(
+            label: 'Average',
+            value: '${analytics.averageSessionMinutes}m',
+            sub: 'per session',
+            color: AppColors.brandPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Active pomodoro progress ──────────────────────────────────────────────────
 
 class _ActivePomodoroProgress extends StatelessWidget {
   final TaskModel task;
@@ -446,42 +1247,69 @@ class _ActivePomodoroProgress extends StatelessWidget {
     final label = estimate > 0
         ? '$completed / $estimate Pomodoros'
         : '$completed Pomodoro${completed == 1 ? '' : 's'} completed';
-    final value = estimate > 0 ? (completed / estimate).clamp(0.0, 1.0) : 0.0;
+    final value = estimate > 0
+        ? (completed / estimate).clamp(0.0, 1.0)
+        : 0.0;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            task.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w700),
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppColors.featTasksSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.xs),
+                ),
+                child: const Icon(
+                  Icons.task_alt,
+                  size: 16,
+                  color: AppColors.featTasks,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  task.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.h4Light,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: estimate > 0 ? value : null,
-            minHeight: 5,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.18),
+          const SizedBox(height: AppSpacing.s12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            child: LinearProgressIndicator(
+              value: estimate > 0 ? value : null,
+              minHeight: 6,
+              backgroundColor: AppColors.brandPrimary.withValues(alpha: 0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                AppColors.brandPrimary,
+              ),
+            ),
           ),
           const SizedBox(height: 6),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-          ),
+          Text(label, style: AppTextStyles.captionLight),
         ],
       ),
     );
   }
 }
+
+// ── Recommendation card ───────────────────────────────────────────────────────
 
 class _FocusRecommendationCard extends StatelessWidget {
   final FocusState state;
@@ -502,83 +1330,103 @@ class _FocusRecommendationCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome, color: AppColors.primary),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.featAISoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  size: 17,
+                  color: AppColors.featAI,
+                ),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Recommended Focus',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.h4Light,
                 ),
               ),
-              IconButton(
-                tooltip: 'Refresh recommendation',
-                onPressed: state.isRecommendationLoading ? null : onRefresh,
-                icon: const Icon(Icons.refresh),
+              GestureDetector(
+                onTap:
+                    state.isRecommendationLoading ? null : onRefresh,
+                child: Icon(
+                  Icons.refresh_rounded,
+                  size: 20,
+                  color: state.isRecommendationLoading
+                      ? AppColors.textHint
+                      : AppColors.brandPrimary,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.s12),
           if (state.isRecommendationLoading) ...[
-            const LinearProgressIndicator(minHeight: 4),
-            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              child: LinearProgressIndicator(
+                minHeight: 4,
+                backgroundColor: AppColors.brandPrimary.withValues(alpha: 0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.brandPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
               'Choosing the best focus task...',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.captionLight,
             ),
           ] else if (state.recommendationError != null) ...[
             Text(
               state.recommendationError!,
-              style: const TextStyle(color: AppColors.error),
+              style: AppTextStyles.body(AppColors.errorColor),
             ),
           ] else if (recommendation == null) ...[
             Text(
               'No recommendation loaded yet.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodySmallLight,
             ),
           ] else ...[
             Text(
               recommendation.title ?? 'No pending task',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              style: AppTextStyles.h4Light,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               recommendation.explanation,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodySmallLight,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.s12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                _RecommendationChip(
-                  label: '${recommendation.recommendedDurationMinutes} min',
+                _InfoChip(
+                  label:
+                      '${recommendation.recommendedDurationMinutes} min',
                   icon: Icons.timer_outlined,
                 ),
-                _RecommendationChip(
+                _InfoChip(
                   label: '${recommendation.confidence} confidence',
                   icon: Icons.insights_outlined,
                 ),
-                _RecommendationChip(
+                _InfoChip(
                   label: recommendation.fallbackUsed
                       ? 'Rules fallback'
                       : 'AI explained',
@@ -589,29 +1437,68 @@ class _FocusRecommendationCard extends StatelessWidget {
               ],
             ),
             if (recommendation.reasons.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
-                recommendation.reasons.take(3).join(' - '),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                recommendation.reasons.take(3).join(' · '),
+                style: AppTextStyles.captionLight,
               ),
             ],
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
+            const SizedBox(height: AppSpacing.s16),
+            Row(
               children: [
                 if (recommendation.hasTask)
-                  FilledButton.icon(
-                    onPressed: onAccept,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Accept'),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: onAccept,
+                      child: Container(
+                        height: AppButtonHeight.small,
+                        decoration: BoxDecoration(
+                          gradient: AppGradients.action,
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.xl),
+                          boxShadow: AppShadows.glowPurple,
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.play_arrow_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Accept',
+                                style: AppTextStyles.buttonLight,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                OutlinedButton.icon(
-                  onPressed: onChooseAnother,
-                  icon: const Icon(Icons.swap_horiz),
-                  label: const Text('Choose task'),
+                if (recommendation.hasTask) const SizedBox(width: 10),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onChooseAnother,
+                    child: Container(
+                      height: AppButtonHeight.small,
+                      decoration: BoxDecoration(
+                        color: AppColors.bgSurface,
+                        borderRadius: BorderRadius.circular(AppRadius.xl),
+                        border: Border.all(color: AppColors.borderSoft),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Choose task',
+                          style: AppTextStyles.button(
+                            AppColors.brandPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -622,117 +1509,159 @@ class _FocusRecommendationCard extends StatelessWidget {
   }
 }
 
+// ── Readiness card ────────────────────────────────────────────────────────────
+
 class _FocusReadinessCard extends StatelessWidget {
   final FocusState state;
   final VoidCallback onRefresh;
 
-  const _FocusReadinessCard({required this.state, required this.onRefresh});
+  const _FocusReadinessCard({
+    required this.state,
+    required this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
     final readiness = state.readiness;
     final label = readiness?.predictedFocusReadiness ?? 'unknown';
     final color = switch (label) {
-      'high' => AppColors.success,
-      'medium' => AppColors.warning,
-      _ => AppColors.textSecondary,
+      'high' => AppColors.successColor,
+      'medium' => AppColors.warningColor,
+      _ => AppColors.textBody,
     };
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.psychology_alt_outlined, color: color),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(
+                  Icons.psychology_alt_outlined,
+                  size: 17,
+                  color: color,
+                ),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Focus Readiness',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.h4Light,
                 ),
               ),
-              IconButton(
-                tooltip: 'Refresh readiness',
-                onPressed: state.isReadinessLoading ? null : onRefresh,
-                icon: const Icon(Icons.refresh),
+              GestureDetector(
+                onTap: state.isReadinessLoading ? null : onRefresh,
+                child: Icon(
+                  Icons.refresh_rounded,
+                  size: 20,
+                  color: state.isReadinessLoading
+                      ? AppColors.textHint
+                      : AppColors.brandPrimary,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.s12),
           if (state.isReadinessLoading) ...[
-            const LinearProgressIndicator(minHeight: 4),
-            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              child: LinearProgressIndicator(
+                minHeight: 4,
+                backgroundColor: AppColors.brandPrimary.withValues(alpha: 0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.brandPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
               'Checking recent focus signals...',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.captionLight,
             ),
           ] else if (state.readinessError != null) ...[
             Text(
               state.readinessError!,
-              style: const TextStyle(color: AppColors.error),
+              style: AppTextStyles.body(AppColors.errorColor),
             ),
           ] else if (readiness == null) ...[
             Text(
               'Readiness prediction is not loaded yet.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodySmallLight,
             ),
           ] else ...[
             Row(
               children: [
                 Text(
                   label.toUpperCase(),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: GoogleFonts.manrope(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
                     color: color,
-                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.3,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: LinearProgressIndicator(
-                    value: readiness.readinessScore / 100,
-                    minHeight: 6,
-                    backgroundColor: color.withValues(alpha: 0.18),
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text('${readiness.readinessScore}%'),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ...readiness.reasons
-                .take(3)
-                .map(
-                  (reason) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('- '),
-                        Expanded(
-                          child: Text(
-                            reason,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppColors.textSecondary),
-                          ),
-                        ),
-                      ],
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    child: LinearProgressIndicator(
+                      value: readiness.readinessScore / 100,
+                      minHeight: 8,
+                      backgroundColor: color.withValues(alpha: 0.1),
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
                     ),
                   ),
                 ),
+                const SizedBox(width: 10),
+                Text(
+                  '${readiness.readinessScore}%',
+                  style: AppTextStyles.label(color),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...readiness.reasons.take(3).map(
+              (reason) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2, right: 6),
+                      child: Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        reason,
+                        style: AppTextStyles.captionLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ],
       ),
@@ -740,85 +1669,43 @@ class _FocusReadinessCard extends StatelessWidget {
   }
 }
 
-class _RecommendationChip extends StatelessWidget {
+// ── Info chip ─────────────────────────────────────────────────────────────────
+
+class _InfoChip extends StatelessWidget {
   final String label;
   final IconData icon;
 
-  const _RecommendationChip({required this.label, required this.icon});
+  const _InfoChip({required this.label, required this.icon});
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(icon, size: 16),
-      label: Text(label),
-      visualDensity: VisualDensity.compact,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurfaceLavender,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: AppColors.borderSoft),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.brandPrimary),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textHeading,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _AnalyticsGrid extends StatelessWidget {
-  final FocusAnalytics analytics;
-
-  const _AnalyticsGrid({required this.analytics});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                label: 'Today',
-                value: '${analytics.todayMinutes}m',
-                sub: '${analytics.todaySessions} sessions',
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                label: 'This Week',
-                value: '${analytics.weekMinutes}m',
-                sub: '${analytics.weekSessions} sessions',
-                color: AppColors.success,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                label: 'Streak',
-                value: '${analytics.currentStreakDays}d',
-                sub: 'Best ${analytics.longestStreakDays}d',
-                color: AppColors.warning,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                label: 'Completion',
-                value: '${analytics.completionRatePercent}%',
-                sub: '${analytics.completedSessions} completed',
-                color: AppColors.prayerGold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _StatCard(
-          label: 'Average session',
-          value: '${analytics.averageSessionMinutes}m',
-          sub: 'Based on completed focus sessions',
-          color: AppColors.primary,
-        ),
-      ],
-    );
-  }
-}
+// ── Focus settings ────────────────────────────────────────────────────────────
 
 class _FocusSettings extends ConsumerWidget {
   final FocusState state;
@@ -829,21 +1716,18 @@ class _FocusSettings extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(focusProvider.notifier);
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Focus Settings',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
+          Text('Focus Settings', style: AppTextStyles.h3Light),
+          const SizedBox(height: AppSpacing.s16),
           _DurationSlider(
             label: 'Focus',
             value: state.focusMinutes,
@@ -877,44 +1761,99 @@ class _FocusSettings extends ConsumerWidget {
             suffix: ' sessions',
             onChanged: notifier.setSessionsBeforeLongBreak,
           ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
+          _ToggleRow(
+            title: 'Continuous mode',
+            subtitle: 'Auto-start the next focus or break phase.',
             value: state.continuousMode,
             onChanged: notifier.setContinuousMode,
-            title: const Text('Continuous mode'),
-            subtitle: const Text('Auto-start the next focus or break phase.'),
           ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
+          _ToggleRow(
+            title: 'Distraction-free mode',
+            subtitle: 'Hide secondary panels during active focus.',
             value: state.distractionFreeMode,
             onChanged: notifier.setDistractionFreeMode,
-            title: const Text('Distraction-free mode'),
-            subtitle: const Text('Hide secondary panels during active focus.'),
           ),
-          DropdownButtonFormField<String>(
-            initialValue: state.ambientSoundKey,
-            decoration: const InputDecoration(
-              labelText: 'Ambient sound',
-              border: OutlineInputBorder(),
+          const SizedBox(height: 4),
+          Text(
+            'Ambient sound',
+            style: AppTextStyles.body(AppColors.textHeading),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.bgApp,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.borderSoft),
             ),
-            items: const [
-              DropdownMenuItem(value: 'silence', child: Text('Silence')),
-              DropdownMenuItem(value: 'rain', child: Text('Rain')),
-              DropdownMenuItem(value: 'cafe', child: Text('Cafe')),
-              DropdownMenuItem(
-                value: 'white_noise',
-                child: Text('White noise'),
+            child: DropdownButtonFormField<String>(
+              initialValue: state.ambientSoundKey,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
-            ],
-            onChanged: (value) {
-              if (value != null) notifier.setAmbientSoundKey(value);
-            },
+              items: const [
+                DropdownMenuItem(value: 'silence', child: Text('Silence')),
+                DropdownMenuItem(value: 'rain', child: Text('Rain')),
+                DropdownMenuItem(value: 'cafe', child: Text('Cafe')),
+                DropdownMenuItem(
+                  value: 'white_noise',
+                  child: Text('White noise'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) notifier.setAmbientSoundKey(value);
+              },
+            ),
           ),
         ],
       ),
     );
   }
 }
+
+class _ToggleRow extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _ToggleRow({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.body(AppColors.textHeading)),
+                Text(subtitle, style: AppTextStyles.captionLight),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: AppColors.brandPrimary,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Duration slider ───────────────────────────────────────────────────────────
 
 class _DurationSlider extends StatelessWidget {
   final String label;
@@ -941,56 +1880,68 @@ class _DurationSlider extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text(label)),
+            Expanded(
+              child: Text(label, style: AppTextStyles.bodySmallLight),
+            ),
             Text(
               '$value$suffix',
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: AppTextStyles.label(AppColors.brandPrimary),
             ),
           ],
         ),
-        Slider(
-          value: value.toDouble(),
-          min: min.toDouble(),
-          max: max.toDouble(),
-          divisions: divisions,
-          label: '$value$suffix',
-          onChanged: (next) => onChanged(next.round()),
+        SliderTheme(
+          data: SliderThemeData(
+            activeTrackColor: AppColors.brandPrimary,
+            inactiveTrackColor:
+                AppColors.brandPrimary.withValues(alpha: 0.12),
+            thumbColor: AppColors.brandPrimary,
+            overlayColor:
+                AppColors.brandPrimary.withValues(alpha: 0.1),
+          ),
+          child: Slider(
+            value: value.toDouble(),
+            min: min.toDouble(),
+            max: max.toDouble(),
+            divisions: divisions,
+            label: '$value$suffix',
+            onChanged: (next) => onChanged(next.round()),
+          ),
         ),
       ],
     );
   }
 }
 
+// ── Estimated pomodoros ───────────────────────────────────────────────────────
+
 class _EstimatedPomodoros extends ConsumerWidget {
   final List<TaskModel> tasks;
   final int focusMinutes;
 
-  const _EstimatedPomodoros({required this.tasks, required this.focusMinutes});
+  const _EstimatedPomodoros({
+    required this.tasks,
+    required this.focusMinutes,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Estimated Pomodoros',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
+          Text('Estimated Pomodoros', style: AppTextStyles.h3Light),
+          const SizedBox(height: AppSpacing.s12),
           if (tasks.isEmpty)
             Text(
               'Add task estimates to see suggested focus counts.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodySmallLight,
             )
           else
             ...tasks.take(3).map((task) {
@@ -998,16 +1949,60 @@ class _EstimatedPomodoros extends ConsumerWidget {
                   ((task.estimatedMinutes ?? focusMinutes) / focusMinutes)
                       .ceil()
                       .clamp(1, 99);
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(task.title),
-                subtitle: Text('$count x ${focusMinutes}m'),
-                trailing: IconButton(
-                  tooltip: 'Start focus',
-                  onPressed: () => ref
-                      .read(focusProvider.notifier)
-                      .startFocusSession(taskId: task.id),
-                  icon: const Icon(Icons.play_arrow),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: AppColors.featTasksSoft,
+                        borderRadius: BorderRadius.circular(AppRadius.xs),
+                      ),
+                      child: const Icon(
+                        Icons.task_alt,
+                        size: 16,
+                        color: AppColors.featTasks,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            task.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.body(AppColors.textHeading),
+                          ),
+                          Text(
+                            '$count × ${focusMinutes}m',
+                            style: AppTextStyles.captionLight,
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => ref
+                          .read(focusProvider.notifier)
+                          .startFocusSession(taskId: task.id),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          gradient: AppGradients.action,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               );
             }),
@@ -1016,6 +2011,8 @@ class _EstimatedPomodoros extends ConsumerWidget {
     );
   }
 }
+
+// ── Report summary ────────────────────────────────────────────────────────────
 
 class _ReportSummary extends StatelessWidget {
   final FocusState state;
@@ -1026,37 +2023,52 @@ class _ReportSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final analytics = state.analytics;
     final completed = state.lastCompletedSession;
+    final message = completed == null
+        ? analytics?.reportSummary ??
+              'Complete a focus session to build your report.'
+        : 'Last session: ${completed.actualMinutes ?? 0}m '
+              '${completed.sessionType.replaceAll('_', ' ')} completed.';
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        gradient: AppGradients.ai,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Focus Report',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.featFocusSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(
+                  Icons.bar_chart_rounded,
+                  size: 17,
+                  color: AppColors.featFocus,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text('Focus Report', style: AppTextStyles.h4Light),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            completed == null
-                ? analytics?.reportSummary ??
-                      'Complete a focus session to build your report.'
-                : 'Last session: ${completed.actualMinutes ?? 0}m ${completed.sessionType.replaceAll('_', ' ')} completed.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-          ),
+          const SizedBox(height: AppSpacing.s12),
+          Text(message, style: AppTextStyles.bodySmallLight),
         ],
       ),
     );
   }
 }
+
+// ── Stat card ─────────────────────────────────────────────────────────────────
 
 class _StatCard extends StatelessWidget {
   final String label;
@@ -1074,34 +2086,27 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-          ),
+          Text(label, style: AppTextStyles.captionLight),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(sub, style: Theme.of(context).textTheme.bodySmall),
+          Text(value, style: AppTextStyles.metricNumber(color)),
+          Text(sub, style: AppTextStyles.captionLight),
         ],
       ),
     );
   }
 }
+
+// ── Session tile ──────────────────────────────────────────────────────────────
 
 class _SessionTile extends StatelessWidget {
   final FocusSession session;
@@ -1112,31 +2117,49 @@ class _SessionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCompleted = session.status == 'completed';
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.listGap),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s16,
+        vertical: AppSpacing.s12,
+      ),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Row(
         children: [
-          Icon(
-            isCompleted ? Icons.check_circle : Icons.cancel,
-            color: isCompleted ? AppColors.success : AppColors.error,
-            size: 20,
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: isCompleted
+                  ? AppColors.successSoft
+                  : AppColors.errorSoft,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isCompleted ? Icons.check_rounded : Icons.close_rounded,
+              size: 17,
+              color: isCompleted
+                  ? AppColors.successColor
+                  : AppColors.errorColor,
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.s12),
           Expanded(
             child: Text(
-              '${session.plannedMinutes} min ${session.sessionType}',
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              '${session.plannedMinutes} min '
+              '${session.sessionType.replaceAll('_', ' ')}',
+              style: AppTextStyles.body(AppColors.textHeading),
             ),
           ),
           Text(
-            isCompleted ? '${session.actualMinutes ?? 0}m done' : 'cancelled',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            isCompleted
+                ? '${session.actualMinutes ?? 0}m done'
+                : 'cancelled',
+            style: AppTextStyles.captionLight,
           ),
         ],
       ),
