@@ -90,6 +90,12 @@ async def _send_code_email(
         ) from exc
 
     logger.info("Email sent purpose=%s recipient=%s", purpose, email)
+    if _development_mode():
+        return EmailSendResult(
+            sent=True,
+            development_code=code,
+            development_message="Development mode: code is shown for testing.",
+        )
     return EmailSendResult(sent=True)
 
 

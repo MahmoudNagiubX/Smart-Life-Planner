@@ -58,6 +58,24 @@ void main() {
     expect(message, 'An account with this email already exists.');
   });
 
+  test('friendly auth errors explain missing Google backend dependency', () {
+    final message = friendlyAuthError(
+      dioError(
+        statusCode: 424,
+        data: {
+          'detail':
+              'Google sign-in is not available because the backend is missing the google-auth dependency.',
+        },
+      ),
+      'Google sign-in failed',
+    );
+
+    expect(
+      message,
+      'Google Sign-In is not available on the backend. Install the google-auth dependency and restart the server.',
+    );
+  });
+
   test('friendly API errors read structured safe detail message', () {
     final message = friendlyApiError(
       dioError(

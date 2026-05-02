@@ -8,10 +8,15 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt as jose_jwt, JWTError
-from google.oauth2 import id_token as google_id_token
-from google.auth.transport import requests as google_requests
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+
+try:
+    from google.oauth2 import id_token as google_id_token
+    from google.auth.transport import requests as google_requests
+except ImportError:  # pragma: no cover - exercised when deployment misses google-auth
+    google_id_token = None
+    google_requests = None
 
 from app.core.config import settings as app_settings
 from app.core.dependencies import get_db
@@ -375,7 +380,24 @@ async def google_sign_in(
     payload: GoogleSignInRequest, db: AsyncSession = Depends(get_db)
 ):
     if not app_settings.GOOGLE_CLIENT_ID:
-        raise HTTPException(status_code=500, detail="Google sign-in not configured")
+        raise HTTPException(
+            status_code=424,
+            detail=(
+                "Google Sign-In is not configured correctly. Set backend "
+                "GOOGLE_CLIENT_ID to the Web OAuth client ID."
+            ),
+        )
+    if google_id_token is None or google_requests is None:
+        logger.error(
+            "Google sign-in dependency missing. Install google-auth on the backend."
+        )
+        raise HTTPException(
+            status_code=424,
+            detail=(
+                "Google sign-in is not available because the backend is missing "
+                "the google-auth dependency."
+            ),
+        )
 
     # Verify the Google ID token
     try:

@@ -54,6 +54,10 @@ String friendlyAuthError(Object error, String fallback) {
       if (normalized.contains('google sign-in not configured')) {
         return 'Google Sign-In is not configured correctly. Check Web Client ID, Android package name, and SHA-1/SHA-256 fingerprints.';
       }
+      if (normalized.contains('google-auth dependency') ||
+          normalized.contains('google sign-in is not available')) {
+        return 'Google Sign-In is not available on the backend. Install the google-auth dependency and restart the server.';
+      }
       if (statusCode == 422) {
         return _validationMessage(data) ??
             'Please check the highlighted fields.';
