@@ -20,6 +20,8 @@ class AuthTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final void Function(String)? onFieldSubmitted;
   final bool autofocus;
+  final bool enabled;
+  final int? maxLength;
 
   const AuthTextField({
     super.key,
@@ -34,6 +36,8 @@ class AuthTextField extends StatelessWidget {
     this.textInputAction,
     this.onFieldSubmitted,
     this.autofocus = false,
+    this.enabled = true,
+    this.maxLength,
   });
 
   @override
@@ -59,6 +63,8 @@ class AuthTextField extends StatelessWidget {
           textInputAction: textInputAction,
           onFieldSubmitted: onFieldSubmitted,
           autofocus: autofocus,
+          enabled: enabled,
+          maxLength: maxLength,
           style: GoogleFonts.manrope(
             fontSize: 15,
             fontWeight: FontWeight.w500,
@@ -66,7 +72,7 @@ class AuthTextField extends StatelessWidget {
           ),
           decoration: InputDecoration(
             filled: true,
-            fillColor: AppColors.bgSurface,
+            fillColor: enabled ? AppColors.bgSurface : AppColors.bgSurfaceLavender,
             hintText: hintText,
             hintStyle: GoogleFonts.manrope(
               fontSize: 15,
@@ -113,6 +119,11 @@ class AuthTextField extends StatelessWidget {
             errorStyle: GoogleFonts.manrope(
               fontSize: 12,
               color: AppColors.errorColor,
+            ),
+            counterText: maxLength != null ? '' : null,
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              borderSide: const BorderSide(color: AppColors.borderSoft),
             ),
           ),
         ),
