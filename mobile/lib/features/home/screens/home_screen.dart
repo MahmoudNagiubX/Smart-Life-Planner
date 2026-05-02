@@ -238,8 +238,8 @@ class _HomeHeader extends StatelessWidget {
       children: [
         // Logo
         Container(
-          width: 48,
-          height: 48,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
@@ -302,8 +302,8 @@ class _HomeHeader extends StatelessWidget {
         GestureDetector(
           onTap: () => HapticFeedback.lightImpact(),
           child: Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.bgSurface,
               shape: BoxShape.circle,
@@ -344,8 +344,8 @@ class _HomeHeader extends StatelessWidget {
         GestureDetector(
           onTap: onCustomize,
           child: Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               gradient: AppGradients.action,
               shape: BoxShape.circle,
@@ -501,7 +501,7 @@ class _DailySummaryCard extends StatelessWidget {
             TextSpan(text: parts[0]),
             TextSpan(
               text: hw,
-              style: TextStyle(color: AppColors.brandGold),
+              style: TextStyle(color: AppColors.brandPinkSoft),
             ),
             if (parts.length > 1) TextSpan(text: parts[1]),
           ],
@@ -622,7 +622,7 @@ class _DailySummaryCard extends StatelessWidget {
                 size: 112,
                 strokeWidth: 9,
                 trackColor: Colors.white.withValues(alpha: 0.22),
-                gradientColors: [AppColors.brandGold, Colors.white],
+                gradientColors: [AppColors.brandPinkSoft, Colors.white],
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1074,14 +1074,14 @@ class _TaskRow extends StatelessWidget {
 
   Color _bubbleBg(String p) {
     if (p == 'high') return AppColors.errorSoft;
-    if (p == 'medium') return AppColors.warningSoft;
-    return AppColors.featHabitsSoft;
+    if (p == 'medium') return AppColors.bgSurfaceLavender;
+    return AppColors.brandPinkSoft;
   }
 
   Color _bubbleColor(String p) {
     if (p == 'high') return AppColors.errorColor;
-    if (p == 'medium') return AppColors.warningColor;
-    return AppColors.featHabits;
+    if (p == 'medium') return AppColors.brandViolet;
+    return AppColors.brandPink;
   }
 
   IconData _bubbleIcon(String p) {
@@ -1103,13 +1103,13 @@ class _TaskRow extends StatelessWidget {
   }
 
   Color _statusBg(String status) {
-    if (status == 'completed') return AppColors.successSoft;
+    if (status == 'completed') return AppColors.bgSurfaceLavender;
     if (status == 'in_progress') return AppColors.bgSurfaceLavender;
     return AppColors.brandPinkSoft;
   }
 
   Color _statusColor(String status) {
-    if (status == 'completed') return AppColors.successColor;
+    if (status == 'completed') return AppColors.brandViolet;
     if (status == 'in_progress') return AppColors.brandPrimary;
     return AppColors.brandPink;
   }
@@ -1505,7 +1505,7 @@ class _MiniMasjidIcon extends StatelessWidget {
               width: w * 0.50,
               height: w * 0.50,
               decoration: BoxDecoration(
-                color: AppColors.brandGold.withValues(alpha: 0.70),
+                color: AppColors.brandPinkSoft.withValues(alpha: 0.70),
                 shape: BoxShape.circle,
               ),
             ),

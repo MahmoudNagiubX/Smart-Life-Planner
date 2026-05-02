@@ -93,7 +93,10 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.screenH, 56, AppSpacing.screenH, 0,
+                        AppSpacing.screenH,
+                        56,
+                        AppSpacing.screenH,
+                        0,
                       ),
                       child: _PrayerHeader(
                         onSettings: () =>
@@ -105,36 +108,44 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.screenH, AppSpacing.s20,
-                          AppSpacing.screenH, 0,
+                          AppSpacing.screenH,
+                          AppSpacing.s20,
+                          AppSpacing.screenH,
+                          0,
                         ),
-                        child: Builder(builder: (_) {
-                          final next = _findNextPrayer(data.prayers);
-                          return _NextPrayerHeroCard(
-                            next: next,
-                            nextDisplayName: next != null
-                                ? _prayerDisplayName(next.prayerName)
-                                : '',
-                            formattedTime: _formatTime(next?.scheduledAt),
-                            completedCount: data.completedCount,
-                            totalCount: data.totalCount,
-                            onMarkPrayed: () {
-                              if (next != null) {
-                                ref
-                                    .read(prayerProvider.notifier)
-                                    .togglePrayer(
-                                        next.prayerName, next.completed);
-                              }
-                            },
-                          );
-                        }),
+                        child: Builder(
+                          builder: (_) {
+                            final next = _findNextPrayer(data.prayers);
+                            return _NextPrayerHeroCard(
+                              next: next,
+                              nextDisplayName: next != null
+                                  ? _prayerDisplayName(next.prayerName)
+                                  : '',
+                              formattedTime: _formatTime(next?.scheduledAt),
+                              completedCount: data.completedCount,
+                              totalCount: data.totalCount,
+                              onMarkPrayed: () {
+                                if (next != null) {
+                                  ref
+                                      .read(prayerProvider.notifier)
+                                      .togglePrayer(
+                                        next.prayerName,
+                                        next.completed,
+                                      );
+                                }
+                              },
+                            );
+                          },
+                        ),
                       ),
                     ),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.screenH, AppSpacing.s20,
-                          AppSpacing.screenH, 0,
+                          AppSpacing.screenH,
+                          AppSpacing.s20,
+                          AppSpacing.screenH,
+                          0,
                         ),
                         child: _DailyPrayerListCard(
                           prayers: data.prayers,
@@ -152,8 +163,10 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.screenH, AppSpacing.s20,
-                          AppSpacing.screenH, 0,
+                          AppSpacing.screenH,
+                          AppSpacing.s20,
+                          AppSpacing.screenH,
+                          0,
                         ),
                         child: _SpiritualProgressCard(
                           completedCount: data.completedCount,
@@ -165,17 +178,17 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.screenH, AppSpacing.s20,
-                          AppSpacing.screenH, 0,
+                          AppSpacing.screenH,
+                          AppSpacing.s20,
+                          AppSpacing.screenH,
+                          0,
                         ),
                         child: _QuranQiblaRow(
                           pagesCompleted:
                               quranState.summary?.todayPagesCompleted,
                           dailyTarget: quranState.summary?.dailyPageTarget,
-                          progressPercent:
-                              quranState.summary?.progressPercent,
-                          onQuranGoal: () =>
-                              context.push(AppRoutes.quranGoal),
+                          progressPercent: quranState.summary?.progressPercent,
+                          onQuranGoal: () => context.push(AppRoutes.quranGoal),
                           onQibla: () => context.push(AppRoutes.qibla),
                         ),
                       ),
@@ -183,15 +196,16 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.screenH, AppSpacing.s20,
-                          AppSpacing.screenH, 0,
+                          AppSpacing.screenH,
+                          AppSpacing.s20,
+                          AppSpacing.screenH,
+                          0,
                         ),
                         child: _SpiritualToolsGrid(
                           onHistory: () =>
                               context.push(AppRoutes.prayerHistory),
                           onRamadan: () => context.push(AppRoutes.ramadan),
-                          onDhikr: () =>
-                              context.push(AppRoutes.dhikrReminders),
+                          onDhikr: () => context.push(AppRoutes.dhikrReminders),
                           onCalendar: () =>
                               context.push(AppRoutes.islamicCalendar),
                         ),
@@ -229,15 +243,21 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                   width: 40,
                   height: 4,
                   margin: const EdgeInsets.only(
-                      top: AppSpacing.s16, bottom: AppSpacing.s12),
+                    top: AppSpacing.s16,
+                    bottom: AppSpacing.s12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.borderSoft,
                     borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.screenH,
-                      AppSpacing.s8, AppSpacing.screenH, AppSpacing.s8),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenH,
+                    AppSpacing.s8,
+                    AppSpacing.screenH,
+                    AppSpacing.s8,
+                  ),
                   child: Text(
                     'Mark ${_prayerDisplayName(prayer.prayerName)} Status',
                     style: AppTextStyles.h4Light,
@@ -249,18 +269,20 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                   iconColor: AppColors.brandViolet,
                   label: 'Prayed On Time',
                   onTap: () {
-                    ref.read(prayerProvider.notifier).setPrayerStatus(
-                        prayer.prayerName, 'prayed_on_time');
+                    ref
+                        .read(prayerProvider.notifier)
+                        .setPrayerStatus(prayer.prayerName, 'prayed_on_time');
                     Navigator.pop(context);
                   },
                 ),
                 _StatusOption(
                   icon: Icons.access_time,
-                  iconColor: AppColors.warningColor,
+                  iconColor: AppColors.brandPink,
                   label: 'Prayed Late',
                   onTap: () {
-                    ref.read(prayerProvider.notifier).setPrayerStatus(
-                        prayer.prayerName, 'prayed_late');
+                    ref
+                        .read(prayerProvider.notifier)
+                        .setPrayerStatus(prayer.prayerName, 'prayed_late');
                     Navigator.pop(context);
                   },
                 ),
@@ -396,8 +418,11 @@ class _NextPrayerHeroCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.nightlight_round,
-                      color: Colors.white, size: 14),
+                  const Icon(
+                    Icons.nightlight_round,
+                    color: Colors.white,
+                    size: 14,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     allDone ? 'All Prayers Complete' : 'Next Prayer',
@@ -541,7 +566,7 @@ class _MosquePainter extends CustomPainter {
         ..style = PaintingStyle.fill,
     );
 
-    // Gold crescent star above dome
+    // Soft lavender crescent above dome
     final crescentPath = Path()
       ..moveTo(80, 18)
       ..cubicTo(77, 23, 77, 27, 80, 32)
@@ -550,7 +575,7 @@ class _MosquePainter extends CustomPainter {
     canvas.drawPath(
       crescentPath,
       Paint()
-        ..color = const Color(0xFFFFD45C).withValues(alpha: 0.9)
+        ..color = AppColors.brandPinkSoft.withValues(alpha: 0.9)
         ..style = PaintingStyle.fill,
     );
 
@@ -603,15 +628,38 @@ class _DailyPrayerListCard extends StatelessWidget {
         child: Column(
           children: [
             for (int i = 0; i < prayers.length; i++)
-              _PrayerRow(
-                prayer: prayers[i],
-                displayName: displayNameOf(prayers[i].prayerName),
-                formattedTime: formatTime(prayers[i].scheduledAt),
-                isNext: nextPrayer?.prayerName == prayers[i].prayerName,
-                showDivider: i != 0,
-                onToggle: () => onToggle(prayers[i]),
-                onLongPress: () => onLongPress(prayers[i]),
-              ),
+              if (i == 0) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.s20,
+                    AppSpacing.s16,
+                    AppSpacing.s20,
+                    AppSpacing.s8,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Prayer Times', style: AppTextStyles.h4Light),
+                  ),
+                ),
+                _PrayerRow(
+                  prayer: prayers[i],
+                  displayName: displayNameOf(prayers[i].prayerName),
+                  formattedTime: formatTime(prayers[i].scheduledAt),
+                  isNext: nextPrayer?.prayerName == prayers[i].prayerName,
+                  showDivider: false,
+                  onToggle: () => onToggle(prayers[i]),
+                  onLongPress: () => onLongPress(prayers[i]),
+                ),
+              ] else
+                _PrayerRow(
+                  prayer: prayers[i],
+                  displayName: displayNameOf(prayers[i].prayerName),
+                  formattedTime: formatTime(prayers[i].scheduledAt),
+                  isNext: nextPrayer?.prayerName == prayers[i].prayerName,
+                  showDivider: false,
+                  onToggle: () => onToggle(prayers[i]),
+                  onLongPress: () => onLongPress(prayers[i]),
+                ),
           ],
         ),
       ),
@@ -645,83 +693,136 @@ class _PrayerRow extends StatelessWidget {
 
     return GestureDetector(
       onLongPress: onLongPress,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isNext ? AppColors.bgSurfaceLavender : Colors.transparent,
-          borderRadius:
-              isNext ? BorderRadius.circular(AppRadius.md) : null,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.s12,
+          AppSpacing.s4,
+          AppSpacing.s12,
+          AppSpacing.s4,
         ),
-        child: Column(
-          children: [
-            if (showDivider)
-              Divider(
-                height: 1,
-                color: AppColors.dividerColor,
-                indent: AppSpacing.s16,
-                endIndent: AppSpacing.s16,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: isNext ? AppColors.bgSurfaceLavender : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: isNext
+                ? Border.all(
+                    color: AppColors.brandPrimary.withValues(alpha: 0.18),
+                  )
+                : null,
+          ),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 4,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: isNext ? AppColors.brandPrimary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
               ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s16,
-                vertical: 14,
-              ),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: onToggle,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isCompleted
-                            ? AppColors.brandViolet
-                            : isNext
-                            ? AppColors.brandPrimary
-                            : Colors.transparent,
-                        border: (isCompleted || isNext)
-                            ? null
-                            : Border.all(
-                                color: AppColors.borderSoft,
-                                width: 2,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s12,
+                    vertical: AppSpacing.s8,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: isNext
+                              ? AppColors.bgSurface
+                              : AppColors.bgSurfaceLavender.withValues(
+                                  alpha: 0.60,
+                                ),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Icon(
+                          _iconForPrayer(prayer.prayerName),
+                          size: 18,
+                          color: isNext
+                              ? AppColors.brandPrimary
+                              : AppColors.textHint,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayName,
+                              style: AppTextStyles.h4(
+                                isMissed
+                                    ? AppColors.errorColor
+                                    : AppColors.textHeading,
                               ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              formattedTime,
+                              style: AppTextStyles.caption(
+                                isNext
+                                    ? AppColors.brandPrimary
+                                    : AppColors.textHint,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: isCompleted
-                          ? const Icon(Icons.check,
-                              color: Colors.white, size: 14)
-                          : isNext
-                          ? const Icon(Icons.nightlight_round,
-                              color: Colors.white, size: 14)
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      displayName,
-                      style: AppTextStyles.h4(
-                        isMissed
-                            ? AppColors.errorColor
-                            : AppColors.textHeading,
+                      GestureDetector(
+                        onTap: onToggle,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isCompleted
+                                ? AppColors.brandViolet
+                                : AppColors.bgSurface,
+                            border: Border.all(
+                              color: isCompleted
+                                  ? AppColors.brandViolet
+                                  : isNext
+                                  ? AppColors.brandPrimary
+                                  : AppColors.borderSoft,
+                              width: 2,
+                            ),
+                          ),
+                          child: isCompleted
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 13,
+                                )
+                              : null,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  Text(
-                    formattedTime,
-                    style: AppTextStyles.h4(
-                      isNext
-                          ? AppColors.brandPrimary
-                          : AppColors.textHeading,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  IconData _iconForPrayer(String name) {
+    return switch (name) {
+      'fajr' => Icons.wb_twilight_outlined,
+      'dhuhr' => Icons.wb_sunny_outlined,
+      'asr' => Icons.wb_sunny_outlined,
+      'maghrib' => Icons.filter_drama_outlined,
+      'isha' => Icons.nightlight_round,
+      _ => Icons.nightlight_round,
+    };
   }
 }
 
@@ -740,8 +841,7 @@ class _SpiritualProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress =
-        totalCount == 0 ? 0.0 : completedCount / totalCount;
+    final progress = totalCount == 0 ? 0.0 : completedCount / totalCount;
     final allDone = completedCount >= totalCount && totalCount > 0;
 
     return Container(
@@ -836,9 +936,7 @@ class _QuranQiblaRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.cardGap),
-          Expanded(
-            child: _QiblaCard(onTap: onQibla),
-          ),
+          Expanded(child: _QiblaCard(onTap: onQibla)),
         ],
       ),
     );
@@ -861,8 +959,7 @@ class _QuranGoalCard extends StatelessWidget {
     final hasData = pagesCompleted != null && dailyTarget != null;
     final target = dailyTarget ?? 0;
     final completed = pagesCompleted ?? 0;
-    final progress =
-        target == 0 ? 0.0 : (completed / target).clamp(0.0, 1.0);
+    final progress = target == 0 ? 0.0 : (completed / target).clamp(0.0, 1.0);
 
     return GestureDetector(
       onTap: onTap,
@@ -982,13 +1079,13 @@ class _QiblaCard extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: AppColors.featNotesSoft,
+                    color: AppColors.bgSurfaceLavender,
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: const Icon(
                     Icons.explore_outlined,
                     size: 18,
-                    color: AppColors.warningColor,
+                    color: AppColors.brandPrimary,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1004,9 +1101,7 @@ class _QiblaCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Center(
-              child: Text('136° SE', style: AppTextStyles.captionLight),
-            ),
+            Center(child: Text('136° SE', style: AppTextStyles.captionLight)),
           ],
         ),
       ),
@@ -1124,8 +1219,8 @@ class _SpiritualToolsGrid extends StatelessWidget {
             _ToolTile(
               icon: Icons.grain_outlined,
               label: 'Dhikr',
-              iconColor: AppColors.featHabits,
-              iconBg: AppColors.featHabitsSoft,
+              iconColor: AppColors.brandPink,
+              iconBg: AppColors.bgSurfaceLavender,
               onTap: onDhikr,
             ),
             _ToolTile(

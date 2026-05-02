@@ -157,7 +157,7 @@ class _FloatingNavBarState extends ConsumerState<FloatingNavBar>
                         ),
                       ),
                       // Center FAB reserved slot — matches FAB width exactly
-                      const SizedBox(width: _kFabSize + 4),
+                      const SizedBox(width: _kFabSize + 20),
                       // Right group: Focus (2), Prayer (3), Profile (4)
                       Expanded(
                         child: Row(

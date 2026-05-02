@@ -28,9 +28,9 @@ class _Preset {
 }
 
 const _kPresets = [
-  _Preset('25 / 5', 'Pomodoro', 25, 5),
-  _Preset('50 / 10', 'Deep Work', 50, 10),
-  _Preset('90 min', 'Study Block', 90, 15),
+  _Preset('Pomodoro', '25/5', 25, 5),
+  _Preset('Deep Work', '50/10', 50, 10),
+  _Preset('Study', '45/15', 45, 15),
   _Preset('Custom', 'Set your own', -1, -1),
 ];
 
@@ -524,7 +524,19 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                 // ── Quick presets (only when idle) ────────────────────
                 if (!hasActive) ...[
                   const SizedBox(height: AppSpacing.s24),
-                  Text('Quick presets', style: AppTextStyles.h3Light),
+                  Row(
+                    children: [
+                      Text('Presets', style: AppTextStyles.h3Light),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => context.push(AppRoutes.focusSettings),
+                        child: Text(
+                          'Edit',
+                          style: AppTextStyles.label(AppColors.brandPrimary),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: AppSpacing.s12),
                   _QuickPresets(
                     currentFocusMin: state.focusMinutes,
@@ -752,47 +764,43 @@ class _MainFocusCard extends StatelessWidget {
     final timerText = hasActive
         ? formatTime(state.remainingSeconds)
         : formatTime(focusMinutes * 60);
-    final subLabel = hasActive
-        ? (sessionLabel ?? 'Focus session')
-        : 'Focus Time';
+    final subLabel = hasActive ? (sessionLabel ?? 'Focus session') : 'POMODORO';
     final cardLabel = hasActive
-        ? (isBreak ? 'Break session' : 'Pomodoro - Round 1 of 4')
-        : 'Pomodoro - Round 1 of 4';
+        ? (isBreak ? 'Break session' : 'Focused session in progress')
+        : 'Ready to Focus';
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: AppGradients.focus,
+        color: AppColors.bgSurface,
         borderRadius: BorderRadius.circular(AppRadius.xl3),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.brandPink.withValues(alpha: 0.30),
-            blurRadius: 32,
-            offset: const Offset(0, 16),
-          ),
-        ],
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         children: [
           // Session label
+          Text(cardLabel, style: AppTextStyles.h3Light),
+          const SizedBox(height: 4),
           Text(
-            cardLabel,
-            style: GoogleFonts.manrope(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Colors.white.withValues(alpha: 0.9),
-            ),
+            hasActive
+                ? 'Keep your attention on this session'
+                : 'Select a preset or start custom timer',
+            style: AppTextStyles.bodySmallLight,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Progress ring with timer
           ProgressRing(
             value: progress,
             size: 200,
             strokeWidth: 12,
-            trackColor: Colors.white.withValues(alpha: 0.2),
-            gradientColors: const [Colors.white, AppColors.brandViolet],
+            trackColor: AppColors.bgSurfaceLavender,
+            gradientColors: const [
+              AppColors.brandPrimary,
+              AppColors.brandViolet,
+            ],
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -801,7 +809,7 @@ class _MainFocusCard extends StatelessWidget {
                   style: GoogleFonts.manrope(
                     fontSize: 48,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: AppColors.textHeading,
                     letterSpacing: -1.5,
                   ),
                 ),
@@ -811,7 +819,7 @@ class _MainFocusCard extends StatelessWidget {
                   style: GoogleFonts.manrope(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: AppColors.textHint,
                   ),
                 ),
               ],
@@ -833,11 +841,9 @@ class _MainFocusCard extends StatelessWidget {
                     child: Container(
                       height: 48,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: AppColors.bgSurfaceLavender,
                         borderRadius: BorderRadius.circular(AppRadius.xl),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.35),
-                        ),
+                        border: Border.all(color: AppColors.borderSoft),
                       ),
                       child: Center(
                         child: Text(
@@ -845,7 +851,7 @@ class _MainFocusCard extends StatelessWidget {
                           style: GoogleFonts.manrope(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: AppColors.textHeading,
                           ),
                         ),
                       ),
@@ -863,6 +869,7 @@ class _MainFocusCard extends StatelessWidget {
                       height: 48,
                       decoration: BoxDecoration(
                         color: Colors.white,
+                        border: Border.all(color: AppColors.borderSoft),
                         borderRadius: BorderRadius.circular(AppRadius.xl),
                       ),
                       child: Center(
@@ -873,7 +880,7 @@ class _MainFocusCard extends StatelessWidget {
                               Icons.check_rounded,
                               size: 18,
                               color: isBreak
-                                  ? AppColors.successColor
+                                  ? AppColors.brandViolet
                                   : AppColors.brandPrimary,
                             ),
                             const SizedBox(width: 6),
@@ -883,7 +890,7 @@ class _MainFocusCard extends StatelessWidget {
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
                                 color: isBreak
-                                    ? AppColors.successColor
+                                    ? AppColors.brandViolet
                                     : AppColors.brandPrimary,
                               ),
                             ),
@@ -905,7 +912,7 @@ class _MainFocusCard extends StatelessWidget {
                   style: GoogleFonts.manrope(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: AppColors.brandPrimary,
                   ),
                 ),
               ),
@@ -917,7 +924,7 @@ class _MainFocusCard extends StatelessWidget {
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  Colors.white.withValues(alpha: 0.9),
+                  AppColors.brandPrimary,
                 ),
               ),
             ),
@@ -932,15 +939,9 @@ class _MainFocusCard extends StatelessWidget {
                 height: 56,
                 padding: const EdgeInsets.symmetric(horizontal: 40),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  gradient: AppGradients.action,
                   borderRadius: BorderRadius.circular(AppRadius.pill),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  boxShadow: AppShadows.glowPurple,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -948,7 +949,7 @@ class _MainFocusCard extends StatelessWidget {
                     Icon(
                       Icons.play_arrow_rounded,
                       size: 20,
-                      color: AppColors.brandPink,
+                      color: Colors.white,
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -956,7 +957,7 @@ class _MainFocusCard extends StatelessWidget {
                       style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.brandPink,
+                        color: Colors.white,
                       ),
                     ),
                   ],
@@ -973,11 +974,9 @@ class _MainFocusCard extends StatelessWidget {
                     child: Container(
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: AppColors.bgSurfaceLavender,
                         borderRadius: BorderRadius.circular(AppRadius.pill),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                        ),
+                        border: Border.all(color: AppColors.borderSoft),
                       ),
                       child: Center(
                         child: Row(
@@ -986,7 +985,7 @@ class _MainFocusCard extends StatelessWidget {
                             Icon(
                               Icons.coffee_rounded,
                               size: 14,
-                              color: Colors.white,
+                              color: AppColors.brandPrimary,
                             ),
                             const SizedBox(width: 5),
                             Text(
@@ -994,7 +993,7 @@ class _MainFocusCard extends StatelessWidget {
                               style: GoogleFonts.manrope(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                                color: AppColors.textHeading,
                               ),
                             ),
                           ],
@@ -1010,11 +1009,9 @@ class _MainFocusCard extends StatelessWidget {
                     child: Container(
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: AppColors.bgSurfaceLavender,
                         borderRadius: BorderRadius.circular(AppRadius.pill),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                        ),
+                        border: Border.all(color: AppColors.borderSoft),
                       ),
                       child: Center(
                         child: Row(
@@ -1023,7 +1020,7 @@ class _MainFocusCard extends StatelessWidget {
                             Icon(
                               Icons.weekend_rounded,
                               size: 14,
-                              color: Colors.white,
+                              color: AppColors.brandPrimary,
                             ),
                             const SizedBox(width: 5),
                             Text(
@@ -1031,7 +1028,7 @@ class _MainFocusCard extends StatelessWidget {
                               style: GoogleFonts.manrope(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                                color: AppColors.textHeading,
                               ),
                             ),
                           ],
@@ -1068,26 +1065,59 @@ class _QuickPresets extends StatelessWidget {
       childAspectRatio: 2.2,
       children: _kPresets.map((p) {
         final selected = p.focusMin == currentFocusMin;
+        final isCustom = p.focusMin < 0;
         return GestureDetector(
           onTap: () => onSelect(p),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.bgSurface,
+              gradient: selected ? AppGradients.action : null,
+              color: selected
+                  ? null
+                  : isCustom
+                  ? AppColors.bgSurfaceLavender
+                  : AppColors.bgSurface,
               borderRadius: BorderRadius.circular(AppRadius.xl),
               border: Border.all(
-                color: selected ? AppColors.brandPink : AppColors.borderSoft,
-                width: selected ? 2 : 1,
+                color: selected
+                    ? AppColors.bgSurface.withValues(alpha: 0)
+                    : AppColors.borderSoft,
+                width: 1,
               ),
-              boxShadow: selected ? AppShadows.glowPink : AppShadows.soft,
+              boxShadow: selected ? AppShadows.glowPurple : AppShadows.soft,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(p.title, style: AppTextStyles.h4Light),
-                const SizedBox(height: 2),
-                Text(p.subtitle, style: AppTextStyles.captionLight),
+                Icon(
+                  isCustom ? Icons.add_rounded : Icons.timer_outlined,
+                  size: 18,
+                  color: selected ? Colors.white : AppColors.brandPrimary,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        p.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.body(
+                          selected ? Colors.white : AppColors.textHeading,
+                        ).copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    Text(
+                      p.subtitle,
+                      style: AppTextStyles.caption(
+                        selected
+                            ? Colors.white.withValues(alpha: 0.72)
+                            : AppColors.textHint,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -1173,28 +1203,28 @@ class _AnalyticsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatCard(
-            label: 'This week',
-            value: '${analytics.weekMinutes}m',
-            sub: '${analytics.weekSessions} sessions',
-            color: AppColors.successColor,
+            label: 'Daily goal',
+            value: '${analytics.todaySessions} / 4',
+            sub: 'sessions',
+            color: AppColors.brandPrimary,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _StatCard(
-            label: 'Completion',
-            value: '${analytics.completionRatePercent}%',
-            sub: '${analytics.completedSessions} done',
+            label: 'Total time',
+            value: '${analytics.todayMinutes}m',
+            sub: 'today',
             color: AppColors.brandViolet,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _StatCard(
-            label: 'Average',
-            value: '${analytics.averageSessionMinutes}m',
-            sub: 'per session',
-            color: AppColors.brandPrimary,
+            label: 'This week',
+            value: '${analytics.weekMinutes}m',
+            sub: '${analytics.weekSessions} sessions',
+            color: AppColors.brandPink,
           ),
         ),
       ],
@@ -2077,15 +2107,15 @@ class _SessionTile extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: isCompleted ? AppColors.successSoft : AppColors.errorSoft,
+              color: isCompleted
+                  ? AppColors.bgSurfaceLavender
+                  : AppColors.errorSoft,
               shape: BoxShape.circle,
             ),
             child: Icon(
               isCompleted ? Icons.check_rounded : Icons.close_rounded,
               size: 17,
-              color: isCompleted
-                  ? AppColors.successColor
-                  : AppColors.errorColor,
+              color: isCompleted ? AppColors.brandViolet : AppColors.errorColor,
             ),
           ),
           const SizedBox(width: AppSpacing.s12),

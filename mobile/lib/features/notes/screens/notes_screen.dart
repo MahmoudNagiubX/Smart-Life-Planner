@@ -58,17 +58,20 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         backgroundColor: AppColors.bgApp,
         surfaceTintColor: AppColors.bgApp,
         elevation: 0,
+        titleSpacing: AppSpacing.screenH,
         title: Text('Notes', style: AppTextStyles.h2Light),
         actions: [
           IconButton(
             tooltip: 'Templates',
             onPressed: () => _showNoteTemplatePicker(context),
             icon: const Icon(Icons.dashboard_customize_outlined),
+            color: AppColors.textHeading,
           ),
           IconButton(
             tooltip: 'Smart note tools',
             onPressed: () => _showSmartNoteMenu(context),
             icon: const Icon(Icons.auto_awesome_outlined),
+            color: AppColors.textHeading,
           ),
           IconButton(
             tooltip: state.showingArchived
@@ -88,6 +91,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   ? Icons.note_alt_outlined
                   : Icons.archive_outlined,
             ),
+            color: AppColors.textHeading,
           ),
         ],
       ),
@@ -270,13 +274,20 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                           tag: state.selectedTag,
                           isArchived: state.showingArchived,
                         ),
-                    child: ListView.builder(
+                    child: GridView.builder(
                       padding: const EdgeInsets.fromLTRB(
                         AppSpacing.screenH,
                         AppSpacing.s8,
                         AppSpacing.screenH,
-                        104,
+                        132,
                       ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: AppSpacing.s12,
+                            mainAxisSpacing: AppSpacing.s12,
+                            childAspectRatio: 0.78,
+                          ),
                       itemCount: state.notes.length,
                       itemBuilder: (context, index) {
                         return _NoteCard(note: state.notes[index]);
@@ -348,7 +359,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                           );
                     }
                   },
-                  backgroundColor: AppColors.brandPrimary,
+                  backgroundColor: AppColors.brandPink,
                   foregroundColor: AppColors.bgSurface,
                   child: const Icon(Icons.add),
                 ),
@@ -482,14 +493,13 @@ class _NoteCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
-      padding: const EdgeInsets.all(AppSpacing.s16),
+      padding: const EdgeInsets.all(AppSpacing.s12),
       decoration: BoxDecoration(
         color: _noteBackgroundColor(note.colorKey),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
         boxShadow: AppShadows.soft,
         border: note.isPinned
-            ? Border.all(color: AppColors.prayerGold.withValues(alpha: 0.5))
+            ? Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.35))
             : Border.all(color: AppColors.borderSoft),
       ),
       child: Column(
@@ -501,7 +511,7 @@ class _NoteCard extends ConsumerWidget {
                 const Icon(
                   Icons.push_pin,
                   size: 16,
-                  color: AppColors.prayerGold,
+                  color: AppColors.brandPrimary,
                 ),
               if (note.isPinned) const SizedBox(width: 4),
               Expanded(
@@ -619,7 +629,8 @@ class _NoteCard extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.textBody,
-                height: 1.45,
+                height: 1.35,
+                fontSize: 12,
               ),
             ),
           if (note.structuredBlocks.isNotEmpty) ...[

@@ -287,14 +287,14 @@ class _DirectionCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.s8),
               Text(
                 'Compass arrow is a bearing estimate from saved coordinates.',
-                style: AppTextStyles.caption(AppColors.warningColor),
+                style: AppTextStyles.caption(AppColors.brandPink),
               ),
             ],
             if (saveWarning != null) ...[
               const SizedBox(height: AppSpacing.s8),
               Text(
                 saveWarning!,
-                style: AppTextStyles.caption(AppColors.warningColor),
+                style: AppTextStyles.caption(AppColors.brandPink),
               ),
             ],
           ],
@@ -491,14 +491,14 @@ class _PermissionCard extends ConsumerWidget {
   Color get _permissionColor {
     switch (permissionState) {
       case QiblaLocationPermissionState.granted:
-        return AppColors.successColor;
+        return AppColors.brandViolet;
       case QiblaLocationPermissionState.permanentlyDenied:
       case QiblaLocationPermissionState.restricted:
         return AppColors.errorColor;
       case QiblaLocationPermissionState.serviceDisabled:
       case QiblaLocationPermissionState.denied:
       case QiblaLocationPermissionState.unknown:
-        return AppColors.warningColor;
+        return AppColors.brandPink;
     }
   }
 
@@ -549,10 +549,10 @@ class _SensorStatusCard extends StatelessWidget {
     final status = state.compassSensorStatus;
     final isReady = state.compassSensorIntegrationReady;
     final accentColor = switch (status) {
-      QiblaCompassSensorStatus.active => AppColors.successColor,
-      QiblaCompassSensorStatus.lowAccuracy => AppColors.warningColor,
+      QiblaCompassSensorStatus.active => AppColors.brandViolet,
+      QiblaCompassSensorStatus.lowAccuracy => AppColors.brandPink,
       QiblaCompassSensorStatus.listening => AppColors.brandPrimary,
-      QiblaCompassSensorStatus.unavailable => AppColors.warningColor,
+      QiblaCompassSensorStatus.unavailable => AppColors.brandPink,
       QiblaCompassSensorStatus.unknown => AppColors.brandPrimary,
     };
 
@@ -590,7 +590,7 @@ class _SensorStatusCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.s12),
             Text(
               'Fallback: face the numeric bearing ${state.referenceDirection!.displayDegrees} ${state.referenceDirection!.compassLabel}.',
-              style: AppTextStyles.caption(AppColors.warningColor),
+              style: AppTextStyles.caption(AppColors.brandPink),
             ),
           ],
         ],

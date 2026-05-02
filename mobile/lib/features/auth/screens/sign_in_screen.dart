@@ -371,48 +371,30 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
 
                     // ── Social buttons ────────────────────────────────────
                     if (_canShowAppleSignIn)
-                      Row(
+                      Column(
                         children: [
-                          Expanded(
-                            child: AuthSocialButton(
-                              icon: Image.asset(
-                                'assets/images/google_logo.png',
-                                errorBuilder: (_, _, _) => const Icon(
-                                  Icons.g_mobiledata_rounded,
-                                  size: 20,
-                                  color: AppColors.textHeading,
-                                ),
-                              ),
-                              label: 'Google',
-                              isLoading: _isLoading,
-                              onTap: _isLoading ? null : _googleLogin,
-                            ),
+                          AuthSocialButton(
+                            icon: const GoogleGMark(),
+                            label: 'Continue with Google',
+                            isLoading: _isLoading,
+                            onTap: _isLoading ? null : _googleLogin,
                           ),
-                          const SizedBox(width: AppSpacing.s12),
-                          Expanded(
-                            child: AuthSocialButton(
-                              icon: const Icon(
-                                Icons.apple_rounded,
-                                size: 20,
-                                color: AppColors.textHeading,
-                              ),
-                              label: 'Apple',
-                              isLoading: _isLoading,
-                              onTap: _isLoading ? null : _appleLogin,
+                          const SizedBox(height: AppSpacing.s12),
+                          AuthSocialButton(
+                            icon: const Icon(
+                              Icons.apple_rounded,
+                              size: 20,
+                              color: AppColors.textHeading,
                             ),
+                            label: 'Continue with Apple',
+                            isLoading: _isLoading,
+                            onTap: _isLoading ? null : _appleLogin,
                           ),
                         ],
                       )
                     else
                       AuthSocialButton(
-                        icon: Image.asset(
-                          'assets/images/google_logo.png',
-                          errorBuilder: (_, _, _) => const Icon(
-                            Icons.g_mobiledata_rounded,
-                            size: 20,
-                            color: AppColors.textHeading,
-                          ),
-                        ),
+                        icon: const GoogleGMark(),
                         label: 'Continue with Google',
                         isLoading: _isLoading,
                         onTap: _isLoading ? null : _googleLogin,

@@ -26,8 +26,11 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Smart Life Planner'), findsOneWidget);
-    expect(find.text('Sign In'), findsOneWidget);
-    expect(find.text('Create Account'), findsOneWidget);
+    expect(
+      find.text('Organize your life with\ncalm intelligence'),
+      findsOneWidget,
+    );
+    expect(find.text('Get Started'), findsOneWidget);
+    expect(find.text('I already have an account'), findsOneWidget);
   });
 }

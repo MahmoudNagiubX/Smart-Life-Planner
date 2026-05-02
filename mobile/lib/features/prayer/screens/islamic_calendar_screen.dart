@@ -19,8 +19,7 @@ class IslamicCalendarScreen extends ConsumerStatefulWidget {
       _IslamicCalendarScreenState();
 }
 
-class _IslamicCalendarScreenState
-    extends ConsumerState<IslamicCalendarScreen> {
+class _IslamicCalendarScreenState extends ConsumerState<IslamicCalendarScreen> {
   @override
   void initState() {
     super.initState();
@@ -78,7 +77,10 @@ class _IslamicCalendarScreenState
                       ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.s12),
-                      child: Text('Upcoming Events', style: AppTextStyles.h3Light),
+                      child: Text(
+                        'Upcoming Events',
+                        style: AppTextStyles.h3Light,
+                      ),
                     ),
                     if (calendar.events.isEmpty)
                       const _EmptyEventsCard()
@@ -231,10 +233,7 @@ class _IslamicEventTile extends StatelessWidget {
                 ),
                 if (event.description.isNotEmpty) ...[
                   const SizedBox(height: 6),
-                  Text(
-                    event.description,
-                    style: AppTextStyles.bodySmallLight,
-                  ),
+                  Text(event.description, style: AppTextStyles.bodySmallLight),
                 ],
               ],
             ),
