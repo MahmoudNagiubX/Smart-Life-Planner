@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
@@ -19,73 +23,99 @@ class ProjectTimelineScreen extends ConsumerStatefulWidget {
       _ProjectTimelineScreenState();
 }
 
-class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
+class _ProjectTimelineScreenState
+    extends ConsumerState<ProjectTimelineScreen> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(projectTimelineProvider(widget.projectId).notifier).load();
+      ref
+          .read(projectTimelineProvider(widget.projectId).notifier)
+          .load();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(projectTimelineProvider(widget.projectId));
-    final project = state.project;
-    final sortedBars = [...state.taskBars]..sort(_compareTimelineBars);
+    final state =
+        ref.watch(projectTimelineProvider(widget.projectId));
+    final sortedBars = [...state.taskBars]
+      ..sort(_compareTimelineBars);
 
     return Scaffold(
-      appBar: AppBar(title: Text(project?.title ?? 'Project Timeline')),
+      backgroundColor: AppColors.bgApp,
+      appBar: AppBar(
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Text(
+          state.project?.title ?? 'Project Timeline',
+          style: AppTextStyles.h2Light,
+        ),
+      ),
       body: state.isLoading
-          ? const AppLoadingState(message: 'Loading project timeline...')
+          ? const AppLoadingState(
+              message: 'Loading project timeline...')
           : state.error != null
-          ? AppErrorState(
-              title: 'Timeline could not load',
-              message: state.error!,
-              onRetry: () => ref
-                  .read(projectTimelineProvider(widget.projectId).notifier)
-                  .load(),
-            )
-          : RefreshIndicator(
-              onRefresh: () => ref
-                  .read(projectTimelineProvider(widget.projectId).notifier)
-                  .load(),
-              child: sortedBars.isEmpty
-                  ? const AppEmptyState(
-                      icon: Icons.timeline_outlined,
-                      title: 'No project tasks',
-                      message:
-                          'Tasks linked to this project will appear on a timeline.',
-                    )
-                  : Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                          child: _ProjectTimelineHeader(
-                            project: project,
-                            taskBars: sortedBars,
-                          ),
+              ? AppErrorState(
+                  title: 'Timeline could not load',
+                  message: state.error!,
+                  onRetry: () => ref
+                      .read(projectTimelineProvider(widget.projectId)
+                          .notifier)
+                      .load(),
+                )
+              : RefreshIndicator(
+                  color: AppColors.brandPrimary,
+                  onRefresh: () => ref
+                      .read(projectTimelineProvider(widget.projectId)
+                          .notifier)
+                      .load(),
+                  child: sortedBars.isEmpty
+                      ? const AppEmptyState(
+                          icon: Icons.timeline_outlined,
+                          title: 'No project tasks',
+                          message:
+                              'Tasks linked to this project will appear on a timeline.',
+                        )
+                      : Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.screenH,
+                                AppSpacing.s16,
+                                AppSpacing.screenH,
+                                0,
+                              ),
+                              child: _ProjectTimelineHeader(
+                                project: state.project,
+                                taskBars: sortedBars,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.s16),
+                            Expanded(
+                              child: ListView.builder(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.screenH),
+                                itemCount: sortedBars.length,
+                                itemBuilder: (context, index) {
+                                  final bar = sortedBars[index];
+                                  return _TimelineTaskRow(
+                                    key: ValueKey(bar.taskId),
+                                    bar: bar,
+                                    isFirst: index == 0,
+                                    isLast: index ==
+                                        sortedBars.length - 1,
+                                    onDateChanged:
+                                        _confirmAndSaveDateChange,
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Expanded(
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: sortedBars.length,
-                            itemBuilder: (context, index) {
-                              final bar = sortedBars[index];
-                              return _TimelineTaskRow(
-                                key: ValueKey(bar.taskId),
-                                bar: bar,
-                                isFirst: index == 0,
-                                isLast: index == sortedBars.length - 1,
-                                onDateChanged: _confirmAndSaveDateChange,
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
+                ),
     );
   }
 
@@ -94,7 +124,8 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
     _TimelineDateField field,
     DateTime newValue,
   ) async {
-    final state = ref.read(projectTimelineProvider(widget.projectId));
+    final state =
+        ref.read(projectTimelineProvider(widget.projectId));
     final validationError = _validateTimelineDateChange(
       state: state,
       bar: bar,
@@ -112,10 +143,13 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Save timeline change?'),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.cardBr),
+        title:
+            Text('Save timeline change?', style: AppTextStyles.h3Light),
         content: Text(
           '${bar.title}\n'
           '${_fieldLabel(field)}: ${_dateOrUnset(oldValue)} -> ${_dateOrUnset(newValue)}',
+          style: AppTextStyles.body(AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -132,11 +166,14 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
     if (confirmed != true || !mounted) return;
 
     final error = await ref
-        .read(projectTimelineProvider(widget.projectId).notifier)
+        .read(
+            projectTimelineProvider(widget.projectId).notifier)
         .updateTimelineTaskDates(
           taskId: bar.taskId,
-          startDate: field == _TimelineDateField.start ? newValue : null,
-          dueDate: field == _TimelineDateField.due ? newValue : null,
+          startDate:
+              field == _TimelineDateField.start ? newValue : null,
+          dueDate:
+              field == _TimelineDateField.due ? newValue : null,
         );
 
     if (!mounted) return;
@@ -152,17 +189,23 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
     final newStart = field == _TimelineDateField.start
         ? newValue
         : bar.startDateTime;
-    final newDue = field == _TimelineDateField.due ? newValue : bar.dueDateTime;
-    if (newStart != null && newDue != null && newStart.isAfter(newDue)) {
+    final newDue =
+        field == _TimelineDateField.due ? newValue : bar.dueDateTime;
+    if (newStart != null &&
+        newDue != null &&
+        newStart.isAfter(newDue)) {
       return 'Start date cannot be after due date.';
     }
 
-    final barsById = {for (final item in state.taskBars) item.taskId: item};
+    final barsById = {
+      for (final item in state.taskBars) item.taskId: item
+    };
     if (newStart != null) {
       for (final dependencyId in bar.dependencyIds) {
         final dependency = barsById[dependencyId];
         final dependencyDue = dependency?.dueDateTime;
-        if (dependencyDue != null && dependencyDue.isAfter(newStart)) {
+        if (dependencyDue != null &&
+            dependencyDue.isAfter(newStart)) {
           return 'Task cannot start before a blocking dependency is due.';
         }
       }
@@ -172,7 +215,8 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
         if (dependency.dependsOnTaskId != bar.taskId) continue;
         final dependent = barsById[dependency.taskId];
         final dependentStart = dependent?.startDateTime;
-        if (dependentStart != null && newDue.isAfter(dependentStart)) {
+        if (dependentStart != null &&
+            newDue.isAfter(dependentStart)) {
           return 'Due date cannot move after a dependent task starts.';
         }
       }
@@ -181,55 +225,67 @@ class _ProjectTimelineScreenState extends ConsumerState<ProjectTimelineScreen> {
   }
 
   void _showTimelineMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.pillBr),
+      ),
+    );
   }
 }
+
+// ── Timeline header ───────────────────────────────────────────────────────────
 
 class _ProjectTimelineHeader extends StatelessWidget {
   final TaskProject? project;
   final List<ProjectTimelineTaskBarModel> taskBars;
 
-  const _ProjectTimelineHeader({required this.project, required this.taskBars});
+  const _ProjectTimelineHeader(
+      {required this.project, required this.taskBars});
 
   @override
   Widget build(BuildContext context) {
     final datedTasks = taskBars
-        .where((bar) => bar.startDateTime != null || bar.dueDateTime != null)
+        .where((bar) =>
+            bar.startDateTime != null || bar.dueDateTime != null)
         .toList();
     final start = datedTasks.isEmpty
         ? null
-        : datedTasks.first.startDateTime ?? datedTasks.first.dueDateTime;
+        : datedTasks.first.startDateTime ??
+            datedTasks.first.dueDateTime;
     final end = datedTasks.isEmpty
         ? null
-        : datedTasks.last.dueDateTime ?? datedTasks.last.startDateTime;
+        : datedTasks.last.dueDateTime ??
+            datedTasks.last.startDateTime;
     final totalMinutes = taskBars.fold<int>(
       0,
       (total, bar) => total + (bar.estimatedDurationMinutes ?? 0),
     );
-    final completed = taskBars.where((bar) => bar.status == 'completed').length;
-    final conflicts = taskBars.where((bar) => bar.conflict).length;
+    final completed =
+        taskBars.where((bar) => bar.status == 'completed').length;
+    final conflicts =
+        taskBars.where((bar) => bar.conflict).length;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardBr,
+        boxShadow: AppShadows.soft,
+        border: Border.all(color: AppColors.borderSoft),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             project?.title ?? 'Project',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: AppTextStyles.h3Light,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.s12),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
             children: [
               _TimelineMetricChip(
                 icon: Icons.task_alt,
@@ -241,7 +297,9 @@ class _ProjectTimelineHeader extends StatelessWidget {
               ),
               _TimelineMetricChip(
                 icon: Icons.timer_outlined,
-                label: totalMinutes == 0 ? 'No estimate' : '$totalMinutes min',
+                label: totalMinutes == 0
+                    ? 'No estimate'
+                    : '$totalMinutes min',
               ),
               _TimelineMetricChip(
                 icon: Icons.date_range_outlined,
@@ -262,6 +320,8 @@ class _ProjectTimelineHeader extends StatelessWidget {
   }
 }
 
+// ── Timeline task row ─────────────────────────────────────────────────────────
+
 class _TimelineTaskRow extends StatelessWidget {
   final ProjectTimelineTaskBarModel bar;
   final bool isFirst;
@@ -270,8 +330,7 @@ class _TimelineTaskRow extends StatelessWidget {
     ProjectTimelineTaskBarModel bar,
     _TimelineDateField field,
     DateTime newValue,
-  )
-  onDateChanged;
+  ) onDateChanged;
 
   const _TimelineTaskRow({
     super.key,
@@ -300,7 +359,8 @@ class _TimelineTaskRow extends StatelessWidget {
                     width: 2,
                     color: isFirst
                         ? Colors.transparent
-                        : AppColors.primary.withValues(alpha: 0.28),
+                        : AppColors.brandPrimary
+                            .withValues(alpha: 0.28),
                   ),
                 ),
                 Container(
@@ -316,7 +376,8 @@ class _TimelineTaskRow extends StatelessWidget {
                     width: 2,
                     color: isLast
                         ? Colors.transparent
-                        : AppColors.primary.withValues(alpha: 0.28),
+                        : AppColors.brandPrimary
+                            .withValues(alpha: 0.28),
                   ),
                 ),
               ],
@@ -324,29 +385,32 @@ class _TimelineTaskRow extends StatelessWidget {
           ),
           Expanded(
             child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => context.push('/home/tasks/${bar.taskId}'),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              onTap: () =>
+                  context.push('/home/tasks/${bar.taskId}'),
               child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(14),
+                margin: const EdgeInsets.only(
+                    bottom: AppSpacing.s12),
+                padding:
+                    const EdgeInsets.all(AppSpacing.cardPad),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.bgSurface,
+                  borderRadius:
+                      BorderRadius.circular(AppRadius.md),
+                  boxShadow: AppShadows.soft,
                   border: Border.all(
-                    color: _statusColor(bar.status).withValues(alpha: 0.2),
+                    color: _statusColor(bar.status)
+                        .withValues(alpha: 0.20),
                   ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      bar.title,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 10),
+                    Text(bar.title, style: AppTextStyles.h4Light),
+                    const SizedBox(height: AppSpacing.s8),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: AppSpacing.s8,
+                      runSpacing: AppSpacing.s8,
                       children: [
                         _TimelineDateAdjustChip(
                           icon: Icons.play_arrow_outlined,
@@ -366,8 +430,11 @@ class _TimelineTaskRow extends StatelessWidget {
                               'Due ${dueAt == null ? 'unset' : _shortDate(dueAt)}',
                           value: dueAt,
                           fallback: timelineDate,
-                          onDateChanged: (value) =>
-                              onDateChanged(bar, _TimelineDateField.due, value),
+                          onDateChanged: (value) => onDateChanged(
+                            bar,
+                            _TimelineDateField.due,
+                            value,
+                          ),
                         ),
                         _TimelineMetricChip(
                           icon: Icons.timer_outlined,
@@ -382,7 +449,8 @@ class _TimelineTaskRow extends StatelessWidget {
                         if (bar.dependencyIds.isNotEmpty)
                           _TimelineMetricChip(
                             icon: Icons.account_tree_outlined,
-                            label: '${bar.dependencyIds.length} deps',
+                            label:
+                                '${bar.dependencyIds.length} deps',
                           ),
                         if (bar.overdue)
                           const _TimelineMetricChip(
@@ -407,38 +475,40 @@ class _TimelineTaskRow extends StatelessWidget {
   }
 }
 
+// ── Metric chip ───────────────────────────────────────────────────────────────
+
 class _TimelineMetricChip extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _TimelineMetricChip({required this.icon, required this.label});
+  const _TimelineMetricChip(
+      {required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s8, vertical: AppSpacing.s4),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
+        color: AppColors.brandPrimary.withValues(alpha: 0.10),
+        borderRadius: AppRadius.pillBr,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.primary),
+          Icon(icon, size: 14, color: AppColors.brandPrimary),
           const SizedBox(width: 5),
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppTextStyles.caption(AppColors.brandPrimary),
           ),
         ],
       ),
     );
   }
 }
+
+// ── Date adjust chip (drag + tap) ─────────────────────────────────────────────
 
 class _TimelineDateAdjustChip extends StatelessWidget {
   final IconData icon;
@@ -458,7 +528,8 @@ class _TimelineDateAdjustChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: 'Tap to pick a date. Drag left or right to shift one day.',
+      message:
+          'Tap to pick a date. Drag left or right to shift one day.',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => _pickDate(context),
@@ -466,8 +537,10 @@ class _TimelineDateAdjustChip extends StatelessWidget {
           final velocity = details.primaryVelocity ?? 0;
           if (velocity.abs() < 150) return;
           final physicalDirection = velocity > 0 ? 1 : -1;
-          final isRtl = Directionality.of(context) == TextDirection.rtl;
-          final dayDelta = isRtl ? -physicalDirection : physicalDirection;
+          final isRtl =
+              Directionality.of(context) == TextDirection.rtl;
+          final dayDelta =
+              isRtl ? -physicalDirection : physicalDirection;
           onDateChanged(_baseDate.add(Duration(days: dayDelta)));
         },
         child: _TimelineMetricChip(icon: icon, label: label),
@@ -489,6 +562,8 @@ class _TimelineDateAdjustChip extends StatelessWidget {
     onDateChanged(_copyDatePreservingTime(base, picked));
   }
 }
+
+// ── Sort / helpers ────────────────────────────────────────────────────────────
 
 int _compareTimelineBars(
   ProjectTimelineTaskBarModel left,
@@ -517,7 +592,8 @@ String _dateOrUnset(DateTime? date) {
   return date == null ? 'unset' : _shortDateWithYear(date);
 }
 
-DateTime _copyDatePreservingTime(DateTime source, DateTime pickedDate) {
+DateTime _copyDatePreservingTime(
+    DateTime source, DateTime pickedDate) {
   return DateTime(
     pickedDate.year,
     pickedDate.month,
@@ -532,18 +608,8 @@ DateTime _copyDatePreservingTime(DateTime source, DateTime pickedDate) {
 
 String _shortDate(DateTime date) {
   const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
   return '${months[date.month - 1]} ${date.day}';
 }
@@ -554,10 +620,10 @@ String _shortDateWithYear(DateTime date) {
 
 Color _statusColor(String status) {
   return switch (status) {
-    'completed' => AppColors.success,
-    'in_progress' => AppColors.warning,
-    'waiting' => AppColors.prayerGold,
-    'next' => AppColors.primary,
+    'completed' => AppColors.successColor,
+    'in_progress' => AppColors.warningColor,
+    'waiting' => AppColors.brandGold,
+    'next' => AppColors.brandPrimary,
     _ => AppColors.textSecondary,
   };
 }

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../providers/feedback_provider.dart';
 
 class SupportScreen extends ConsumerStatefulWidget {
@@ -63,43 +66,51 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     final state = ref.watch(feedbackProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        title: const Text(
-          'Support',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Text('Support', style: AppTextStyles.h2Light),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenH, AppSpacing.s8,
+          AppSpacing.screenH, AppSpacing.s32,
+        ),
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.cardPad),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardTheme.color,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.2),
-              ),
+              color: AppColors.bgSurface,
+              borderRadius: AppRadius.cardBr,
+              boxShadow: AppShadows.soft,
+              border: Border.all(color: AppColors.borderSoft),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.support_agent_outlined,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Send feedback',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      width: AppIconSize.avatar,
+                      height: AppIconSize.avatar,
+                      decoration: BoxDecoration(
+                        color: AppColors.featAISoft,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: const Icon(
+                        Icons.support_agent_outlined,
+                        color: AppColors.featAI,
+                        size: AppIconSize.cardHeader,
                       ),
                     ),
+                    const SizedBox(width: AppSpacing.s12),
+                    Text('Send Feedback', style: AppTextStyles.h4Light),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.s20),
                 DropdownButtonFormField<String>(
                   initialValue: _category,
                   decoration: const InputDecoration(
@@ -118,12 +129,13 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                     if (value != null) setState(() => _category = value);
                   },
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.s16),
                 TextField(
                   controller: _messageController,
                   minLines: 6,
                   maxLines: 10,
                   textInputAction: TextInputAction.newline,
+                  style: AppTextStyles.bodyLight,
                   decoration: const InputDecoration(
                     labelText: 'Message',
                     alignLabelWithHint: true,
@@ -134,35 +146,77 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                     hintText: 'Describe what happened or what would help.',
                   ),
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: state.isSubmitting ? null : _submit,
-                    icon: state.isSubmitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send_outlined),
-                    label: Text(
-                      state.isSubmitting ? 'Sending...' : 'Send Feedback',
-                    ),
-                  ),
+                const SizedBox(height: AppSpacing.s20),
+                _GradientButton(
+                  label: state.isSubmitting ? 'Sending...' : 'Send Feedback',
+                  icon: Icons.send_outlined,
+                  enabled: !state.isSubmitting,
+                  onTap: state.isSubmitting ? null : _submit,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s16),
           Text(
             'Feedback is stored with your account so the team can triage it. Do not include passwords, tokens, or private secrets.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.45,
-            ),
+            style: AppTextStyles.captionLight,
+            textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Gradient button ───────────────────────────────────────────────────────────
+
+class _GradientButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  const _GradientButton({
+    required this.label,
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: AppButtonHeight.primary,
+      decoration: BoxDecoration(
+        gradient: enabled ? AppGradients.action : null,
+        color: enabled ? null : AppColors.borderSoft,
+        borderRadius: AppRadius.pillBr,
+        boxShadow: enabled ? AppShadows.glowPurple : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: AppRadius.pillBr,
+          onTap: onTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: enabled ? Colors.white : AppColors.textHint,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Text(
+                label,
+                style: enabled
+                    ? AppTextStyles.buttonLight
+                    : AppTextStyles.button(AppColors.textHint),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

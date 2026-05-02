@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../models/quran_goal_model.dart';
@@ -77,53 +80,65 @@ class _QuranGoalScreenState extends ConsumerState<QuranGoalScreen> {
     final pages = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return Padding(
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.bgSurface,
+            borderRadius: AppRadius.sheetBr,
+          ),
           padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            left: AppSpacing.screenH,
+            right: AppSpacing.screenH,
+            top: AppSpacing.s24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.s24,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.dividerColor,
+                    borderRadius: AppRadius.pillBr,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s20),
               Text(
                 'Update ${_formatDateLabel(item.progressDate)}',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: AppTextStyles.h4Light,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s16),
               TextField(
                 controller: controller,
                 autofocus: true,
                 keyboardType: TextInputType.number,
+                style: AppTextStyles.bodyLight,
                 decoration: const InputDecoration(
                   labelText: 'Pages read',
                   prefixIcon: Icon(Icons.menu_book_outlined),
                 ),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    final value = int.tryParse(controller.text.trim());
-                    if (value == null || value < 0 || value > 604) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Enter pages between 0 and 604.'),
-                        ),
-                      );
-                      return;
-                    }
-                    Navigator.of(context).pop(value);
-                  },
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Save Day'),
-                ),
+              const SizedBox(height: AppSpacing.s20),
+              _GradientButton(
+                label: 'Save Day',
+                icon: Icons.save_outlined,
+                onTap: () {
+                  final value = int.tryParse(controller.text.trim());
+                  if (value == null || value < 0 || value > 604) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Enter pages between 0 and 604.'),
+                      ),
+                    );
+                    return;
+                  }
+                  Navigator.of(context).pop(value);
+                },
               ),
             ],
           ),
@@ -153,11 +168,13 @@ class _QuranGoalScreenState extends ConsumerState<QuranGoalScreen> {
     }
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        title: const Text(
-          'Quran Goal',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Text('Quran Goal', style: AppTextStyles.h2Light),
       ),
       body: state.isLoading && summary == null
           ? const AppLoadingState(message: 'Loading Quran goal...')
@@ -165,21 +182,26 @@ class _QuranGoalScreenState extends ConsumerState<QuranGoalScreen> {
           ? AppErrorState(
               title: 'Quran goal could not load',
               message: state.error!,
-              onRetry: () => ref.read(quranGoalProvider.notifier).loadSummary(),
+              onRetry: () =>
+                  ref.read(quranGoalProvider.notifier).loadSummary(),
             )
           : RefreshIndicator(
+              color: AppColors.brandGold,
               onRefresh: () =>
                   ref.read(quranGoalProvider.notifier).loadSummary(),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH, AppSpacing.s8,
+                  AppSpacing.screenH, AppSpacing.s32,
+                ),
                 children: [
                   _DailyTargetCard(
                     controller: _targetController,
                     isSaving: state.isSaving,
                     onSave: _saveGoal,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s12),
                   _TodayProgressCard(
                     summary: summary,
                     pagesCompleted: _pagesCompleted,
@@ -188,18 +210,18 @@ class _QuranGoalScreenState extends ConsumerState<QuranGoalScreen> {
                     onIncrease: () => _changeProgress(1),
                     onSave: _saveProgress,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s12),
                   _WeeklySummaryCard(
                     summary: summary,
                     isSaving: state.isSaving,
                     onEditDay: _editWeeklyDay,
                   ),
                   if (state.error != null && summary != null) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.s16),
                     Text(
                       state.error!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.error),
+                      style: AppTextStyles.caption(AppColors.errorColor),
                     ),
                   ],
                 ],
@@ -215,6 +237,8 @@ String _formatDateLabel(String value) {
   }
   return value;
 }
+
+// ── Daily target card ─────────────────────────────────────────────────────────
 
 class _DailyTargetCard extends StatelessWidget {
   final TextEditingController controller;
@@ -237,25 +261,25 @@ class _DailyTargetCard extends StatelessWidget {
           TextField(
             controller: controller,
             keyboardType: TextInputType.number,
+            style: AppTextStyles.bodyLight,
             decoration: const InputDecoration(
               labelText: 'Pages per day',
               prefixIcon: Icon(Icons.menu_book_outlined),
             ),
           ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: isSaving ? null : onSave,
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Save Target'),
-            ),
+          const SizedBox(height: AppSpacing.s16),
+          _GradientButton(
+            label: isSaving ? 'Saving...' : 'Save Target',
+            icon: Icons.save_outlined,
+            onTap: isSaving ? () {} : onSave,
           ),
         ],
       ),
     );
   }
 }
+
+// ── Today progress card ───────────────────────────────────────────────────────
 
 class _TodayProgressCard extends StatelessWidget {
   final QuranGoalSummary? summary;
@@ -292,26 +316,28 @@ class _TodayProgressCard extends StatelessWidget {
               IconButton(
                 tooltip: 'Decrease pages',
                 onPressed: pagesCompleted == 0 ? null : onDecrease,
-                icon: const Icon(Icons.remove_circle_outline),
+                icon: const Icon(
+                  Icons.remove_circle_outline,
+                  color: AppColors.textHint,
+                ),
               ),
               Expanded(
                 child: Column(
                   children: [
                     Text(
-                      '$pagesCompleted ${pagesCompleted == 1 ? 'page' : 'pages'}',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: AppColors.prayerGold,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      '$pagesCompleted',
+                      style: AppTextStyles.h2(AppColors.brandGold),
                     ),
+                    Text(
+                      pagesCompleted == 1 ? 'page' : 'pages',
+                      style: AppTextStyles.captionLight,
+                    ),
+                    const SizedBox(height: 2),
                     Text(
                       target == 0
                           ? 'Set a daily target first'
                           : 'of $target pages today',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                      style: AppTextStyles.captionLight,
                     ),
                   ],
                 ),
@@ -319,36 +345,38 @@ class _TodayProgressCard extends StatelessWidget {
               IconButton(
                 tooltip: 'Increase pages',
                 onPressed: onIncrease,
-                icon: const Icon(Icons.add_circle_outline),
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  color: AppColors.brandGold,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.pillBr,
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8,
-              backgroundColor: AppColors.prayerGold.withValues(alpha: 0.15),
+              backgroundColor: AppColors.brandGold.withValues(alpha: 0.15),
               valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.prayerGold,
+                AppColors.brandGold,
               ),
             ),
           ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: isSaving ? null : onSave,
-              icon: const Icon(Icons.check_circle_outline),
-              label: const Text('Save Today'),
-            ),
+          const SizedBox(height: AppSpacing.s16),
+          _GradientButton(
+            label: isSaving ? 'Saving...' : 'Save Today',
+            icon: Icons.check_circle_outline,
+            onTap: isSaving ? () {} : onSave,
           ),
         ],
       ),
     );
   }
 }
+
+// ── Weekly summary card ───────────────────────────────────────────────────────
 
 class _WeeklySummaryCard extends StatelessWidget {
   final QuranGoalSummary? summary;
@@ -372,30 +400,29 @@ class _WeeklySummaryCard extends StatelessWidget {
         children: [
           Text(
             '${summary?.weeklyTotalPages ?? 0} / ${summary?.weeklyTargetPages ?? 0} pages this week',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            style: AppTextStyles.h4Light,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.s8),
           _WeeklyMetrics(summary: summary),
-          const SizedBox(height: 12),
-          LinearProgressIndicator(
-            value: ((summary?.weeklyCompletionPercent ?? 0) / 100).clamp(
-              0.0,
-              1.0,
-            ),
-            minHeight: 8,
-            backgroundColor: AppColors.prayerGold.withValues(alpha: 0.15),
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              AppColors.prayerGold,
+          const SizedBox(height: AppSpacing.s12),
+          ClipRRect(
+            borderRadius: AppRadius.pillBr,
+            child: LinearProgressIndicator(
+              value: ((summary?.weeklyCompletionPercent ?? 0) / 100)
+                  .clamp(0.0, 1.0),
+              minHeight: 8,
+              backgroundColor: AppColors.brandGold.withValues(alpha: 0.15),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.brandGold,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           Row(
             children: weeklySummary.map((item) {
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.only(right: AppSpacing.s6),
                   child: _WeeklyDayPill(
                     item: item,
                     isDisabled: isSaving,
@@ -405,13 +432,10 @@ class _WeeklySummaryCard extends StatelessWidget {
               );
             }).toList(),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s8),
           Text(
             'Tap a day to correct its pages. Targets use the saved daily goal for each log.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.4,
-            ),
+            style: AppTextStyles.captionLight,
           ),
         ],
       ),
@@ -432,8 +456,8 @@ class _WeeklyMetrics extends StatelessWidget {
     final completion = summary?.weeklyCompletionPercent ?? 0;
     final streak = summary?.currentStreakDays ?? 0;
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: AppSpacing.s8,
+      runSpacing: AppSpacing.s8,
       children: [
         _MetricChip(label: 'Today', value: '$today pages'),
         _MetricChip(label: 'Week', value: '$weeklyTotal pages'),
@@ -454,24 +478,26 @@ class _MetricChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s12,
+        vertical: AppSpacing.s8,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.prayerGold.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.prayerGold.withValues(alpha: 0.2)),
+        color: AppColors.brandGold.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(
+          color: AppColors.brandGold.withValues(alpha: 0.25),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(label, style: AppTextStyles.captionLight.copyWith(fontSize: 10)),
           Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              fontSize: 11,
-            ),
+            value,
+            style: AppTextStyles.label(AppColors.brandGold),
           ),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -492,20 +518,20 @@ class _WeeklyDayPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = _formatDateLabel(item.progressDate);
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
       onTap: isDisabled ? null : onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
         decoration: BoxDecoration(
           color: item.targetMet
-              ? AppColors.prayerGold.withValues(alpha: 0.16)
-              : Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(8),
+              ? AppColors.brandGold.withValues(alpha: 0.16)
+              : AppColors.bgSurfaceSoft,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(
             color: item.targetMet
-                ? AppColors.prayerGold.withValues(alpha: 0.45)
-                : AppColors.textSecondary.withValues(alpha: 0.18),
+                ? AppColors.brandGold.withValues(alpha: 0.45)
+                : AppColors.borderSoft,
           ),
         ),
         child: Column(
@@ -516,10 +542,7 @@ class _WeeklyDayPill extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 child: Text(
                   label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 10,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTextStyles.captionLight.copyWith(fontSize: 10),
                 ),
               ),
             ),
@@ -530,11 +553,8 @@ class _WeeklyDayPill extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 child: Text(
                   '${item.pagesCompleted}/${item.targetPages}',
-                  style: const TextStyle(
-                    color: AppColors.prayerGold,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                  style: AppTextStyles.label(AppColors.brandGold)
+                      .copyWith(fontSize: 11),
                 ),
               ),
             ),
@@ -545,10 +565,7 @@ class _WeeklyDayPill extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 child: Text(
                   '${item.completionPercent}%',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 10,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTextStyles.captionLight.copyWith(fontSize: 10),
                 ),
               ),
             ),
@@ -558,6 +575,8 @@ class _WeeklyDayPill extends StatelessWidget {
     );
   }
 }
+
+// ── Quran card shell ──────────────────────────────────────────────────────────
 
 class _QuranCard extends StatelessWidget {
   final IconData icon;
@@ -574,42 +593,80 @@ class _QuranCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.prayerGold.withValues(alpha: 0.22)),
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardBr,
+        boxShadow: AppShadows.soft,
+        border: Border.all(color: AppColors.borderSoft),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.prayerGold.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppColors.prayerGold),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.prayerGold,
-                    fontWeight: FontWeight.bold,
-                  ),
+          Row(
+            children: [
+              Container(
+                width: AppIconSize.avatar,
+                height: AppIconSize.avatar,
+                decoration: BoxDecoration(
+                  color: AppColors.brandGold.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                const SizedBox(height: 8),
-                child,
-              ],
-            ),
+                child: Icon(
+                  icon,
+                  color: AppColors.brandGold,
+                  size: AppIconSize.cardHeader,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s12),
+              Text(title, style: AppTextStyles.h4Light),
+            ],
           ),
+          const SizedBox(height: AppSpacing.s16),
+          child,
         ],
+      ),
+    );
+  }
+}
+
+// ── Gradient button ───────────────────────────────────────────────────────────
+
+class _GradientButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _GradientButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: AppButtonHeight.primary,
+      decoration: BoxDecoration(
+        gradient: AppGradients.action,
+        borderRadius: AppRadius.pillBr,
+        boxShadow: AppShadows.glowPurple,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: AppRadius.pillBr,
+          onTap: onTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 20),
+              const SizedBox(width: AppSpacing.s8),
+              Text(label, style: AppTextStyles.buttonLight),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:smart_life_planner/core/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../../routes/app_routes.dart';
@@ -82,9 +85,7 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
     _countryController.text = settings.country ?? '';
     _cityController.text = settings.city ?? '';
     _timezoneController.text = settings.timezone;
-    _theme = _themeOptions.containsKey(settings.theme)
-        ? settings.theme
-        : 'dark';
+    _theme = _themeOptions.containsKey(settings.theme) ? settings.theme : 'dark';
     _wakeTime = _safeTime(settings.wakeTime, '06:00');
     _sleepTime = _safeTime(settings.sleepTime, '22:00');
     _notificationsEnabled = settings.notificationsEnabled;
@@ -137,11 +138,13 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
     if (settings != null) _sync(settings);
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        title: Text(
-          l10n.settings,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Text(l10n.settings, style: AppTextStyles.h2Light),
       ),
       body: state.isLoading && settings == null
           ? const AppLoadingState(message: 'Loading settings...')
@@ -154,30 +157,37 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                   .loadSettings(force: true),
             )
           : RefreshIndicator(
+              color: AppColors.brandPrimary,
               onRefresh: () => ref
                   .read(appSettingsProvider.notifier)
                   .loadSettings(force: true),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH, AppSpacing.s8,
+                  AppSpacing.screenH, AppSpacing.s32,
+                ),
                 children: [
+                  // Appearance
                   _SettingsCard(
                     icon: Icons.palette_outlined,
                     title: 'Appearance',
-                    accentColor: AppColors.primary,
+                    color: AppColors.brandPrimary,
                     child: Column(
                       children: [
-                        _NavigationRow(
+                        _NavRow(
                           icon: Icons.language,
                           title: 'Language',
-                          subtitle: settings?.languageLabel ?? 'English',
+                          value: settings?.languageLabel ?? 'English',
                           onTap: () => context.push(AppRoutes.languageSettings),
                         ),
-                        const SizedBox(height: 12),
+                        const _Divider(),
+                        const SizedBox(height: AppSpacing.s8),
                         DropdownButtonFormField<String>(
                           initialValue: _theme,
                           decoration: const InputDecoration(
                             labelText: 'Theme mode',
+                            prefixIcon: Icon(Icons.brightness_6_outlined),
                           ),
                           items: _themeOptions.entries
                               .map(
@@ -195,37 +205,42 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s12),
+
+                  // Daily rhythm
                   _SettingsCard(
                     icon: Icons.schedule_outlined,
                     title: 'Daily rhythm',
-                    accentColor: AppColors.success,
+                    color: AppColors.successColor,
                     child: Column(
                       children: [
                         TextField(
                           controller: _timezoneController,
+                          style: AppTextStyles.bodyLight,
                           decoration: const InputDecoration(
                             labelText: 'Timezone',
                             prefixIcon: Icon(Icons.public_outlined),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.s12),
                         TextField(
                           controller: _countryController,
+                          style: AppTextStyles.bodyLight,
                           decoration: const InputDecoration(
                             labelText: 'Country',
                             prefixIcon: Icon(Icons.flag_outlined),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.s12),
                         TextField(
                           controller: _cityController,
+                          style: AppTextStyles.bodyLight,
                           decoration: const InputDecoration(
                             labelText: 'City',
                             prefixIcon: Icon(Icons.location_city_outlined),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.s12),
                         Row(
                           children: [
                             Expanded(
@@ -236,7 +251,7 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                                     setState(() => _wakeTime = value),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: AppSpacing.s12),
                             Expanded(
                               child: _TimeDropdown(
                                 label: 'Sleep time',
@@ -250,108 +265,107 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s12),
+
+                  // Notifications & permissions
                   _SettingsCard(
                     icon: Icons.notifications_active_outlined,
                     title: 'Notifications and permissions',
-                    accentColor: AppColors.warning,
+                    color: AppColors.warningColor,
                     child: Column(
                       children: [
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
+                        _SwitchRow(
+                          title: 'Enable reminders',
+                          subtitle: 'Master setting saved to your account.',
                           value: _notificationsEnabled,
-                          title: const Text('Enable reminders'),
-                          subtitle: const Text(
-                            'Master setting saved to your account.',
-                          ),
                           onChanged: (value) =>
                               setState(() => _notificationsEnabled = value),
                         ),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
+                        const _Divider(),
+                        _SwitchRow(
+                          title: 'Microphone preference',
+                          subtitle:
+                              'Stores whether voice features should be enabled.',
                           value: _microphoneEnabled,
-                          title: const Text('Microphone preference'),
-                          subtitle: const Text(
-                            'Stores whether voice features should be enabled.',
-                          ),
                           onChanged: (value) =>
                               setState(() => _microphoneEnabled = value),
                         ),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
+                        const _Divider(),
+                        _SwitchRow(
+                          title: 'Location preference',
+                          subtitle:
+                              'Used by prayer and Qibla features when allowed.',
                           value: _locationEnabled,
-                          title: const Text('Location preference'),
-                          subtitle: const Text(
-                            'Used by prayer and Qibla features when allowed.',
-                          ),
                           onChanged: (value) =>
                               setState(() => _locationEnabled = value),
                         ),
-                        _NavigationRow(
+                        const _Divider(),
+                        _NavRow(
                           icon: Icons.tune_outlined,
                           title: 'Detailed notification preferences',
-                          subtitle: 'Channels, types, quiet hours, timing',
+                          value: 'Channels, types, quiet hours',
                           onTap: () =>
                               context.push(AppRoutes.notificationSettings),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s12),
+
+                  // Connected summaries
                   _SettingsCard(
                     icon: Icons.summarize_outlined,
                     title: 'Connected summaries',
-                    accentColor: AppColors.prayerGold,
+                    color: AppColors.featPrayer,
                     child: Column(
                       children: [
-                        _NavigationRow(
+                        _NavRow(
                           icon: Icons.mosque_outlined,
                           title: 'Prayer preferences',
-                          subtitle:
-                              settings?.prayerSummary ?? 'Prayer settings',
+                          value: settings?.prayerSummary ?? 'Prayer settings',
                           onTap: () => context.push(AppRoutes.prayerSettings),
                         ),
-                        const SizedBox(height: 10),
-                        _NavigationRow(
+                        const _Divider(),
+                        _NavRow(
                           icon: Icons.timer_outlined,
                           title: 'Focus preferences',
-                          subtitle:
-                              settings?.focusSummary ??
+                          value: settings?.focusSummary ??
                               'Focus reminder preferences',
                           onTap: () =>
                               context.push(AppRoutes.notificationSettings),
                         ),
-                        const SizedBox(height: 10),
+                        const _Divider(),
                         _StatusRow(
                           icon: Icons.sync_outlined,
                           title: 'Sync status',
-                          subtitle: state.hasLoaded
+                          value: state.hasLoaded
                               ? 'Settings loaded from your account.'
                               : 'Not checked yet.',
                         ),
                       ],
                     ),
                   ),
+
                   if (state.isSaving) ...[
-                    const SizedBox(height: 16),
-                    const LinearProgressIndicator(color: AppColors.primary),
+                    const SizedBox(height: AppSpacing.s16),
+                    const LinearProgressIndicator(
+                      color: AppColors.brandPrimary,
+                    ),
                   ],
                   if (state.error != null && settings != null) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.s12),
                     Text(
                       state.error!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.error),
+                      style: AppTextStyles.caption(AppColors.errorColor),
                     ),
                   ],
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: state.isSaving ? null : _save,
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('Save Settings'),
-                    ),
+                  const SizedBox(height: AppSpacing.s24),
+                  _GradientButton(
+                    label: 'Save Settings',
+                    icon: Icons.save_outlined,
+                    enabled: !state.isSaving,
+                    onTap: state.isSaving ? null : _save,
                   ),
                 ],
               ),
@@ -359,6 +373,213 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
     );
   }
 }
+
+// ── Settings card ─────────────────────────────────────────────────────────────
+
+class _SettingsCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color color;
+  final Widget child;
+
+  const _SettingsCard({
+    required this.icon,
+    required this.title,
+    required this.color,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardBr,
+        boxShadow: AppShadows.soft,
+        border: Border.all(color: AppColors.borderSoft),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: AppIconSize.avatar,
+                height: AppIconSize.avatar,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Icon(icon, color: color, size: AppIconSize.cardHeader),
+              ),
+              const SizedBox(width: AppSpacing.s12),
+              Text(title, style: AppTextStyles.h4Light),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+// ── Row widgets ───────────────────────────────────────────────────────────────
+
+class _NavRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final VoidCallback onTap;
+
+  const _NavRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s6),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppColors.bgSurfaceLavender,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Icon(icon, size: 17, color: AppColors.brandPrimary),
+            ),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTextStyles.bodyLight),
+                  if (value.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(value, style: AppTextStyles.captionLight),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              color: AppColors.textHint,
+              size: AppIconSize.action,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SwitchRow extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SwitchRow({
+    required this.title,
+    this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.bodyLight),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle!, style: AppTextStyles.captionLight),
+                ],
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeTrackColor: AppColors.brandPrimary,
+            activeThumbColor: Colors.white,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+
+  const _StatusRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s6),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.bgSurfaceLavender,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Icon(icon, size: 17, color: AppColors.brandPrimary),
+          ),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.bodyLight),
+                const SizedBox(height: 2),
+                Text(value, style: AppTextStyles.captionLight),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  const _Divider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Divider(color: AppColors.dividerColor, height: AppSpacing.s16);
+  }
+}
+
+// ── Time dropdown ─────────────────────────────────────────────────────────────
 
 class _TimeDropdown extends StatelessWidget {
   final String label;
@@ -389,107 +610,55 @@ class _TimeDropdown extends StatelessWidget {
   }
 }
 
-class _NavigationRow extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+// ── Gradient button ───────────────────────────────────────────────────────────
 
-  const _NavigationRow({
+class _GradientButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  const _GradientButton({
+    required this.label,
     required this.icon,
-    required this.title,
-    required this.subtitle,
+    required this.enabled,
     required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: AppColors.textSecondary),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
-    );
-  }
-}
-
-class _StatusRow extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _StatusRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: AppColors.textSecondary),
-      title: Text(title),
-      subtitle: Text(subtitle),
-    );
-  }
-}
-
-class _SettingsCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Color accentColor;
-  final Widget child;
-
-  const _SettingsCard({
-    required this.icon,
-    required this.title,
-    required this.accentColor,
-    required this.child,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      height: AppButtonHeight.primary,
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accentColor.withValues(alpha: 0.22)),
+        gradient: enabled ? AppGradients.action : null,
+        color: enabled ? null : AppColors.borderSoft,
+        borderRadius: AppRadius.pillBr,
+        boxShadow: enabled ? AppShadows.glowPurple : null,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: accentColor),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: AppRadius.pillBr,
+          onTap: onTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: enabled ? Colors.white : AppColors.textHint,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Text(
+                label,
+                style: enabled
+                    ? AppTextStyles.buttonLight
+                    : AppTextStyles.button(AppColors.textHint),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: accentColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                child,
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

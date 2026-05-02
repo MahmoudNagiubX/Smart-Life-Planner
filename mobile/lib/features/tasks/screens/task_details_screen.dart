@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
@@ -48,10 +52,8 @@ class _TaskDetailsScreenState extends ConsumerState<TaskDetailsScreen> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: AppColors.bgApp,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.sheetBr),
       builder: (_) => CreateNoteSheet(linkedTaskId: widget.taskId),
     );
     if (!mounted) return;
@@ -63,7 +65,14 @@ class _TaskDetailsScreenState extends ConsumerState<TaskDetailsScreen> {
     final linkedNotesState = ref.watch(taskLinkedNotesProvider(widget.taskId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Task Details')),
+      backgroundColor: AppColors.bgApp,
+      appBar: AppBar(
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Text('Task Details', style: AppTextStyles.h2Light),
+      ),
       body: FutureBuilder<TaskModel>(
         future: _taskFuture,
         builder: (context, snapshot) {
@@ -80,31 +89,42 @@ class _TaskDetailsScreenState extends ConsumerState<TaskDetailsScreen> {
 
           final task = snapshot.data!;
           return RefreshIndicator(
+            color: AppColors.brandPrimary,
             onRefresh: _refresh,
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                AppSpacing.s8,
+                AppSpacing.screenH,
+                138,
+              ),
               children: [
                 _TaskSummaryCard(task: task),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.s16),
                 _CompletionHistorySection(future: _completionHistoryFuture),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.s20),
                 Row(
                   children: [
                     Text(
-                      'Linked Notes',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'LINKED NOTES',
+                      style: AppTextStyles.label(AppColors.textHint),
                     ),
                     const Spacer(),
                     TextButton.icon(
                       onPressed: _createLinkedNote,
-                      icon: const Icon(Icons.note_add_outlined),
-                      label: const Text('Add'),
+                      icon: const Icon(
+                        Icons.note_add_outlined,
+                        color: AppColors.brandPrimary,
+                        size: 18,
+                      ),
+                      label: const Text(
+                        'Add',
+                        style: TextStyle(color: AppColors.brandPrimary),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.s8),
                 if (linkedNotesState.isLoading)
                   const AppLoadingState(message: 'Loading linked notes...')
                 else if (linkedNotesState.error != null)
@@ -124,43 +144,53 @@ class _TaskDetailsScreenState extends ConsumerState<TaskDetailsScreen> {
                 else
                   ...linkedNotesState.notes.map(
                     (note) => Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
+                      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+                      padding: const EdgeInsets.all(AppSpacing.cardPad),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).cardTheme.color,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.16),
-                        ),
+                        color: AppColors.bgSurface,
+                        borderRadius: AppRadius.cardBr,
+                        boxShadow: AppShadows.soft,
+                        border: Border.all(color: AppColors.borderSoft),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             note.title ?? 'Untitled note',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+                            style: AppTextStyles.h4Light,
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: AppSpacing.s8),
                           Text(
                             note.content,
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: AppColors.textSecondary),
+                            style: AppTextStyles.body(AppColors.textSecondary),
                           ),
                           if (note.tags.isNotEmpty) ...[
-                            const SizedBox(height: 8),
+                            const SizedBox(height: AppSpacing.s8),
                             Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
+                              spacing: AppSpacing.s8,
+                              runSpacing: AppSpacing.s8,
                               children: note.tags
                                   .map(
                                     (tag) => Chip(
                                       avatar: const Icon(
                                         Icons.label_outline,
                                         size: 15,
+                                        color: AppColors.brandPrimary,
                                       ),
-                                      label: Text('#$tag'),
+                                      label: Text(
+                                        '#$tag',
+                                        style: AppTextStyles.caption(
+                                          AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      backgroundColor:
+                                          AppColors.bgSurfaceLavender,
+                                      side: BorderSide.none,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: AppRadius.pillBr,
+                                      ),
                                     ),
                                   )
                                   .toList(),
@@ -179,6 +209,8 @@ class _TaskDetailsScreenState extends ConsumerState<TaskDetailsScreen> {
   }
 }
 
+// ── Completion history section ────────────────────────────────────────────────
+
 class _CompletionHistorySection extends StatelessWidget {
   final Future<List<TaskCompletionEventModel>> future;
 
@@ -191,42 +223,41 @@ class _CompletionHistorySection extends StatelessWidget {
       builder: (context, snapshot) {
         final events = snapshot.data ?? const <TaskCompletionEventModel>[];
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.cardPad),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color,
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.bgSurface,
+            borderRadius: AppRadius.cardBr,
+            boxShadow: AppShadows.soft,
+            border: Border.all(color: AppColors.borderSoft),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(Icons.history, size: 20, color: AppColors.primary),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Completion History',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  const Icon(
+                    Icons.history,
+                    size: 20,
+                    color: AppColors.brandPrimary,
                   ),
+                  const SizedBox(width: AppSpacing.s8),
+                  Text('Completion History', style: AppTextStyles.h4Light),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s12),
+              const Divider(color: AppColors.dividerColor, height: 1),
+              const SizedBox(height: AppSpacing.s12),
               if (snapshot.connectionState == ConnectionState.waiting)
                 const AppLoadingState(message: 'Loading history...')
               else if (snapshot.hasError)
                 Text(
                   'Completion history could not load.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTextStyles.caption(AppColors.textSecondary),
                 )
               else if (events.isEmpty)
                 Text(
                   'Complete or reopen this task to build its history.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTextStyles.caption(AppColors.textSecondary),
                 )
               else
                 ...events.map((event) => _CompletionHistoryRow(event: event)),
@@ -238,6 +269,8 @@ class _CompletionHistorySection extends StatelessWidget {
   }
 }
 
+// ── Completion history row ────────────────────────────────────────────────────
+
 class _CompletionHistoryRow extends StatelessWidget {
   final TaskCompletionEventModel event;
 
@@ -246,9 +279,9 @@ class _CompletionHistoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCompleted = event.eventType == 'completed';
-    final color = isCompleted ? AppColors.success : AppColors.warning;
+    final color = isCompleted ? AppColors.successColor : AppColors.warningColor;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -265,20 +298,18 @@ class _CompletionHistoryRow extends StatelessWidget {
               color: color,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.s8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   isCompleted ? 'Completed' : 'Reopened',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  style: AppTextStyles.h4Light,
                 ),
                 Text(
                   _eventSubtitle(event),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTextStyles.caption(AppColors.textSecondary),
                 ),
               ],
             ),
@@ -296,6 +327,8 @@ class _CompletionHistoryRow extends StatelessWidget {
   }
 }
 
+// ── Task summary card ─────────────────────────────────────────────────────────
+
 class _TaskSummaryCard extends StatelessWidget {
   final TaskModel task;
 
@@ -304,48 +337,73 @@ class _TaskSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardBr,
+        boxShadow: AppShadows.soft,
+        border: Border.all(color: AppColors.borderSoft),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            task.title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
+          Text(task.title, style: AppTextStyles.h3Light),
           if (task.description != null && task.description!.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.s8),
             Text(
               task.description!,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.body(AppColors.textSecondary),
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           _PomodoroProgressCard(task: task),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
             children: [
               Chip(
-                avatar: const Icon(Icons.flag_outlined, size: 15),
-                label: Text(task.priority),
+                avatar: const Icon(
+                  Icons.flag_outlined,
+                  size: 15,
+                  color: AppColors.brandPrimary,
+                ),
+                label: Text(
+                  task.priority,
+                  style: AppTextStyles.caption(AppColors.brandPrimary),
+                ),
+                backgroundColor: AppColors.bgSurfaceLavender,
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.pillBr),
               ),
               Chip(
-                avatar: const Icon(Icons.task_alt, size: 15),
-                label: Text(task.status),
+                avatar: const Icon(
+                  Icons.task_alt,
+                  size: 15,
+                  color: AppColors.brandPrimary,
+                ),
+                label: Text(
+                  task.status,
+                  style: AppTextStyles.caption(AppColors.brandPrimary),
+                ),
+                backgroundColor: AppColors.bgSurfaceLavender,
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.pillBr),
               ),
               if (task.dueAt != null)
                 Chip(
-                  avatar: const Icon(Icons.event_outlined, size: 15),
-                  label: Text(task.dueAt!.substring(0, 10)),
+                  avatar: const Icon(
+                    Icons.event_outlined,
+                    size: 15,
+                    color: AppColors.brandPrimary,
+                  ),
+                  label: Text(
+                    task.dueAt!.substring(0, 10),
+                    style: AppTextStyles.caption(AppColors.brandPrimary),
+                  ),
+                  backgroundColor: AppColors.bgSurfaceLavender,
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.pillBr),
                 ),
             ],
           ),
@@ -354,6 +412,8 @@ class _TaskSummaryCard extends StatelessWidget {
     );
   }
 }
+
+// ── Pomodoro progress card ────────────────────────────────────────────────────
 
 class _PomodoroProgressCard extends StatelessWidget {
   final TaskModel task;
@@ -368,46 +428,52 @@ class _PomodoroProgressCard extends StatelessWidget {
     final progress = hasEstimate ? (completed / estimate).clamp(0.0, 1.0) : 0.0;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.s12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.brandPrimary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.timer_outlined, size: 18, color: AppColors.primary),
-              const SizedBox(width: 8),
+              const Icon(
+                Icons.timer_outlined,
+                size: 18,
+                color: AppColors.brandPrimary,
+              ),
+              const SizedBox(width: AppSpacing.s8),
               Text(
                 hasEstimate
                     ? '$completed / $estimate Pomodoros'
                     : '$completed Pomodoro${completed == 1 ? '' : 's'} completed',
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                style: AppTextStyles.h4Light,
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s8),
           LinearProgressIndicator(
             value: hasEstimate ? progress : null,
             minHeight: 5,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.18),
+            color: AppColors.brandPrimary,
+            backgroundColor: AppColors.brandPrimary.withValues(alpha: 0.18),
+            borderRadius: AppRadius.pillBr,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.s8),
           Text(
             hasEstimate
                 ? 'Linked focus sessions update this progress.'
                 : 'Set a Pomodoro estimate when creating a task.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.caption(AppColors.textSecondary),
           ),
         ],
       ),
     );
   }
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 String _statusLabel(String status) {
   return switch (status) {

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../providers/app_settings_provider.dart';
@@ -53,11 +56,13 @@ class _LanguageSettingsScreenState
     if (settings != null) _sync(settings.language);
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        title: const Text(
-          'Language and Localization',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Text('Language', style: AppTextStyles.h2Light),
       ),
       body: state.isLoading && settings == null
           ? const AppLoadingState(message: 'Loading language settings...')
@@ -70,8 +75,16 @@ class _LanguageSettingsScreenState
                   .loadSettings(force: true),
             )
           : ListView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH, AppSpacing.s8,
+                AppSpacing.screenH, AppSpacing.s32,
+              ),
               children: [
+                Text(
+                  'SELECT LANGUAGE',
+                  style: AppTextStyles.label(AppColors.textHint),
+                ),
+                const SizedBox(height: AppSpacing.s8),
                 _LanguageCard(
                   languageCode: 'en',
                   title: 'English',
@@ -80,7 +93,7 @@ class _LanguageSettingsScreenState
                   onChanged: (value) =>
                       setState(() => _selectedLanguage = value),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.s8),
                 _LanguageCard(
                   languageCode: 'ar',
                   title: 'العربية',
@@ -89,43 +102,69 @@ class _LanguageSettingsScreenState
                   onChanged: (value) =>
                       setState(() => _selectedLanguage = value),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.s16),
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.s16),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).cardTheme.color,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.18),
-                    ),
+                    color: AppColors.bgSurface,
+                    borderRadius: AppRadius.cardBr,
+                    boxShadow: AppShadows.soft,
+                    border: Border.all(color: AppColors.borderSoft),
                   ),
-                  child: const Text(
-                    'This preference is saved to your account and applied to localized app surfaces after save.',
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.infoSoft,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: const Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: AppColors.infoColor,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s12),
+                      Expanded(
+                        child: Text(
+                          'This preference is saved to your account and applied to localized app surfaces after save.',
+                          style: AppTextStyles.bodySmallLight,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 if (state.isSaving) ...[
-                  const SizedBox(height: 16),
-                  const LinearProgressIndicator(color: AppColors.primary),
+                  const SizedBox(height: AppSpacing.s16),
+                  const LinearProgressIndicator(
+                    color: AppColors.brandPrimary,
+                  ),
                 ],
                 if (state.error != null && settings != null) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s12),
                   Text(
                     state.error!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.error),
+                    style: AppTextStyles.caption(AppColors.errorColor),
                   ),
                 ],
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: state.isSaving ? null : _save,
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Save Language'),
+                const SizedBox(height: AppSpacing.s24),
+                _GradientButton(
+                  label: 'Save Language',
+                  icon: Icons.save_outlined,
+                  enabled: !state.isSaving,
+                  onTap: state.isSaving ? null : _save,
                 ),
               ],
             ),
     );
   }
 }
+
+// ── Language card ─────────────────────────────────────────────────────────────
 
 class _LanguageCard extends StatelessWidget {
   final String languageCode;
@@ -145,50 +184,115 @@ class _LanguageCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = selectedLanguage == languageCode;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
       onTap: () => onChanged(languageCode),
-      child: Container(
-        padding: const EdgeInsets.all(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(AppSpacing.s16),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(12),
+          color: selected ? AppColors.bgSurfaceLavender : AppColors.bgSurface,
+          borderRadius: AppRadius.cardBr,
+          boxShadow: AppShadows.soft,
           border: Border.all(
-            color: selected
-                ? AppColors.primary
-                : AppColors.textSecondary.withValues(alpha: 0.22),
+            color: selected ? AppColors.brandPrimary : AppColors.borderSoft,
+            width: selected ? 1.5 : 1,
           ),
         ),
         child: Row(
           children: [
-            Icon(
-              selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              color: selected ? AppColors.primary : AppColors.textSecondary,
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: selected
+                    ? AppColors.brandPrimary
+                    : AppColors.bgSurfaceSoft,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected
+                      ? AppColors.brandPrimary
+                      : AppColors.borderSoft,
+                ),
+              ),
+              child: Icon(
+                Icons.check,
+                size: 16,
+                color: selected ? Colors.white : Colors.transparent,
+              ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.s12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    style: AppTextStyles.h4(
+                      selected
+                          ? AppColors.brandPrimary
+                          : AppColors.textHeading,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: AppTextStyles.captionLight),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Gradient button ───────────────────────────────────────────────────────────
+
+class _GradientButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  const _GradientButton({
+    required this.label,
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: AppButtonHeight.primary,
+      decoration: BoxDecoration(
+        gradient: enabled ? AppGradients.action : null,
+        color: enabled ? null : AppColors.borderSoft,
+        borderRadius: AppRadius.pillBr,
+        boxShadow: enabled ? AppShadows.glowPurple : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: AppRadius.pillBr,
+          onTap: onTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: enabled ? Colors.white : AppColors.textHint,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Text(
+                label,
+                style: enabled
+                    ? AppTextStyles.buttonLight
+                    : AppTextStyles.button(AppColors.textHint),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../models/reminder_preferences_model.dart';
@@ -55,11 +58,13 @@ class _NotificationSettingsScreenState
     final preferences = state.preferences;
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        title: const Text(
-          'Notification Settings',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Text('Notification Settings', style: AppTextStyles.h2Light),
       ),
       body: state.isLoading && !state.hasLoaded
           ? const AppLoadingState(message: 'Loading reminder preferences...')
@@ -72,40 +77,51 @@ class _NotificationSettingsScreenState
                   .loadPreferences(),
             )
           : RefreshIndicator(
+              color: AppColors.brandPrimary,
               onRefresh: () => ref
                   .read(reminderPreferencesProvider.notifier)
                   .loadPreferences(),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH, AppSpacing.s8,
+                  AppSpacing.screenH, AppSpacing.s32,
+                ),
                 children: [
+                  // Master switch
                   _SettingsCard(
                     icon: Icons.notifications_active_outlined,
                     title: 'Master Switch',
-                    accentColor: AppColors.primary,
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
+                    color: AppColors.brandPrimary,
+                    child: _SwitchRow(
+                      title: 'Enable reminders',
+                      subtitle:
+                          'Controls all reminder scheduling on this device.',
                       value: state.notificationsEnabled,
-                      title: const Text('Enable reminders'),
-                      subtitle: const Text(
-                        'Controls all reminder scheduling on this device.',
-                      ),
                       onChanged: (value) => ref
                           .read(reminderPreferencesProvider.notifier)
                           .updateNotificationsEnabled(value),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s12),
+
+                  // Channels
                   _ChannelCard(preferences: preferences, onChanged: _save),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s12),
+
+                  // Types
                   _TypeCard(preferences: preferences, onChanged: _save),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s12),
+
+                  // Quiet hours
                   _QuietHoursCard(
                     preferences: preferences,
                     quietHourOptions: _quietHourOptions,
                     onChanged: _save,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s12),
+
+                  // Timing
                   _TimingCard(
                     preferences: preferences,
                     prayerTimings: _prayerTimings,
@@ -113,16 +129,19 @@ class _NotificationSettingsScreenState
                     focusTimings: _focusTimings,
                     onChanged: _save,
                   ),
+
                   if (state.isSaving) ...[
-                    const SizedBox(height: 16),
-                    const LinearProgressIndicator(color: AppColors.primary),
+                    const SizedBox(height: AppSpacing.s16),
+                    const LinearProgressIndicator(
+                      color: AppColors.brandPrimary,
+                    ),
                   ],
                   if (state.error != null && state.hasLoaded) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.s12),
                     Text(
                       state.error!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.error),
+                      style: AppTextStyles.caption(AppColors.errorColor),
                     ),
                   ],
                 ],
@@ -131,6 +150,8 @@ class _NotificationSettingsScreenState
     );
   }
 }
+
+// ── Channel card ──────────────────────────────────────────────────────────────
 
 class _ChannelCard extends StatelessWidget {
   final ReminderPreferences preferences;
@@ -144,7 +165,7 @@ class _ChannelCard extends StatelessWidget {
     return _SettingsCard(
       icon: Icons.settings_input_component_outlined,
       title: 'Channels',
-      accentColor: AppColors.success,
+      color: AppColors.successColor,
       child: Column(
         children: [
           _SwitchRow(
@@ -155,6 +176,7 @@ class _ChannelCard extends StatelessWidget {
               preferences.copyWith(channels: channels.copyWith(local: value)),
             ),
           ),
+          const _Divider(),
           _SwitchRow(
             title: 'Push notification',
             subtitle: 'Server-driven channel for future release builds.',
@@ -163,6 +185,7 @@ class _ChannelCard extends StatelessWidget {
               preferences.copyWith(channels: channels.copyWith(push: value)),
             ),
           ),
+          const _Divider(),
           _SwitchRow(
             title: 'In-app notification center',
             subtitle: 'Keep reminders visible inside the app.',
@@ -171,6 +194,7 @@ class _ChannelCard extends StatelessWidget {
               preferences.copyWith(channels: channels.copyWith(inApp: value)),
             ),
           ),
+          const _Divider(),
           _SwitchRow(
             title: 'Email',
             subtitle: 'Placeholder channel for future account reminders.',
@@ -185,6 +209,8 @@ class _ChannelCard extends StatelessWidget {
   }
 }
 
+// ── Type card ─────────────────────────────────────────────────────────────────
+
 class _TypeCard extends StatelessWidget {
   final ReminderPreferences preferences;
   final ValueChanged<ReminderPreferences> onChanged;
@@ -197,7 +223,7 @@ class _TypeCard extends StatelessWidget {
     return _SettingsCard(
       icon: Icons.tune_outlined,
       title: 'Reminder Types',
-      accentColor: AppColors.warning,
+      color: AppColors.warningColor,
       child: Column(
         children: [
           _SwitchRow(
@@ -207,6 +233,7 @@ class _TypeCard extends StatelessWidget {
               preferences.copyWith(types: types.copyWith(task: value)),
             ),
           ),
+          const _Divider(),
           _SwitchRow(
             title: 'Habits',
             value: types.habit,
@@ -214,6 +241,7 @@ class _TypeCard extends StatelessWidget {
               preferences.copyWith(types: types.copyWith(habit: value)),
             ),
           ),
+          const _Divider(),
           _SwitchRow(
             title: 'Notes',
             value: types.note,
@@ -221,6 +249,7 @@ class _TypeCard extends StatelessWidget {
               preferences.copyWith(types: types.copyWith(note: value)),
             ),
           ),
+          const _Divider(),
           _SwitchRow(
             title: 'Prayer',
             value: types.prayer,
@@ -228,6 +257,7 @@ class _TypeCard extends StatelessWidget {
               preferences.copyWith(types: types.copyWith(prayer: value)),
             ),
           ),
+          const _Divider(),
           _SwitchRow(
             title: 'Quran goal',
             value: types.quranGoal,
@@ -235,6 +265,7 @@ class _TypeCard extends StatelessWidget {
               preferences.copyWith(types: types.copyWith(quranGoal: value)),
             ),
           ),
+          const _Divider(),
           _SwitchRow(
             title: 'Focus prompts',
             value: types.focusPrompt,
@@ -242,6 +273,7 @@ class _TypeCard extends StatelessWidget {
               preferences.copyWith(types: types.copyWith(focusPrompt: value)),
             ),
           ),
+          const _Divider(),
           _SwitchRow(
             title: 'Bedtime',
             value: types.bedtime,
@@ -249,6 +281,7 @@ class _TypeCard extends StatelessWidget {
               preferences.copyWith(types: types.copyWith(bedtime: value)),
             ),
           ),
+          const _Divider(),
           _SwitchRow(
             title: 'Constant reminders',
             subtitle: 'Repeat important task reminders with safe limits.',
@@ -264,6 +297,8 @@ class _TypeCard extends StatelessWidget {
     );
   }
 }
+
+// ── Quiet hours card ──────────────────────────────────────────────────────────
 
 class _QuietHoursCard extends StatelessWidget {
   final ReminderPreferences preferences;
@@ -282,7 +317,7 @@ class _QuietHoursCard extends StatelessWidget {
     return _SettingsCard(
       icon: Icons.nightlight_round,
       title: 'Quiet Hours',
-      accentColor: AppColors.primary,
+      color: AppColors.brandPrimary,
       child: Column(
         children: [
           _SwitchRow(
@@ -294,6 +329,7 @@ class _QuietHoursCard extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: AppSpacing.s12),
           Row(
             children: [
               Expanded(
@@ -308,7 +344,7 @@ class _QuietHoursCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.s12),
               Expanded(
                 child: _TimeDropdown(
                   label: 'End',
@@ -328,6 +364,8 @@ class _QuietHoursCard extends StatelessWidget {
     );
   }
 }
+
+// ── Timing card ───────────────────────────────────────────────────────────────
 
 class _TimingCard extends StatelessWidget {
   final ReminderPreferences preferences;
@@ -350,7 +388,7 @@ class _TimingCard extends StatelessWidget {
     return _SettingsCard(
       icon: Icons.schedule_outlined,
       title: 'Timing',
-      accentColor: AppColors.prayerGold,
+      color: AppColors.featPrayer,
       child: Column(
         children: [
           _NumberDropdown(
@@ -364,7 +402,7 @@ class _TimingCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           _NumberDropdown(
             label: 'Bedtime reminder',
             value: timing.bedtimeMinutesBefore,
@@ -376,7 +414,7 @@ class _TimingCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           _NumberDropdown(
             label: 'Focus prompt',
             value: timing.focusPromptMinutesBefore,
@@ -388,6 +426,58 @@ class _TimingCard extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Shared widgets ────────────────────────────────────────────────────────────
+
+class _SettingsCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color color;
+  final Widget child;
+
+  const _SettingsCard({
+    required this.icon,
+    required this.title,
+    required this.color,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardBr,
+        boxShadow: AppShadows.soft,
+        border: Border.all(color: AppColors.borderSoft),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: AppIconSize.avatar,
+                height: AppIconSize.avatar,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Icon(icon, color: color, size: AppIconSize.cardHeader),
+              ),
+              const SizedBox(width: AppSpacing.s12),
+              Text(title, style: AppTextStyles.h4Light),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          child,
         ],
       ),
     );
@@ -409,12 +499,42 @@ class _SwitchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
-      contentPadding: EdgeInsets.zero,
-      value: value,
-      title: Text(title),
-      subtitle: subtitle == null ? null : Text(subtitle!),
-      onChanged: onChanged,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.bodyLight),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle!, style: AppTextStyles.captionLight),
+                ],
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeTrackColor: AppColors.brandPrimary,
+            activeThumbColor: Colors.white,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  const _Divider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Divider(
+      color: AppColors.dividerColor,
+      height: AppSpacing.s16,
     );
   }
 }
@@ -439,7 +559,10 @@ class _TimeDropdown extends StatelessWidget {
       initialValue: safeValue,
       decoration: InputDecoration(labelText: label),
       items: options
-          .map((option) => DropdownMenuItem(value: option, child: Text(option)))
+          .map(
+            (option) =>
+                DropdownMenuItem(value: option, child: Text(option)),
+          )
           .toList(),
       onChanged: (value) {
         if (value != null) onChanged(value);
@@ -471,71 +594,15 @@ class _NumberDropdown extends StatelessWidget {
       decoration: InputDecoration(labelText: label),
       items: options
           .map(
-            (option) =>
-                DropdownMenuItem(value: option, child: Text('$option $suffix')),
+            (option) => DropdownMenuItem(
+              value: option,
+              child: Text('$option $suffix'),
+            ),
           )
           .toList(),
       onChanged: (value) {
         if (value != null) onChanged(value);
       },
-    );
-  }
-}
-
-class _SettingsCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Color accentColor;
-  final Widget child;
-
-  const _SettingsCard({
-    required this.icon,
-    required this.title,
-    required this.accentColor,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accentColor.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: accentColor),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: accentColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                child,
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

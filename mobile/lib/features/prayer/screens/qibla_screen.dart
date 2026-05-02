@@ -6,6 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../../routes/app_routes.dart';
 import '../providers/qibla_provider.dart';
@@ -40,29 +43,37 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        title: Text(
-          l10n.qibla,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Text(l10n.qibla, style: AppTextStyles.h2Light),
       ),
       body:
           state.isCheckingPermission &&
               state.permissionState == QiblaLocationPermissionState.unknown
           ? const AppLoadingState(message: 'Checking location permission...')
           : RefreshIndicator(
+              color: AppColors.brandPrimary,
               onRefresh: () =>
                   ref.read(qiblaProvider.notifier).refreshDirection(),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH,
+                  AppSpacing.s8,
+                  AppSpacing.screenH,
+                  138,
+                ),
                 children: [
                   _QiblaCompass(
                     direction: state.referenceDirection,
                     headingDegrees: state.compassHeadingDegrees,
                     rotationDegrees: state.displayRotationDegrees,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.s20),
                   _DirectionCard(
                     direction: state.referenceDirection,
                     sourceLabel: state.sourceLabel,
@@ -71,14 +82,19 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
                     saveWarning: state.saveWarning,
                   ),
                   if (state.isSavingLocation) ...[
-                    const SizedBox(height: 12),
-                    const LinearProgressIndicator(color: AppColors.prayerGold),
+                    const SizedBox(height: AppSpacing.s12),
+                    LinearProgressIndicator(
+                      color: AppColors.brandGold,
+                      backgroundColor: AppColors.brandGold.withValues(
+                        alpha: 0.18,
+                      ),
+                    ),
                   ],
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s16),
                   _ManualFallbackCard(coordinateSource: state.coordinateSource),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s16),
                   _PermissionCard(permissionState: state.permissionState),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.s16),
                   _SensorStatusCard(state: state),
                 ],
               ),
@@ -86,6 +102,8 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
     );
   }
 }
+
+// ── Compass ───────────────────────────────────────────────────────────────────
 
 class _QiblaCompass extends StatelessWidget {
   final QiblaDirection? direction;
@@ -113,9 +131,9 @@ class _QiblaCompass extends StatelessWidget {
             Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.prayerGold.withValues(alpha: 0.08),
+                color: AppColors.brandGold.withValues(alpha: 0.08),
                 border: Border.all(
-                  color: AppColors.prayerGold.withValues(alpha: 0.35),
+                  color: AppColors.brandGold.withValues(alpha: 0.35),
                   width: 2,
                 ),
               ),
@@ -139,13 +157,13 @@ class _QiblaCompass extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.navigation, size: 88, color: AppColors.prayerGold),
+                  Icon(Icons.navigation, size: 88, color: AppColors.brandGold),
                   const SizedBox(height: 8),
                   Container(
                     width: 10,
                     height: 54,
                     decoration: BoxDecoration(
-                      color: AppColors.prayerGold.withValues(alpha: 0.55),
+                      color: AppColors.brandGold.withValues(alpha: 0.55),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -156,7 +174,7 @@ class _QiblaCompass extends StatelessWidget {
               width: 14,
               height: 14,
               decoration: const BoxDecoration(
-                color: AppColors.prayerGold,
+                color: AppColors.brandGold,
                 shape: BoxShape.circle,
               ),
             ),
@@ -165,10 +183,7 @@ class _QiblaCompass extends StatelessWidget {
                 bottom: 58,
                 child: Text(
                   '${direction!.displayDegrees} ${direction!.compassLabel}',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.prayerGold,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.label(AppColors.brandGold),
                 ),
               ),
             if (headingDegrees != null)
@@ -176,10 +191,7 @@ class _QiblaCompass extends StatelessWidget {
                 top: 58,
                 child: Text(
                   'Heading ${headingDegrees!.toStringAsFixed(0)} deg',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTextStyles.caption(AppColors.textSecondary),
                 ),
               ),
           ],
@@ -196,15 +208,11 @@ class _CompassLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        color: AppColors.prayerGold,
-        fontWeight: FontWeight.bold,
-      ),
-    );
+    return Text(label, style: AppTextStyles.h4(AppColors.brandGold));
   }
 }
+
+// ── Direction card ────────────────────────────────────────────────────────────
 
 class _DirectionCard extends StatelessWidget {
   final QiblaDirection? direction;
@@ -226,7 +234,7 @@ class _DirectionCard extends StatelessWidget {
     return _QiblaInfoCard(
       icon: Icons.explore_outlined,
       title: 'Direction',
-      accentColor: AppColors.prayerGold,
+      accentColor: AppColors.brandGold,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -236,37 +244,28 @@ class _DirectionCard extends StatelessWidget {
                 : usesDeviceLocation
                 ? 'Using live device location'
                 : 'Using saved prayer location',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            style: AppTextStyles.h4Light,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s8),
           Text(
             guidanceMessage,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.45,
-            ),
+            style: AppTextStyles.caption(AppColors.textSecondary),
           ),
           if (direction != null) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.s12),
             _BearingSummary(label: sourceLabel, direction: direction!),
             if (!usesDeviceLocation) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s8),
               Text(
                 'Compass arrow is a bearing estimate from saved coordinates.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
+                style: AppTextStyles.caption(AppColors.warningColor),
               ),
             ],
             if (saveWarning != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s8),
               Text(
                 saveWarning!,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
+                style: AppTextStyles.caption(AppColors.warningColor),
               ),
             ],
           ],
@@ -275,6 +274,8 @@ class _DirectionCard extends StatelessWidget {
     );
   }
 }
+
+// ── Manual fallback card ──────────────────────────────────────────────────────
 
 class _ManualFallbackCard extends StatelessWidget {
   final QiblaCoordinateSource coordinateSource;
@@ -290,7 +291,9 @@ class _ManualFallbackCard extends StatelessWidget {
           ? Icons.location_city_outlined
           : Icons.add_location_alt_outlined,
       title: 'Manual Location Fallback',
-      accentColor: hasSavedFallback ? AppColors.success : AppColors.warning,
+      accentColor: hasSavedFallback
+          ? AppColors.successColor
+          : AppColors.warningColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -298,26 +301,34 @@ class _ManualFallbackCard extends StatelessWidget {
             hasSavedFallback
                 ? 'Saved city coordinates are available.'
                 : 'No saved prayer location is available.',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            style: AppTextStyles.h4Light,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s8),
           Text(
             hasSavedFallback
                 ? 'Qibla can still calculate a respectful bearing if live location is denied or unavailable.'
                 : 'Add a manual city with latitude and longitude so Qibla works without live device location.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.45,
-            ),
+            style: AppTextStyles.caption(AppColors.textSecondary),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.s12),
           OutlinedButton.icon(
             onPressed: () => context.push(AppRoutes.prayerSettings),
-            icon: const Icon(Icons.tune_outlined),
+            icon: const Icon(
+              Icons.tune_outlined,
+              color: AppColors.brandPrimary,
+              size: 18,
+            ),
             label: Text(
               hasSavedFallback ? 'Edit Manual Location' : 'Add Manual Location',
+              style: const TextStyle(color: AppColors.brandPrimary),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.brandPrimary),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.pillBr),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s16,
+                vertical: AppSpacing.s12,
+              ),
             ),
           ),
         ],
@@ -325,6 +336,8 @@ class _ManualFallbackCard extends StatelessWidget {
     );
   }
 }
+
+// ── Bearing summary ───────────────────────────────────────────────────────────
 
 class _BearingSummary extends StatelessWidget {
   final String label;
@@ -336,25 +349,23 @@ class _BearingSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.s12),
       decoration: BoxDecoration(
-        color: AppColors.prayerGold.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.brandGold.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.place_outlined,
-            color: AppColors.prayerGold,
+            color: AppColors.brandGold,
             size: 20,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.s8),
           Expanded(
             child: Text(
               '$label: ${direction.displayDegrees} ${direction.compassLabel}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: AppTextStyles.bodyLight,
             ),
           ),
         ],
@@ -362,6 +373,8 @@ class _BearingSummary extends StatelessWidget {
     );
   }
 }
+
+// ── Permission card ───────────────────────────────────────────────────────────
 
 class _PermissionCard extends ConsumerWidget {
   final QiblaLocationPermissionState permissionState;
@@ -380,22 +393,14 @@ class _PermissionCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _permissionTitle,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
+          Text(_permissionTitle, style: AppTextStyles.h4Light),
+          const SizedBox(height: AppSpacing.s8),
           Text(
             _permissionMessage,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.45,
-            ),
+            style: AppTextStyles.caption(AppColors.textSecondary),
           ),
           if (permissionState != QiblaLocationPermissionState.granted) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.s16),
             ElevatedButton.icon(
               onPressed:
                   permissionState ==
@@ -407,21 +412,29 @@ class _PermissionCard extends ConsumerWidget {
                   : notifier.requestLocationPermission,
               icon: Icon(
                 permissionState ==
-                        QiblaLocationPermissionState.permanentlyDenied
-                    ? Icons.settings_outlined
-                    : permissionState ==
-                          QiblaLocationPermissionState.serviceDisabled
+                            QiblaLocationPermissionState.permanentlyDenied ||
+                        permissionState ==
+                            QiblaLocationPermissionState.serviceDisabled
                     ? Icons.settings_outlined
                     : Icons.location_on_outlined,
+                size: 18,
               ),
               label: Text(
                 permissionState ==
-                        QiblaLocationPermissionState.permanentlyDenied
-                    ? l10n.openSettings
-                    : permissionState ==
-                          QiblaLocationPermissionState.serviceDisabled
+                            QiblaLocationPermissionState.permanentlyDenied ||
+                        permissionState ==
+                            QiblaLocationPermissionState.serviceDisabled
                     ? l10n.openSettings
                     : l10n.allowLocation,
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brandPrimary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.pillBr),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s16,
+                  vertical: AppSpacing.s12,
+                ),
               ),
             ),
           ],
@@ -449,15 +462,14 @@ class _PermissionCard extends ConsumerWidget {
   Color get _permissionColor {
     switch (permissionState) {
       case QiblaLocationPermissionState.granted:
-        return AppColors.success;
+        return AppColors.successColor;
       case QiblaLocationPermissionState.permanentlyDenied:
       case QiblaLocationPermissionState.restricted:
-        return AppColors.error;
+        return AppColors.errorColor;
       case QiblaLocationPermissionState.serviceDisabled:
-        return AppColors.warning;
       case QiblaLocationPermissionState.denied:
       case QiblaLocationPermissionState.unknown:
-        return AppColors.warning;
+        return AppColors.warningColor;
     }
   }
 
@@ -496,6 +508,8 @@ class _PermissionCard extends ConsumerWidget {
   }
 }
 
+// ── Sensor status card ────────────────────────────────────────────────────────
+
 class _SensorStatusCard extends StatelessWidget {
   final QiblaState state;
 
@@ -506,11 +520,11 @@ class _SensorStatusCard extends StatelessWidget {
     final status = state.compassSensorStatus;
     final isReady = state.compassSensorIntegrationReady;
     final accentColor = switch (status) {
-      QiblaCompassSensorStatus.active => AppColors.success,
-      QiblaCompassSensorStatus.lowAccuracy => AppColors.warning,
-      QiblaCompassSensorStatus.listening => AppColors.primary,
-      QiblaCompassSensorStatus.unavailable => AppColors.warning,
-      QiblaCompassSensorStatus.unknown => AppColors.primary,
+      QiblaCompassSensorStatus.active => AppColors.successColor,
+      QiblaCompassSensorStatus.lowAccuracy => AppColors.warningColor,
+      QiblaCompassSensorStatus.listening => AppColors.brandPrimary,
+      QiblaCompassSensorStatus.unavailable => AppColors.warningColor,
+      QiblaCompassSensorStatus.unknown => AppColors.brandPrimary,
     };
 
     return _QiblaInfoCard(
@@ -520,22 +534,14 @@ class _SensorStatusCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _titleForStatus(status),
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
+          Text(_titleForStatus(status), style: AppTextStyles.h4Light),
+          const SizedBox(height: AppSpacing.s8),
           Text(
             state.compassMessage,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.45,
-            ),
+            style: AppTextStyles.caption(AppColors.textSecondary),
           ),
           if (isReady) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s12),
             _CompassMetricRow(
               label: 'Current heading',
               value: '${state.compassHeadingDegrees!.toStringAsFixed(0)} deg',
@@ -552,12 +558,10 @@ class _SensorStatusCard extends StatelessWidget {
                     '+/- ${state.compassAccuracyDegrees!.toStringAsFixed(0)} deg',
               ),
           ] else if (state.referenceDirection != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s12),
             Text(
               'Fallback: face the numeric bearing ${state.referenceDirection!.displayDegrees} ${state.referenceDirection!.compassLabel}.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
+              style: AppTextStyles.caption(AppColors.warningColor),
             ),
           ],
         ],
@@ -581,6 +585,8 @@ class _SensorStatusCard extends StatelessWidget {
   }
 }
 
+// ── Compass metric row ────────────────────────────────────────────────────────
+
 class _CompassMetricRow extends StatelessWidget {
   final String label;
   final String value;
@@ -590,28 +596,18 @@ class _CompassMetricRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s8),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-            ),
-          ),
-          Text(
-            value,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
+          Expanded(child: Text(label, style: AppTextStyles.captionLight)),
+          Text(value, style: AppTextStyles.label(AppColors.textHeading)),
         ],
       ),
     );
   }
 }
+
+// ── Info card shell ───────────────────────────────────────────────────────────
 
 class _QiblaInfoCard extends StatelessWidget {
   final IconData icon;
@@ -630,37 +626,32 @@ class _QiblaInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardBr,
+        boxShadow: AppShadows.soft,
         border: Border.all(color: accentColor.withValues(alpha: 0.22)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: AppIconSize.avatar,
+            height: AppIconSize.avatar,
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: accentColor),
+            child: Icon(icon, color: accentColor, size: AppIconSize.cardHeader),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: AppSpacing.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: accentColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
+                Text(title, style: AppTextStyles.h4(accentColor)),
+                const SizedBox(height: AppSpacing.s8),
                 child,
               ],
             ),
