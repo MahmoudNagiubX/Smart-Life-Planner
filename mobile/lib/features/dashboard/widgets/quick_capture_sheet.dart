@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../ai/providers/ai_provider.dart';
 import '../../ai/widgets/ai_confirmation_sheet.dart';
 import '../../notes/models/note_model.dart';
@@ -41,10 +44,8 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
     final confirmed = await showModalBottomSheet<_CaptureConfirmation>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: AppColors.bgApp,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.sheetBr),
       builder: (_) => _QuickCaptureConfirmationSheet(
         classification: classification,
         initialType: _type,
@@ -107,10 +108,8 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
       final confirmed = await showModalBottomSheet<bool>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+        backgroundColor: AppColors.bgApp,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.sheetBr),
         builder: (_) => AiConfirmationSheet(parsedTask: aiState.parsedTask!),
       );
 
@@ -210,10 +209,10 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+        left: AppSpacing.screenH,
+        right: AppSpacing.screenH,
+        top: AppSpacing.s16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.s32,
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -225,75 +224,118 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textSecondary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+                  color: AppColors.borderSoft,
+                  borderRadius: AppRadius.pillBr,
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Quick Capture',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            const SizedBox(height: AppSpacing.s20),
+            Row(
+              children: [
+                Container(
+                  width: AppIconSize.avatar,
+                  height: AppIconSize.avatar,
+                  decoration: BoxDecoration(
+                    gradient: AppGradients.action,
+                    borderRadius: AppRadius.circular(AppRadius.md),
+                    boxShadow: AppShadows.glowPurple,
+                  ),
+                  child: const Icon(
+                    Icons.add_task_outlined,
+                    color: AppColors.bgSurface,
+                    size: AppIconSize.cardHeader,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Quick Capture', style: AppTextStyles.h2Light),
+                      Text(
+                        'Drop a thought in and review before saving.',
+                        style: AppTextStyles.captionLight,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.s16),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
               children: [
                 _TypeChip(
                   label: 'Task',
+                  icon: Icons.task_alt,
                   selected: _type == 'task',
                   onTap: () => setState(() => _type = 'task'),
                 ),
                 _TypeChip(
                   label: 'Note',
+                  icon: Icons.sticky_note_2_outlined,
                   selected: _type == 'note',
                   onTap: () => setState(() => _type = 'note'),
                 ),
                 _TypeChip(
                   label: 'Checklist',
+                  icon: Icons.checklist_outlined,
                   selected: _type == 'checklist',
                   onTap: () => setState(() => _type = 'checklist'),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.s16),
             if (_showAiFallback) ...[
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.s12),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppColors.warning.withValues(alpha: 0.35),
-                  ),
+                  color: AppColors.warningSoft,
+                  borderRadius: AppRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.warningColor),
                 ),
                 child: Text(
                   _aiFallbackMessage ?? "Couldn't parse that, enter manually.",
-                  style: const TextStyle(color: AppColors.warning),
+                  style: AppTextStyles.bodySmall(AppColors.warningColor),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s12),
             ],
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              maxLines: 4,
-              minLines: 1,
-              decoration: InputDecoration(
-                hintText: _type == 'task' && _useAi
-                    ? 'e.g. Finish report tomorrow at 6 PM high priority'
-                    : _type == 'checklist'
-                    ? 'One checklist item per line'
-                    : _type == 'task'
-                    ? 'What needs to be done?'
-                    : 'Capture your thought...',
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: AppRadius.circular(AppRadius.xl),
+                border: Border.all(color: AppColors.borderSoft),
+                boxShadow: AppShadows.soft,
+              ),
+              child: TextField(
+                controller: _controller,
+                autofocus: true,
+                maxLines: 5,
+                minLines: 3,
+                style: AppTextStyles.body(AppColors.textHeading),
+                decoration: InputDecoration(
+                  hintText: _type == 'task' && _useAi
+                      ? 'e.g. Finish report tomorrow at 6 PM high priority'
+                      : _type == 'checklist'
+                      ? 'One checklist item per line'
+                      : _type == 'task'
+                      ? 'What needs to be done?'
+                      : 'Capture your thought...',
+                  hintStyle: AppTextStyles.bodySmall(AppColors.textHint),
+                  filled: true,
+                  fillColor: AppColors.bgSurface,
+                  border: OutlineInputBorder(
+                    borderRadius: AppRadius.circular(AppRadius.xl),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(AppSpacing.s16),
+                ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s12),
             if (_type == 'task' && !_useAi) ...[
               DropdownButtonFormField<String>(
                 initialValue: _priority,
@@ -305,28 +347,51 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
                 ],
                 onChanged: (v) => setState(() => _priority = v!),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s12),
             ],
             if (_type == 'task')
-              Row(
-                children: [
-                  const Icon(Icons.auto_awesome, size: 18),
-                  const SizedBox(width: 8),
-                  const Text('Use AI to parse task'),
-                  const Spacer(),
-                  Switch(
-                    value: _useAi,
-                    activeThumbColor: AppColors.primary,
-                    onChanged: (v) => setState(() => _useAi = v),
-                  ),
-                ],
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s12,
+                  vertical: AppSpacing.s8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.featAISoft,
+                  borderRadius: AppRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.borderSoft),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 18,
+                      color: AppColors.featAI,
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    Text(
+                      'Use AI to parse task',
+                      style: AppTextStyles.bodySmall(AppColors.textHeading),
+                    ),
+                    const Spacer(),
+                    Switch(
+                      value: _useAi,
+                      activeThumbColor: AppColors.brandPrimary,
+                      onChanged: (v) => setState(() => _useAi = v),
+                    ),
+                  ],
+                ),
               ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.s20),
             _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.brandPrimary,
+                    ),
+                  )
+                : _GradientActionButton(
+                    label: 'Review Capture',
+                    icon: Icons.arrow_forward,
                     onPressed: _submit,
-                    child: const Text('Review Capture'),
                   ),
           ],
         ),
@@ -463,10 +528,10 @@ class _QuickCaptureConfirmationSheetState
     final classification = widget.classification;
     return Padding(
       padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+        left: AppSpacing.screenH,
+        right: AppSpacing.screenH,
+        top: AppSpacing.s16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.s32,
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -478,26 +543,28 @@ class _QuickCaptureConfirmationSheetState
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textSecondary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+                  color: AppColors.borderSoft,
+                  borderRadius: AppRadius.pillBr,
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Confirm Capture',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            const SizedBox(height: AppSpacing.s20),
+            Text('Confirm Capture', style: AppTextStyles.h2Light),
+            const SizedBox(height: AppSpacing.s8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.s12),
+              decoration: BoxDecoration(
+                color: AppColors.featAISoft,
+                borderRadius: AppRadius.circular(AppRadius.lg),
+                border: Border.all(color: AppColors.borderSoft),
+              ),
+              child: Text(
+                '${classification.reason} Confidence: ${classification.confidence}.',
+                style: AppTextStyles.bodySmallLight,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${classification.reason} Confidence: ${classification.confidence}.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.s16),
             DropdownButtonFormField<String>(
               initialValue: _captureType,
               decoration: const InputDecoration(labelText: 'Save as'),
@@ -516,12 +583,12 @@ class _QuickCaptureConfirmationSheetState
                 setState(() => _captureType = value);
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s12),
             TextField(
               controller: _titleController,
               decoration: const InputDecoration(labelText: 'Title'),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s12),
             TextField(
               controller: _contentController,
               minLines: 2,
@@ -534,24 +601,22 @@ class _QuickCaptureConfirmationSheetState
             ),
             if (_captureType == 'reminder' &&
                 classification.reminderAt == null) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s12),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.s12),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppColors.warning.withValues(alpha: 0.35),
-                  ),
+                  color: AppColors.warningSoft,
+                  borderRadius: AppRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.warningColor),
                 ),
-                child: const Text(
+                child: Text(
                   'No reminder time was detected. It will save as a task without a reminder.',
-                  style: TextStyle(color: AppColors.warning),
+                  style: AppTextStyles.bodySmall(AppColors.warningColor),
                 ),
               ),
             ],
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.s20),
             Row(
               children: [
                 Expanded(
@@ -560,11 +625,12 @@ class _QuickCaptureConfirmationSheetState
                     child: const Text('Cancel'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.s12),
                 Expanded(
-                  child: ElevatedButton(
+                  child: _GradientActionButton(
+                    label: 'Save',
+                    icon: Icons.check,
                     onPressed: _confirm,
-                    child: const Text('Save'),
                   ),
                 ),
               ],
@@ -578,11 +644,13 @@ class _QuickCaptureConfirmationSheetState
 
 class _TypeChip extends StatelessWidget {
   final String label;
+  final IconData icon;
   final bool selected;
   final VoidCallback onTap;
 
   const _TypeChip({
     required this.label,
+    required this.icon,
     required this.selected,
     required this.onTap,
   });
@@ -592,16 +660,76 @@ class _TypeChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.cardDark,
-          borderRadius: BorderRadius.circular(20),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s12,
+          vertical: AppSpacing.s8,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : AppColors.textSecondary,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+        decoration: BoxDecoration(
+          gradient: selected ? AppGradients.action : null,
+          color: selected ? null : AppColors.bgSurface,
+          borderRadius: AppRadius.pillBr,
+          border: Border.all(
+            color: selected
+                ? AppColors.bgSurfaceLavender
+                : AppColors.borderSoft,
+          ),
+          boxShadow: selected ? AppShadows.glowPurple : AppShadows.soft,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? AppColors.bgSurface : AppColors.brandPrimary,
+            ),
+            const SizedBox(width: AppSpacing.s6),
+            Text(
+              label,
+              style: AppTextStyles.label(
+                selected ? AppColors.bgSurface : AppColors.textBody,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GradientActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _GradientActionButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.bgSurface,
+      borderRadius: AppRadius.pillBr,
+      child: InkWell(
+        borderRadius: AppRadius.pillBr,
+        onTap: onPressed,
+        child: Container(
+          height: AppButtonHeight.primary,
+          decoration: BoxDecoration(
+            gradient: AppGradients.action,
+            borderRadius: AppRadius.pillBr,
+            boxShadow: AppShadows.glowPurple,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: AppColors.bgSurface, size: 20),
+              const SizedBox(width: AppSpacing.s8),
+              Text(label, style: AppTextStyles.button(AppColors.bgSurface)),
+            ],
           ),
         ),
       ),

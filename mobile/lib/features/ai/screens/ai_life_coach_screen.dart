@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../routes/app_routes.dart';
 
 class AiCoachFeature {
@@ -64,46 +68,182 @@ class AiLifeCoachScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        title: const Text(
-          'AI Life Coach',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('AI Assistant', style: AppTextStyles.h2Light),
+            Text(
+              'Ready to help when AI flows are available.',
+              style: AppTextStyles.caption(AppColors.textHint),
+            ),
+          ],
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          AppSpacing.s16,
+          AppSpacing.screenH,
+          AppSpacing.s32,
+        ),
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.28),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.psychology_alt_outlined,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'These coaching surfaces are prepared for future safe AI flows. Nothing here changes your data automatically.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-              ],
-            ),
+          const _AiHeaderCard(),
+          const SizedBox(height: AppSpacing.s16),
+          const _AssistantMessageCard(),
+          const SizedBox(height: AppSpacing.s16),
+          Wrap(
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
+            children: const [
+              _SuggestionChip(label: 'Plan my day'),
+              _SuggestionChip(label: 'Review progress'),
+              _SuggestionChip(label: 'Break down a goal'),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s20),
+          Text('Prepared flows', style: AppTextStyles.h4Light),
+          const SizedBox(height: AppSpacing.s12),
           ...aiCoachFeatures.map(
             (feature) => _CoachFeatureCard(feature: feature),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AiHeaderCard extends StatelessWidget {
+  const _AiHeaderCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
+      decoration: BoxDecoration(
+        gradient: AppGradients.action,
+        borderRadius: AppRadius.cardBr,
+        boxShadow: AppShadows.glowPurple,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: AppColors.bgSurface.withValues(alpha: 0.18),
+              borderRadius: AppRadius.circular(AppRadius.lg),
+              border: Border.all(
+                color: AppColors.bgSurface.withValues(alpha: 0.35),
+              ),
+            ),
+            child: const Icon(
+              Icons.psychology_alt_outlined,
+              color: AppColors.bgSurface,
+              size: 30,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'AI Life Coach',
+                  style: AppTextStyles.h3(AppColors.bgSurface),
+                ),
+                const SizedBox(height: AppSpacing.s4),
+                Text(
+                  'Coaching surfaces stay read-only until their safe AI flows are connected.',
+                  style: AppTextStyles.bodySmall(
+                    AppColors.bgSurface.withValues(alpha: 0.86),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AssistantMessageCard extends StatelessWidget {
+  const _AssistantMessageCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: AppIconSize.avatar,
+            height: AppIconSize.avatar,
+            decoration: BoxDecoration(
+              color: AppColors.featAISoft,
+              borderRadius: AppRadius.circular(AppRadius.md),
+            ),
+            child: const Icon(
+              Icons.auto_awesome,
+              color: AppColors.featAI,
+              size: AppIconSize.cardHeader,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Assistant',
+                  style: AppTextStyles.label(AppColors.textHeading),
+                ),
+                const SizedBox(height: AppSpacing.s4),
+                Text(
+                  'Choose a prepared coaching area to preview what is coming next. No data is changed automatically from this screen.',
+                  style: AppTextStyles.bodySmallLight,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestionChip extends StatelessWidget {
+  final String label;
+
+  const _SuggestionChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s12,
+        vertical: AppSpacing.s8,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.pillBr,
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
+      ),
+      child: Text(label, style: AppTextStyles.label(AppColors.brandPrimary)),
     );
   }
 }
@@ -116,48 +256,57 @@ class _CoachFeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
+      ),
       child: Material(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.circular(AppRadius.xl),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.circular(AppRadius.xl),
           onTap: () => context.push('${AppRoutes.aiCoach}/${feature.id}'),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.s16),
             child: Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: AppIconSize.avatar,
+                  height: AppIconSize.avatar,
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.featAISoft,
+                    borderRadius: AppRadius.circular(AppRadius.md),
                   ),
-                  child: Icon(feature.icon, color: AppColors.warning),
+                  child: Icon(
+                    feature.icon,
+                    color: AppColors.featAI,
+                    size: AppIconSize.cardHeader,
+                  ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: AppSpacing.s12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        feature.title,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
+                      Text(feature.title, style: AppTextStyles.h4Light),
+                      const SizedBox(height: AppSpacing.s4),
                       Text(
                         feature.description,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySmallLight,
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textHint,
+                  size: AppIconSize.action,
+                ),
               ],
             ),
           ),

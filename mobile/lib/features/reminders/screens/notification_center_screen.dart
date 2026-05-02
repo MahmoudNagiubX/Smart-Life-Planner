@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
@@ -44,25 +47,40 @@ class _NotificationCenterScreenState
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        title: Text(
-          l10n.notificationCenter,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+        backgroundColor: AppColors.bgApp,
+        surfaceTintColor: AppColors.bgApp,
+        elevation: 0,
+        titleSpacing: AppSpacing.screenH,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.notificationCenter, style: AppTextStyles.h2Light),
+            Text(
+              'Recent reminders and alerts.',
+              style: AppTextStyles.caption(AppColors.textHint),
+            ),
+          ],
         ),
         actions: [
-          IconButton(
+          _HeaderAction(
             tooltip: l10n.refresh,
+            icon: Icons.refresh,
             onPressed: () =>
                 ref.read(notificationCenterProvider.notifier).load(),
-            icon: const Icon(Icons.refresh),
           ),
-          IconButton(
-            tooltip: l10n.clearOld,
-            onPressed: state.clearableOld.isEmpty || state.isClearing
-                ? null
-                : () =>
-                      ref.read(notificationCenterProvider.notifier).clearOld(),
-            icon: const Icon(Icons.cleaning_services_outlined),
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.s12),
+            child: _HeaderAction(
+              tooltip: l10n.clearOld,
+              icon: Icons.cleaning_services_outlined,
+              onPressed: state.clearableOld.isEmpty || state.isClearing
+                  ? null
+                  : () => ref
+                        .read(notificationCenterProvider.notifier)
+                        .clearOld(),
+            ),
           ),
         ],
       ),
@@ -76,49 +94,51 @@ class _NotificationCenterScreenState
                   ref.read(notificationCenterProvider.notifier).load(),
             )
           : RefreshIndicator(
+              color: AppColors.brandPrimary,
               onRefresh: () =>
                   ref.read(notificationCenterProvider.notifier).load(),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH,
+                  AppSpacing.s16,
+                  AppSpacing.screenH,
+                  AppSpacing.s32,
+                ),
                 children: [
                   _InboxSummary(state: state),
-                  const SizedBox(height: 16),
-                  SegmentedButton<_NotificationInboxTab>(
-                    segments: [
-                      ButtonSegment(
-                        value: _NotificationInboxTab.recent,
-                        label: Text(l10n.recent),
-                        icon: Icon(Icons.notifications_outlined),
-                      ),
-                      ButtonSegment(
-                        value: _NotificationInboxTab.missed,
-                        label: Text(l10n.missed),
-                        icon: Icon(Icons.notification_important_outlined),
-                      ),
-                      ButtonSegment(
-                        value: _NotificationInboxTab.cleared,
-                        label: Text(l10n.cleared),
-                        icon: Icon(Icons.done_all_outlined),
-                      ),
-                    ],
-                    selected: {_tab},
-                    onSelectionChanged: (selection) =>
-                        setState(() => _tab = selection.first),
+                  const SizedBox(height: AppSpacing.s16),
+                  _InboxTabs(
+                    selected: _tab,
+                    onChanged: (tab) => setState(() => _tab = tab),
                   ),
                   if (state.isClearing) ...[
-                    const SizedBox(height: 16),
-                    const LinearProgressIndicator(color: AppColors.primary),
-                  ],
-                  if (state.error != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      state.error!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.error),
+                    const SizedBox(height: AppSpacing.s16),
+                    ClipRRect(
+                      borderRadius: AppRadius.pillBr,
+                      child: const LinearProgressIndicator(
+                        color: AppColors.brandPrimary,
+                        backgroundColor: AppColors.bgSurfaceLavender,
+                      ),
                     ),
                   ],
-                  const SizedBox(height: 16),
+                  if (state.error != null) ...[
+                    const SizedBox(height: AppSpacing.s16),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.s12),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorSoft,
+                        borderRadius: AppRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.errorColor),
+                      ),
+                      child: Text(
+                        state.error!,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.bodySmall(AppColors.errorColor),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.s16),
                   if (items.isEmpty)
                     _EmptyInbox(tab: _tab)
                   else
@@ -163,28 +183,32 @@ class _InboxSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.cardPad),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
+        gradient: AppGradients.ai,
+        borderRadius: AppRadius.cardBr,
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.card,
       ),
       child: Row(
         children: [
           _SummaryMetric(
             label: l10n.recent,
             value: state.recent.length,
-            color: AppColors.primary,
+            color: AppColors.brandPrimary,
+            icon: Icons.notifications_outlined,
           ),
           _SummaryMetric(
             label: l10n.missed,
             value: state.missed.length,
-            color: AppColors.warning,
+            color: AppColors.warningColor,
+            icon: Icons.notification_important_outlined,
           ),
           _SummaryMetric(
             label: l10n.cleared,
             value: state.cleared.length,
-            color: AppColors.success,
+            color: AppColors.successColor,
+            icon: Icons.done_all_outlined,
           ),
         ],
       ),
@@ -196,11 +220,13 @@ class _SummaryMetric extends StatelessWidget {
   final String label;
   final int value;
   final Color color;
+  final IconData icon;
 
   const _SummaryMetric({
     required this.label,
     required this.value,
     required this.color,
+    required this.icon,
   });
 
   @override
@@ -208,21 +234,115 @@ class _SummaryMetric extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text(
-            '$value',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
+          Container(
+            width: AppIconSize.avatar,
+            height: AppIconSize.avatar,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: AppRadius.circular(AppRadius.md),
             ),
+            child: Icon(icon, color: color, size: AppIconSize.cardHeader),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          const SizedBox(height: AppSpacing.s8),
+          Text('$value', style: AppTextStyles.h3(color)),
+          const SizedBox(height: AppSpacing.s2),
+          Text(label, style: AppTextStyles.captionLight),
+        ],
+      ),
+    );
+  }
+}
+
+class _InboxTabs extends StatelessWidget {
+  final _NotificationInboxTab selected;
+  final ValueChanged<_NotificationInboxTab> onChanged;
+
+  const _InboxTabs({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _InboxTabChip(
+            label: l10n.recent,
+            icon: Icons.notifications_outlined,
+            selected: selected == _NotificationInboxTab.recent,
+            onTap: () => onChanged(_NotificationInboxTab.recent),
+          ),
+          const SizedBox(width: AppSpacing.s8),
+          _InboxTabChip(
+            label: l10n.missed,
+            icon: Icons.notification_important_outlined,
+            selected: selected == _NotificationInboxTab.missed,
+            onTap: () => onChanged(_NotificationInboxTab.missed),
+          ),
+          const SizedBox(width: AppSpacing.s8),
+          _InboxTabChip(
+            label: l10n.cleared,
+            icon: Icons.done_all_outlined,
+            selected: selected == _NotificationInboxTab.cleared,
+            onTap: () => onChanged(_NotificationInboxTab.cleared),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _InboxTabChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _InboxTabChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: AppRadius.pillBr,
+      onTap: onTap,
+      child: Container(
+        height: AppButtonHeight.small,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s12,
+          vertical: AppSpacing.s8,
+        ),
+        decoration: BoxDecoration(
+          gradient: selected ? AppGradients.action : null,
+          color: selected ? null : AppColors.bgSurface,
+          borderRadius: AppRadius.pillBr,
+          border: Border.all(
+            color: selected
+                ? AppColors.bgSurfaceLavender
+                : AppColors.borderSoft,
+          ),
+          boxShadow: selected ? AppShadows.glowPurple : AppShadows.soft,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? AppColors.bgSurface : AppColors.brandPrimary,
+            ),
+            const SizedBox(width: AppSpacing.s6),
+            Text(
+              label,
+              style: AppTextStyles.label(
+                selected ? AppColors.bgSurface : AppColors.textBody,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -245,12 +365,15 @@ class _ReminderInboxTile extends StatelessWidget {
     final cleared = _isCleared(reminder);
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
+        color: cleared ? AppColors.bgSurfaceSoft : AppColors.bgSurface,
+        borderRadius: AppRadius.circular(AppRadius.xl),
+        border: Border.all(
+          color: cleared ? AppColors.borderSoft : color.withValues(alpha: 0.24),
+        ),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,38 +381,44 @@ class _ReminderInboxTile extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: AppIconSize.avatar,
+                height: AppIconSize.avatar,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: cleared ? 0.08 : 0.14),
+                  borderRadius: AppRadius.circular(AppRadius.md),
                 ),
-                child: Icon(_targetIcon(reminder.targetType), color: color),
+                child: Icon(
+                  _targetIcon(reminder.targetType),
+                  color: color,
+                  size: AppIconSize.cardHeader,
+                ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       _title(reminder),
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.h4(AppColors.textHeading),
                     ),
+                    const SizedBox(height: AppSpacing.s2),
                     Text(
                       _subtitle(reminder),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.captionLight,
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.s8),
               _StatusChip(reminder: reminder, color: color),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           Row(
             children: [
               Expanded(
@@ -299,7 +428,7 @@ class _ReminderInboxTile extends StatelessWidget {
                   label: Text(l10n.open),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpacing.s8),
               Expanded(
                 child: TextButton.icon(
                   onPressed: cleared ? null : onClear,
@@ -323,10 +452,24 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      visualDensity: VisualDensity.compact,
-      avatar: Icon(_statusIcon(reminder), size: 15, color: color),
-      label: Text(_statusLabel(reminder)),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s8,
+        vertical: AppSpacing.s6,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: AppRadius.pillBr,
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_statusIcon(reminder), size: 14, color: color),
+          const SizedBox(width: AppSpacing.s4),
+          Text(_statusLabel(reminder), style: AppTextStyles.caption(color)),
+        ],
+      ),
     );
   }
 }
@@ -355,6 +498,46 @@ class _EmptyInbox extends StatelessWidget {
       icon: Icons.notifications_none_outlined,
       title: title,
       message: message,
+      accentColor: AppColors.brandPrimary,
+    );
+  }
+}
+
+class _HeaderAction extends StatelessWidget {
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  const _HeaderAction({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: AppRadius.circular(AppRadius.md),
+        onTap: onPressed,
+        child: Container(
+          width: AppButtonHeight.icon,
+          height: AppButtonHeight.icon,
+          margin: const EdgeInsets.only(left: AppSpacing.s6),
+          decoration: BoxDecoration(
+            color: AppColors.bgSurface,
+            borderRadius: AppRadius.circular(AppRadius.md),
+            border: Border.all(color: AppColors.borderSoft),
+            boxShadow: enabled ? AppShadows.soft : null,
+          ),
+          child: Icon(
+            icon,
+            color: enabled ? AppColors.brandPrimary : AppColors.textHint,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -414,10 +597,10 @@ IconData _statusIcon(ReminderModel reminder) {
 Color _statusColor(ReminderModel reminder) {
   final label = _statusLabel(reminder);
   return switch (label) {
-    'Missed' => AppColors.warning,
-    'Cleared' => AppColors.success,
-    'Snoozed' => AppColors.primary,
-    _ => AppColors.primary,
+    'Missed' => AppColors.warningColor,
+    'Cleared' => AppColors.successColor,
+    'Snoozed' => AppColors.brandPrimary,
+    _ => AppColors.brandPrimary,
   };
 }
 
