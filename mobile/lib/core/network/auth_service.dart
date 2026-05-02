@@ -5,7 +5,7 @@ class AuthService {
 
   AuthService(this._apiClient);
 
-  Future<Map<String, dynamic>> register({
+  Future<String> register({
     required String email,
     required String fullName,
     required String password,
@@ -14,7 +14,10 @@ class AuthService {
       '/auth/register',
       data: {'email': email, 'full_name': fullName, 'password': password},
     );
-    return response.data;
+    return _messageWithDevelopmentCode(
+      response.data,
+      fallback: 'Account created. Check your email for the code.',
+    );
   }
 
   Future<String> login({

@@ -58,7 +58,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
-    await ref.read(authProvider.notifier).register(
+    final successMessage = await ref
+        .read(authProvider.notifier)
+        .register(
           email: _emailController.text.trim(),
           fullName: _fullNameController.text.trim(),
           password: _passwordController.text,
@@ -75,20 +77,33 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created. Check your email for the code.'),
+          SnackBar(
+            content: Text(
+              successMessage ??
+                  'Account created. Check your email for the code.',
+            ),
             backgroundColor: AppColors.success,
           ),
         );
+        final developmentCode = _extractDevelopmentCode(successMessage);
         context.go(
           Uri(
             path: AppRoutes.verifyEmail,
-            queryParameters: {'email': _emailController.text.trim()},
+            queryParameters: {
+              'email': _emailController.text.trim(),
+              'code': ?developmentCode,
+            },
           ).toString(),
         );
       }
       setState(() => _isLoading = false);
     }
+  }
+
+  String? _extractDevelopmentCode(String? message) {
+    if (message == null) return null;
+    final match = RegExp(r'Code:\s*(\d{6})').firstMatch(message);
+    return match?.group(1);
   }
 
   @override
@@ -138,8 +153,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.brandPrimary
-                                .withValues(alpha: 0.22),
+                            color: AppColors.brandPrimary.withValues(
+                              alpha: 0.22,
+                            ),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -250,7 +266,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                       ),
                       suffixIcon: GestureDetector(
                         onTap: () => setState(
-                            () => _obscurePassword = !_obscurePassword),
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.only(right: 14),
                           child: Icon(

@@ -41,6 +41,11 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RegisterResponse(UserResponse):
+    message: str = "Account created. Check your email for the verification code."
+    development_code: str | None = None
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

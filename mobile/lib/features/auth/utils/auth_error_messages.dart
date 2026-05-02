@@ -26,6 +26,9 @@ String friendlyAuthError(Object error, String fallback) {
       if (normalized.contains('already exists')) {
         return 'An account with this email already exists.';
       }
+      if (normalized.contains('already registered')) {
+        return 'An account with this email already exists. Sign in or reset your password.';
+      }
       if (normalized.contains('different sign-in') ||
           normalized.contains('another google sign-in')) {
         return 'This account uses a different sign-in method.';
@@ -37,6 +40,19 @@ String friendlyAuthError(Object error, String fallback) {
       if (normalized.contains('email delivery') ||
           normalized.contains('could not send email')) {
         return 'Email sending is not configured yet. Check backend email settings or use the development code.';
+      }
+      if (normalized.contains('at least 8')) {
+        return 'Use a password with at least 8 characters.';
+      }
+      if (normalized.contains('full name')) {
+        return 'Enter your full name.';
+      }
+      if (normalized.contains('valid email') ||
+          normalized.contains('email address')) {
+        return 'Enter a valid email address.';
+      }
+      if (normalized.contains('google sign-in not configured')) {
+        return 'Google Sign-In is not configured correctly. Check Web Client ID, Android package name, and SHA-1/SHA-256 fingerprints.';
       }
       if (statusCode == 422) {
         return _validationMessage(data) ??
@@ -67,6 +83,18 @@ String? _detailFromData(dynamic data) {
   if (data is Map) {
     final detail = data['detail'];
     if (detail is String && detail.isNotEmpty) return detail;
+    if (detail is List && detail.isNotEmpty) {
+      return detail
+          .map((item) {
+            if (item is Map) {
+              final message = item['msg'] ?? item['message'];
+              return message is String ? message : null;
+            }
+            return null;
+          })
+          .whereType<String>()
+          .join('\n');
+    }
     final message = data['message'];
     if (message is String && message.isNotEmpty) return message;
   }
@@ -77,11 +105,20 @@ String? _detailFromData(dynamic data) {
 String? _validationMessage(dynamic data) {
   if (data is! Map) return null;
   final errors = data['errors'];
-  if (errors is! List || errors.isEmpty) return null;
-  return errors
+  final detail = data['detail'];
+  final items = errors is List
+      ? errors
+      : detail is List
+      ? detail
+      : null;
+  if (items == null || items.isEmpty) return null;
+  return items
       .map((item) {
         if (item is Map) {
-          final field = item['field'];
+          final loc = item['loc'];
+          final field =
+              item['field'] ??
+              (loc is List && loc.isNotEmpty ? loc.last.toString() : null);
           final message = item['message'] ?? item['msg'];
           if (message is! String) return null;
           if (field is String && field == 'sensitive_field') {

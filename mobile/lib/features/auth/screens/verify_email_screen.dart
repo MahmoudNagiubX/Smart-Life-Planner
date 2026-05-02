@@ -13,8 +13,13 @@ import '../widgets/auth_text_field.dart';
 
 class VerifyEmailScreen extends ConsumerStatefulWidget {
   final String initialEmail;
+  final String? initialDevelopmentCode;
 
-  const VerifyEmailScreen({super.key, this.initialEmail = ''});
+  const VerifyEmailScreen({
+    super.key,
+    this.initialEmail = '',
+    this.initialDevelopmentCode,
+  });
 
   @override
   ConsumerState<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
@@ -27,6 +32,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
   final _codeController = TextEditingController();
   bool _isSubmitting = false;
   bool _isResending = false;
+  String? _developmentCode;
 
   late final AnimationController _ctrl;
   late final Animation<double> _fade;
@@ -36,6 +42,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
   void initState() {
     super.initState();
     _emailController = TextEditingController(text: widget.initialEmail);
+    _developmentCode = widget.initialDevelopmentCode;
+    if (_developmentCode != null) {
+      _codeController.text = _developmentCode!;
+    }
     _ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -100,6 +110,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
           .read(authServiceProvider)
           .resendVerification(email: email);
       if (!mounted) return;
+      final code = _extractDevelopmentCode(message);
+      setState(() {
+        _developmentCode = code;
+        if (code != null) _codeController.text = code;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: AppColors.success),
       );
@@ -114,6 +129,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
     } finally {
       if (mounted) setState(() => _isResending = false);
     }
+  }
+
+  String? _extractDevelopmentCode(String message) {
+    final match = RegExp(r'Code:\s*(\d{6})').firstMatch(message);
+    return match?.group(1);
   }
 
   @override
@@ -165,7 +185,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.brandPrimary.withValues(alpha: 0.22),
+                            color: AppColors.brandPrimary.withValues(
+                              alpha: 0.22,
+                            ),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -220,6 +242,26 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
                     const SizedBox(height: AppSpacing.s28),
 
                     // ── Email field ───────────────────────────────────────
+                    if (_developmentCode != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.s12),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningSoft,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.warningColor),
+                        ),
+                        child: Text(
+                          'Development verification code: $_developmentCode',
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.warningColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s16),
+                    ],
                     AuthTextField(
                       label: 'Email',
                       controller: _emailController,

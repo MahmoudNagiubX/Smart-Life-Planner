@@ -74,7 +74,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
-  Future<void> register({
+  Future<String?> register({
     required String email,
     required String fullName,
     required String password,
@@ -82,18 +82,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       state = state.copyWith(error: null);
       final authService = _ref.read(authServiceProvider);
-      await authService.register(
+      final message = await authService.register(
         email: email,
         fullName: fullName,
         password: password,
       );
       state = const AuthState(status: AuthStatus.unauthenticated);
+      return message;
     } on DioException catch (e) {
       final message = _authDioError(e, 'Registration failed');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: message,
       );
+      return null;
     }
   }
 
@@ -175,9 +177,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
         error: _googlePlatformError(e),
       );
     } catch (e) {
+      final message = e.toString().toLowerCase();
+      if (message.contains('api exception: 10') ||
+          message.contains('sign_in_failed')) {
+        state = state.copyWith(
+          status: AuthStatus.unauthenticated,
+          error:
+              'Google Sign-In is not configured correctly. Check Web Client ID, Android package name, and SHA-1/SHA-256 fingerprints.',
+        );
+        return;
+      }
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
-        error: 'Google sign-in failed: $e',
+        error: 'Google sign-in failed. Please try again.',
       );
     }
   }

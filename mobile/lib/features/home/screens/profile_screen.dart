@@ -24,6 +24,7 @@ class ProfileScreen extends ConsumerWidget {
     final isActive = user?['is_active'] != false;
     final fullName = user?['full_name'] as String? ?? '';
     final email = user?['email'] as String? ?? '';
+    final isSocialProvider = provider == 'google' || provider == 'apple';
 
     Future<void> showDeleteDialog() async {
       final controller = TextEditingController();
@@ -40,17 +41,19 @@ class ProfileScreen extends ConsumerWidget {
                 style: TextStyle(color: Colors.red),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'To confirm, enter your password. If you signed in with Google or Apple, type the word DELETE.',
+              Text(
+                'To confirm, ${isSocialProvider ? 'type DELETE.' : 'enter your current password.'}',
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
-                decoration: const InputDecoration(
-                  labelText: 'Password or DELETE',
+                decoration: InputDecoration(
+                  labelText: isSocialProvider
+                      ? 'Type DELETE'
+                      : 'Current password',
                   border: OutlineInputBorder(),
                 ),
-                obscureText: true,
+                obscureText: !isSocialProvider,
               ),
             ],
           ),
@@ -75,12 +78,11 @@ class ProfileScreen extends ConsumerWidget {
         final input = controller.text.trim();
         if (input.isEmpty) return;
 
-        final isSocial = input.toUpperCase() == 'DELETE';
         final success = await ref
             .read(authProvider.notifier)
             .deleteAccount(
-              password: isSocial ? null : input,
-              confirmation: isSocial ? 'DELETE' : null,
+              password: isSocialProvider ? null : input,
+              confirmation: isSocialProvider ? input : null,
             );
 
         if (success && context.mounted) {
@@ -105,7 +107,10 @@ class ProfileScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH, 56, AppSpacing.screenH, 0,
+                AppSpacing.screenH,
+                56,
+                AppSpacing.screenH,
+                0,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,8 +130,10 @@ class ProfileScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH, AppSpacing.s20,
-                AppSpacing.screenH, 0,
+                AppSpacing.screenH,
+                AppSpacing.s20,
+                AppSpacing.screenH,
+                0,
               ),
               child: _ProfileHeroCard(
                 fullName: fullName,
@@ -142,8 +149,10 @@ class ProfileScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH, AppSpacing.s24,
-                AppSpacing.screenH, 0,
+                AppSpacing.screenH,
+                AppSpacing.s24,
+                AppSpacing.screenH,
+                0,
               ),
               child: _SettingsSection(
                 label: 'Account',
@@ -179,8 +188,10 @@ class ProfileScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH, AppSpacing.s20,
-                AppSpacing.screenH, 0,
+                AppSpacing.screenH,
+                AppSpacing.s20,
+                AppSpacing.screenH,
+                0,
               ),
               child: _SettingsSection(
                 label: 'Productivity',
@@ -229,8 +240,10 @@ class ProfileScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH, AppSpacing.s20,
-                AppSpacing.screenH, 0,
+                AppSpacing.screenH,
+                AppSpacing.s20,
+                AppSpacing.screenH,
+                0,
               ),
               child: _SettingsSection(
                 label: 'Notifications',
@@ -258,8 +271,10 @@ class ProfileScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH, AppSpacing.s20,
-                AppSpacing.screenH, 0,
+                AppSpacing.screenH,
+                AppSpacing.s20,
+                AppSpacing.screenH,
+                0,
               ),
               child: _SettingsSection(
                 label: 'Spiritual',
@@ -294,8 +309,10 @@ class ProfileScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH, AppSpacing.s20,
-                AppSpacing.screenH, 0,
+                AppSpacing.screenH,
+                AppSpacing.s20,
+                AppSpacing.screenH,
+                0,
               ),
               child: _SettingsSection(
                 label: 'Support',
@@ -323,8 +340,10 @@ class ProfileScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH, AppSpacing.s32,
-                AppSpacing.screenH, 0,
+                AppSpacing.screenH,
+                AppSpacing.s32,
+                AppSpacing.screenH,
+                0,
               ),
               child: _OutlineActionButton(
                 icon: Icons.logout,
@@ -333,8 +352,7 @@ class ProfileScreen extends ConsumerWidget {
                   final confirmed = await confirmDestructiveAction(
                     context: context,
                     title: 'Sign Out',
-                    message:
-                        'Sign out of Smart Life Planner on this device?',
+                    message: 'Sign out of Smart Life Planner on this device?',
                     confirmLabel: 'Sign Out',
                   );
                   if (!confirmed) return;
@@ -348,16 +366,16 @@ class ProfileScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH, AppSpacing.s20,
-                AppSpacing.screenH, 0,
+                AppSpacing.screenH,
+                AppSpacing.s20,
+                AppSpacing.screenH,
+                0,
               ),
               child: _DangerZone(onDeleteAccount: showDeleteDialog),
             ),
           ),
 
-          const SliverToBoxAdapter(
-            child: SizedBox(height: _kNavClearance),
-          ),
+          const SliverToBoxAdapter(child: SizedBox(height: _kNavClearance)),
         ],
       ),
     );
@@ -393,8 +411,7 @@ class _ProfileHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial =
-        fullName.isNotEmpty ? fullName.trim()[0].toUpperCase() : '';
+    final initial = fullName.isNotEmpty ? fullName.trim()[0].toUpperCase() : '';
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.cardPad),
@@ -416,9 +433,15 @@ class _ProfileHeroCard extends StatelessWidget {
             ),
             child: Center(
               child: initial.isNotEmpty
-                  ? Text(initial, style: AppTextStyles.h2(AppColors.brandPrimary))
-                  : const Icon(Icons.person,
-                      color: AppColors.brandPrimary, size: 28),
+                  ? Text(
+                      initial,
+                      style: AppTextStyles.h2(AppColors.brandPrimary),
+                    )
+                  : const Icon(
+                      Icons.person,
+                      color: AppColors.brandPrimary,
+                      size: 28,
+                    ),
             ),
           ),
           const SizedBox(width: AppSpacing.s16),
@@ -520,10 +543,7 @@ class _SettingsSection extends StatelessWidget {
   final String label;
   final List<_SettingsRow> rows;
 
-  const _SettingsSection({
-    required this.label,
-    required this.rows,
-  });
+  const _SettingsSection({required this.label, required this.rows});
 
   @override
   Widget build(BuildContext context) {
@@ -707,8 +727,11 @@ class _DangerZone extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.delete_forever,
-                    color: AppColors.errorColor, size: 20),
+                Icon(
+                  Icons.delete_forever,
+                  color: AppColors.errorColor,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Delete Account',

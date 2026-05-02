@@ -117,6 +117,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.verifyEmail,
         builder: (context, state) => VerifyEmailScreen(
           initialEmail: state.uri.queryParameters['email'] ?? '',
+          initialDevelopmentCode: state.uri.queryParameters['code'],
         ),
       ),
       GoRoute(

@@ -30,6 +30,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
   final _confirmPasswordController = TextEditingController();
   _ResetStep _step = _ResetStep.requestCode;
   String? _resetToken;
+  String? _developmentCode;
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -73,7 +74,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
               .read(authServiceProvider)
               .forgotPassword(email: _emailController.text.trim());
           if (!mounted) return;
-          setState(() => _step = _ResetStep.verifyCode);
+          final code = _extractDevelopmentCode(message);
+          setState(() {
+            _step = _ResetStep.verifyCode;
+            _developmentCode = code;
+            if (code != null) _codeController.text = code;
+          });
           _showSuccess(message);
           break;
         case _ResetStep.verifyCode:
@@ -121,6 +127,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: AppColors.success),
     );
+  }
+
+  String? _extractDevelopmentCode(String message) {
+    final match = RegExp(r'Code:\s*(\d{6})').firstMatch(message);
+    return match?.group(1);
   }
 
   String get _buttonText {
@@ -298,6 +309,27 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                     const SizedBox(height: AppSpacing.s28),
 
                     // ── Email field (always visible, locked after step 0) ─
+                    if (_developmentCode != null &&
+                        _step != _ResetStep.requestCode) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.s12),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningSoft,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.warningColor),
+                        ),
+                        child: Text(
+                          'Development reset code: $_developmentCode',
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.warningColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s16),
+                    ],
                     AuthTextField(
                       label: 'Email',
                       controller: _emailController,

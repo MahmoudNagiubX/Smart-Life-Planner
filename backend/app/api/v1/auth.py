@@ -35,6 +35,7 @@ from app.schemas.user import (
     UserRegister,
     UserLogin,
     UserResponse,
+    RegisterResponse,
     TokenResponse,
     VerifyEmailRequest,
     ResendVerificationRequest,
@@ -120,7 +121,7 @@ async def get_current_user(
 
 
 @router.post(
-    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+    "/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED
 )
 async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
     existing = await get_user_by_email(db, payload.email)
@@ -136,8 +137,25 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
     )
     # Generate + send verification code
     code = await _create_verification_code(db, user.id)
-    await send_verification_email(user.email, code)
-    return user
+    email_result = await send_verification_email(user.email, code)
+    response = {
+        "id": user.id,
+        "email": user.email,
+        "full_name": user.full_name,
+        "auth_provider": user.auth_provider.value,
+        "is_active": user.is_active,
+        "is_verified": user.is_verified,
+        "onboarding_completed": False,
+        "created_at": user.created_at,
+        "message": "Account created. Check your email for the verification code.",
+    }
+    if email_result.development_message:
+        response["message"] = (
+            f"{response['message']} {email_result.development_message}"
+        )
+    if email_result.development_code:
+        response["development_code"] = email_result.development_code
+    return response
 
 
 @router.post("/login", response_model=TokenResponse)
