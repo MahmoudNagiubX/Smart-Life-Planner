@@ -389,11 +389,18 @@ class _DashboardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = data.personalization;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Daily summary gradient card
-        _DailySummaryCard(
+    final enabledWidgets = p.dailyDashboardWidgets
+        .where(defaultDashboardWidgets.contains)
+        .toList();
+
+    if (enabledWidgets.isEmpty) {
+      return _DashboardAllHiddenCard(onCustomize: onOpenCustomize);
+    }
+
+    final sections = <Widget>[];
+    for (final widgetId in enabledWidgets) {
+      final section = switch (widgetId) {
+        'productivity_score' => _DailySummaryCard(
           progress: dayProgress,
           headline: summaryData.$1,
           highlightWord: summaryData.$2,
@@ -401,60 +408,56 @@ class _DashboardBody extends StatelessWidget {
           pendingCount: data.pendingCount,
           onViewDay: () => context.go(AppRoutes.tasks),
         ),
-        const SizedBox(height: 16),
-
-        // Prayer + Focus row
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: _NextPrayerCard(
-                  nextPrayer: p.nextPrayer,
-                  onTap: () => context.go(AppRoutes.prayer),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s16),
-              Expanded(
-                child: _FocusSessionCard(
-                  suggestedMinutes: p.focusShortcut.suggestedMinutes,
-                  onTap: () => context.go(AppRoutes.focus),
-                ),
-              ),
-            ],
+        'next_prayer' => SizedBox(
+          height: 236,
+          child: _NextPrayerCard(
+            nextPrayer: p.nextPrayer,
+            onTap: () => context.go(AppRoutes.prayer),
           ),
         ),
-        const SizedBox(height: 16),
-
-        // Today's tasks
-        _TodayTasksCard(
+        'focus_shortcut' => SizedBox(
+          height: 286,
+          child: _FocusSessionCard(
+            suggestedMinutes: p.focusShortcut.suggestedMinutes,
+            onTap: () => context.go(AppRoutes.focus),
+          ),
+        ),
+        'top_tasks' => _TodayTasksCard(
           topTasks: data.topTasks,
           onCompleteTask: onCompleteTask,
           onViewAll: () => context.go(AppRoutes.tasks),
         ),
-        const SizedBox(height: 16),
-
-        // Habits + AI row
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: _HabitsCard(
-                  snapshot: p.habitSnapshot,
-                  onTap: () => context.go(AppRoutes.habits),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s16),
-              Expanded(
-                child: _AiSuggestionCard(
-                  plan: p.aiPlanCard,
-                  onTap: () => context.go(AppRoutes.aiCoach),
-                ),
-              ),
-            ],
+        'habit_snapshot' => _HabitsCard(
+          snapshot: p.habitSnapshot,
+          onTap: () => context.go(AppRoutes.habits),
+        ),
+        'ai_plan' => SizedBox(
+          height: 160,
+          child: _AiSuggestionCard(
+            plan: p.aiPlanCard,
+            onTap: () => context.go(AppRoutes.aiCoach),
           ),
         ),
+        'journal_prompt' => _JournalPromptCard(
+          prompt: p.journalPrompt,
+          onTap: () => context.go(AppRoutes.journal),
+        ),
+        'quran_goal' => _QuranGoalCard(
+          goal: p.spiritualSummary.quranGoal,
+          onTap: () => context.go(AppRoutes.quranGoal),
+        ),
+        _ => null,
+      };
+      if (section != null) sections.add(section);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var index = 0; index < sections.length; index++) ...[
+          sections[index],
+          if (index != sections.length - 1) const SizedBox(height: 16),
+        ],
       ],
     );
   }
@@ -1466,6 +1469,242 @@ class _AiSuggestionCard extends StatelessWidget {
 // ═════════════════════════════════════════════════════════════════════════════
 // State cards: loading / error / empty
 // ═════════════════════════════════════════════════════════════════════════════
+
+class _JournalPromptCard extends StatelessWidget {
+  final String prompt;
+  final VoidCallback onTap;
+
+  const _JournalPromptCard({required this.prompt, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final displayPrompt = prompt.trim().isEmpty
+        ? 'What is one thing worth remembering from today?'
+        : prompt.trim();
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgSurface,
+          borderRadius: BorderRadius.circular(AppRadius.xl2),
+          border: Border.all(color: AppColors.borderSoft),
+          boxShadow: AppShadows.card,
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.bgSurfaceLavender,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: const Icon(
+                Icons.edit_note_rounded,
+                color: AppColors.brandPrimary,
+                size: 23,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Journal Prompt',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textHeading,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    displayPrompt,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textBody,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s8),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textHint,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuranGoalCard extends StatelessWidget {
+  final DashboardQuranGoalSummary goal;
+  final VoidCallback onTap;
+
+  const _QuranGoalCard({required this.goal, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = (goal.progressPercent / 100).clamp(0.0, 1.0);
+    final subtitle = goal.enabled
+        ? '${goal.todayPagesCompleted}/${goal.dailyPageTarget} pages today'
+        : 'Create a gentle reading goal';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFFFFF), Color(0xFFF6F1FF)],
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.xl2),
+          border: Border.all(color: AppColors.borderSoft),
+          boxShadow: AppShadows.card,
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            ProgressRing(
+              value: goal.enabled ? progress : 0,
+              size: 58,
+              strokeWidth: 6,
+              trackColor: AppColors.bgSurfaceLavender,
+              gradientColors: [AppColors.brandViolet, AppColors.brandPink],
+              child: const Icon(
+                Icons.menu_book_rounded,
+                color: AppColors.brandPrimary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Spiritual Today',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textHeading,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textBody,
+                    ),
+                  ),
+                  if (goal.enabled) ...[
+                    const SizedBox(height: 7),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 5,
+                        backgroundColor: AppColors.bgSurfaceLavender,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.brandPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s8),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textHint,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardAllHiddenCard extends StatelessWidget {
+  final VoidCallback onCustomize;
+
+  const _DashboardAllHiddenCard({required this.onCustomize});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.bgSurfaceLavender,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: const Icon(
+              Icons.dashboard_customize_outlined,
+              color: AppColors.brandPrimary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Text(
+            'Dashboard widgets are hidden',
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textHeading,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Turn widgets back on whenever you want.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textBody,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          TextButton.icon(
+            onPressed: onCustomize,
+            icon: const Icon(Icons.tune_rounded),
+            label: const Text('Customize Dashboard'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _MiniMasjidIcon extends StatelessWidget {
   final Color color;
