@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,13 +11,13 @@ import '../../../core/theme/app_tokens.dart';
 import '../../dashboard/widgets/quick_capture_sheet.dart';
 
 // ── Layout constants matching Claude Design tokens ──────────────────────────
-const double _kNavHeight       = 78;
-const double _kNavBottomMargin = 18;
-const double _kNavSideMargin   = 16;
-const double _kFabSize         = 60;
-const double _kFabBorderWidth  = 4;
+const double _kNavHeight = 82;
+const double _kNavBottomMargin = 16;
+const double _kNavSideMargin = 14;
+const double _kFabSize = 64;
+const double _kFabBorderWidth = 5;
 // FAB protrudes this many px above nav pill top (matches tokens.css top:-22px)
-const double _kFabOverhang     = 22;
+const double _kFabOverhang = 22;
 
 /// Total height of the bottomNavigationBar slot:
 ///   fab-overhang + nav-pill + bottom-margin + safeArea
@@ -32,11 +34,16 @@ class _Tab {
 }
 
 const _kTabs = [
-  _Tab(Icons.home_outlined,     Icons.home_rounded,       'Home',    'Go to Home'),
-  _Tab(Icons.task_alt_outlined, Icons.task_alt,            'Tasks',   'Go to Tasks'),
-  _Tab(Icons.timer_outlined,    Icons.timer_rounded,       'Focus',   'Go to Focus'),
-  _Tab(Icons.nightlight_round,  Icons.nightlight_round,    'Prayer',  'Go to Prayer'),
-  _Tab(Icons.person_outline,    Icons.person_rounded,      'Profile', 'Go to Profile'),
+  _Tab(Icons.home_outlined, Icons.home_rounded, 'Home', 'Go to Home'),
+  _Tab(Icons.task_alt_outlined, Icons.task_alt, 'Tasks', 'Go to Tasks'),
+  _Tab(Icons.timer_outlined, Icons.timer_rounded, 'Focus', 'Go to Focus'),
+  _Tab(
+    Icons.nightlight_round,
+    Icons.nightlight_round,
+    'Prayer',
+    'Go to Prayer',
+  ),
+  _Tab(Icons.person_outline, Icons.person_rounded, 'Profile', 'Go to Profile'),
 ];
 
 /// Floating pill navigation bar with center FAB.
@@ -116,26 +123,57 @@ class _FloatingNavBarState extends ConsumerState<FloatingNavBar>
             right: _kNavSideMargin,
             bottom: _kNavBottomMargin + safeArea,
             height: _kNavHeight,
-            child: Container(
-              decoration: BoxDecoration(
-                color: navBg,
-                borderRadius: BorderRadius.circular(AppRadius.xl3),
-                border: Border.all(color: borderC),
-                boxShadow: AppShadows.floating,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.xl3),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: navBg,
+                    borderRadius: BorderRadius.circular(AppRadius.xl3),
+                    border: Border.all(color: borderC),
+                    boxShadow: AppShadows.floating,
+                  ),
+                  child: Row(
+                    children: [
+                      for (int i = 0; i < _kTabs.length; i++) ...[
+                        if (i == 2) const SizedBox(width: _kFabSize + 10),
+                        Expanded(
+                          child: _NavTabItem(
+                            tab: _kTabs[i],
+                            isActive: widget.currentIndex == i,
+                            activeColor: activeC,
+                            inactiveColor: inactiveC,
+                            onTap: () => widget.onTap(i),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-              child: Row(
-                children: [
-                  for (int i = 0; i < _kTabs.length; i++)
-                    Expanded(
-                      child: _NavTabItem(
-                        tab: _kTabs[i],
-                        isActive: widget.currentIndex == i,
-                        activeColor: activeC,
-                        inactiveColor: inactiveC,
-                        onTap: () => widget.onTap(i),
-                      ),
+            ),
+          ),
+
+          Positioned(
+            bottom: _kNavBottomMargin + safeArea + _kNavHeight - 2,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  width: _kFabSize + 22,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.bgApp.withValues(alpha: 0),
+                        AppColors.bgApp.withValues(alpha: 0.88),
+                        AppColors.bgApp.withValues(alpha: 0),
+                      ],
                     ),
-                ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -171,7 +209,14 @@ class _FloatingNavBarState extends ConsumerState<FloatingNavBar>
                           color: Colors.white,
                           width: _kFabBorderWidth,
                         ),
-                        boxShadow: AppShadows.glowPurple,
+                        boxShadow: [
+                          ...AppShadows.glowPurple,
+                          BoxShadow(
+                            color: AppColors.brandPink.withValues(alpha: 0.22),
+                            blurRadius: 34,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
                       ),
                       child: const Icon(
                         Icons.add_rounded,
@@ -218,29 +263,50 @@ class _NavTabItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.xl3),
         splashColor: activeColor.withValues(alpha: 0.10),
         highlightColor: Colors.transparent,
-        child: SizedBox(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
           height: _kNavHeight,
+          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive
+                ? activeColor.withValues(alpha: 0.10)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedSwitcher(
+              AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                transitionBuilder: (child, anim) => ScaleTransition(
-                  scale: anim,
-                  child: FadeTransition(opacity: anim, child: child),
+                width: 34,
+                height: 30,
+                decoration: BoxDecoration(
+                  gradient: isActive ? AppGradients.action : null,
+                  color: isActive ? null : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  boxShadow: isActive ? AppShadows.glowPurple : null,
                 ),
-                child: Icon(
-                  isActive ? tab.activeIcon : tab.icon,
-                  key: ValueKey(isActive),
-                  size: AppIconSize.nav,
-                  color: isActive ? activeColor : inactiveColor,
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    transitionBuilder: (child, anim) => ScaleTransition(
+                      scale: anim,
+                      child: FadeTransition(opacity: anim, child: child),
+                    ),
+                    child: Icon(
+                      isActive ? tab.activeIcon : tab.icon,
+                      key: ValueKey(isActive),
+                      size: AppIconSize.nav,
+                      color: isActive ? Colors.white : inactiveColor,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Text(
                 tab.label,
                 style: GoogleFonts.manrope(
-                  fontSize: 10,
+                  fontSize: 9.5,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
                   color: isActive ? activeColor : inactiveColor,
                   height: 1.0,
@@ -248,7 +314,7 @@ class _NavTabItem extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 4),
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 200),
                 opacity: isActive ? 1.0 : 0.0,

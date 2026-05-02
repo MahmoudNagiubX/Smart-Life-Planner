@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,8 +82,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final now = DateTime.now();
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
   }
@@ -95,7 +107,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       isScrollControlled: true,
       backgroundColor: AppColors.bgSurface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl3)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.xl3),
+        ),
       ),
       builder: (_) => _DashboardCustomizeSheet(
         currentWidgets: data.personalization.dailyDashboardWidgets
@@ -108,7 +122,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   double _dayProgress(DashboardData data) {
     final total = data.pendingCount + data.completedToday;
     final taskRatio = total == 0 ? 0.0 : data.completedToday / total;
-    final prayerTotal = data.prayerProgress.total <= 0 ? 5 : data.prayerProgress.total;
+    final prayerTotal = data.prayerProgress.total <= 0
+        ? 5
+        : data.prayerProgress.total;
     final prayerRatio = data.prayerProgress.completed / prayerTotal;
     return (taskRatio * 0.55 + prayerRatio * 0.45).clamp(0.0, 1.0);
   }
@@ -240,9 +256,7 @@ class _HomeHeader extends StatelessWidget {
               'assets/images/app_logo.png',
               fit: BoxFit.contain,
               errorBuilder: (_, _, _) => Container(
-                decoration: const BoxDecoration(
-                  gradient: AppGradients.action,
-                ),
+                decoration: const BoxDecoration(gradient: AppGradients.action),
                 child: const Icon(
                   Icons.auto_awesome_rounded,
                   color: Colors.white,
@@ -311,7 +325,10 @@ class _HomeHeader extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.errorColor,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.bgSurface, width: 1.5),
+                      border: Border.all(
+                        color: AppColors.bgSurface,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                 ),
@@ -429,6 +446,7 @@ class _DashboardBody extends StatelessWidget {
               const SizedBox(width: AppSpacing.s12),
               Expanded(
                 child: _AiSuggestionCard(
+                  plan: p.aiPlanCard,
                   onTap: () => context.go(AppRoutes.aiCoach),
                 ),
               ),
@@ -504,91 +522,109 @@ class _DailySummaryCard extends StatelessWidget {
         ],
       ),
       padding: const EdgeInsets.all(AppSpacing.s20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          // Left: text + button
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                headlineWidget,
-                const SizedBox(height: AppSpacing.s8),
-                Text(
-                  "Keep going! You're building\nconsistency that matters.",
-                  style: GoogleFonts.manrope(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withValues(alpha: 0.92),
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.s16),
-                GestureDetector(
-                  onTap: onViewDay,
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'View your day',
-                          style: GoogleFonts.manrope(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.brandPrimary,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 14,
-                          color: AppColors.brandPrimary,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+          Positioned(
+            right: 4,
+            bottom: -8,
+            child: _HeroBars(color: Colors.white.withValues(alpha: 0.12)),
+          ),
+          Positioned(
+            right: 76,
+            top: 20,
+            child: Icon(
+              Icons.auto_awesome_rounded,
+              color: AppColors.brandGold.withValues(alpha: 0.92),
+              size: 24,
             ),
           ),
-          const SizedBox(width: AppSpacing.s12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left: text + button
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    headlineWidget,
+                    const SizedBox(height: AppSpacing.s8),
+                    Text(
+                      "Keep going! You're building\nconsistency that matters.",
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.92),
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s16),
+                    GestureDetector(
+                      onTap: onViewDay,
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'View your day',
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.brandPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 14,
+                              color: AppColors.brandPrimary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s12),
 
-          // Right: progress ring
-          ProgressRing(
-            value: progress,
-            size: 108,
-            strokeWidth: 9,
-            trackColor: Colors.white.withValues(alpha: 0.22),
-            gradientColors: [AppColors.brandGold, Colors.white],
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${(progress * 100).round()}%',
-                  style: GoogleFonts.manrope(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    height: 1.0,
-                  ),
+              // Right: progress ring
+              ProgressRing(
+                value: progress,
+                size: 108,
+                strokeWidth: 9,
+                trackColor: Colors.white.withValues(alpha: 0.22),
+                gradientColors: [AppColors.brandGold, Colors.white],
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${(progress * 100).round()}%',
+                      style: GoogleFonts.manrope(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        height: 1.0,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Day Progress',
+                      style: GoogleFonts.manrope(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Day Progress',
-                  style: GoogleFonts.manrope(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -611,9 +647,7 @@ class _NextPrayerCard extends StatelessWidget {
     final name = nextPrayer.enabled
         ? _prayerDisplayName(nextPrayer.name)
         : 'Prayer';
-    final timeStr = nextPrayer.enabled
-        ? _prayerTimeLabel(nextPrayer)
-        : '—';
+    final timeStr = nextPrayer.enabled ? _prayerTimeLabel(nextPrayer) : '—';
     final countdown = nextPrayer.enabled
         ? _prayerCountdown(nextPrayer.scheduledAt)
         : 'Open Prayer to sync';
@@ -626,106 +660,107 @@ class _NextPrayerCard extends StatelessWidget {
         boxShadow: AppShadows.card,
       ),
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          // Label
-          Row(
+          Positioned(
+            right: -10,
+            bottom: 42,
+            child: _MosqueSilhouette(
+              color: AppColors.brandViolet.withValues(alpha: 0.16),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.nightlight_rounded,
-                size: 16,
-                color: AppColors.brandViolet,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Next Prayer',
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textBody,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Prayer name
-          Text(
-            name,
-            style: GoogleFonts.manrope(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textHeading,
-            ),
-          ),
-          const SizedBox(height: 4),
-
-          // Time
-          Text(
-            timeStr,
-            style: GoogleFonts.manrope(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: AppColors.brandPrimary,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 2),
-
-          // Countdown
-          Text(
-            countdown,
-            style: GoogleFonts.manrope(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textHint,
-            ),
-          ),
-
-          const Spacer(),
-
-          // Mosque decoration
-          Align(
-            alignment: Alignment.centerRight,
-            child: Icon(
-              Icons.mosque_outlined,
-              size: 56,
-              color: AppColors.brandViolet.withValues(alpha: 0.10),
-            ),
-          ),
-
-          // Button
-          GestureDetector(
-            onTap: onTap,
-            child: Container(
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppColors.bgSurface,
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-                border: Border.all(color: AppColors.borderSoft),
-                boxShadow: AppShadows.soft,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              // Label
+              Row(
                 children: [
-                  Text(
-                    'View Prayer Times',
-                    style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.brandPrimary,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
                   const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 12,
-                    color: AppColors.brandPrimary,
+                    Icons.nightlight_rounded,
+                    size: 16,
+                    color: AppColors.brandViolet,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Next Prayer',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textBody,
+                    ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 16),
+
+              // Prayer name
+              Text(
+                name,
+                style: GoogleFonts.manrope(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textHeading,
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              // Time
+              Text(
+                timeStr,
+                style: GoogleFonts.manrope(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.brandPrimary,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 2),
+
+              // Countdown
+              Text(
+                countdown,
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textHint,
+                ),
+              ),
+
+              const Spacer(),
+
+              // Button
+              GestureDetector(
+                onTap: onTap,
+                child: Container(
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSurface,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    border: Border.all(color: AppColors.borderSoft),
+                    boxShadow: AppShadows.soft,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'View Prayer Times',
+                        style: GoogleFonts.manrope(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.brandPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 12,
+                        color: AppColors.brandPrimary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -784,33 +819,35 @@ class _FocusSessionCard extends StatelessWidget {
 
           // Ring
           Center(
-            child: ProgressRing(
-              value: ringValue,
-              size: 110,
-              strokeWidth: 10,
-              trackColor: AppColors.bgSurfaceLavender,
-              gradientColors: [AppColors.brandPrimary, AppColors.brandPink],
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$suggestedMinutes:00',
-                    style: GoogleFonts.manrope(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textHeading,
-                      letterSpacing: -0.5,
+            child: _FocusDial(
+              child: ProgressRing(
+                value: ringValue,
+                size: 112,
+                strokeWidth: 10,
+                trackColor: AppColors.bgSurfaceLavender,
+                gradientColors: [AppColors.brandPrimary, AppColors.brandPink],
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$suggestedMinutes:00',
+                      style: GoogleFonts.manrope(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textHeading,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Focus Time',
-                    style: GoogleFonts.manrope(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textHint,
+                    Text(
+                      'Focus Time',
+                      style: GoogleFonts.manrope(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textHint,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1013,6 +1050,24 @@ class _TaskRow extends StatelessWidget {
     return 'Normal';
   }
 
+  String _statusLabel(String status) {
+    if (status == 'completed') return 'Done';
+    if (status == 'in_progress') return 'In Progress';
+    return 'Today';
+  }
+
+  Color _statusBg(String status) {
+    if (status == 'completed') return AppColors.successSoft;
+    if (status == 'in_progress') return AppColors.bgSurfaceLavender;
+    return AppColors.brandPinkSoft;
+  }
+
+  Color _statusColor(String status) {
+    if (status == 'completed') return AppColors.successColor;
+    if (status == 'in_progress') return AppColors.brandPrimary;
+    return AppColors.brandPink;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -1073,16 +1128,16 @@ class _TaskRow extends StatelessWidget {
                 height: 26,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
-                  color: AppColors.bgSurfaceLavender,
+                  color: _statusBg(task.status),
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: Center(
                   child: Text(
-                    'Today',
+                    _statusLabel(task.status),
                     style: GoogleFonts.manrope(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.brandPrimary,
+                      color: _statusColor(task.status),
                     ),
                   ),
                 ),
@@ -1100,10 +1155,7 @@ class _TaskRow extends StatelessWidget {
                   height: 32,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.brandPrimary,
-                      width: 2,
-                    ),
+                    border: Border.all(color: AppColors.brandPrimary, width: 2),
                   ),
                   child: const Icon(
                     Icons.check_rounded,
@@ -1248,12 +1300,17 @@ class _HabitsCard extends StatelessWidget {
 // ═════════════════════════════════════════════════════════════════════════════
 
 class _AiSuggestionCard extends StatelessWidget {
+  final DashboardAiPlanCard plan;
   final VoidCallback onTap;
 
-  const _AiSuggestionCard({required this.onTap});
+  const _AiSuggestionCard({required this.plan, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final preview = plan.preview.trim().isEmpty
+        ? "Small steps today create big changes tomorrow. You've got this!"
+        : plan.preview.trim();
+
     return Container(
       decoration: BoxDecoration(
         gradient: AppGradients.ai,
@@ -1262,61 +1319,81 @@ class _AiSuggestionCard extends StatelessWidget {
         boxShadow: AppShadows.card,
       ),
       padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
+          Positioned(
+            right: -8,
+            bottom: -6,
+            child: _RobotIllustration(
+              size: 72,
+              color: AppColors.brandPrimary.withValues(alpha: 0.88),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.auto_awesome_rounded,
-                size: 16,
-                color: AppColors.brandPink,
+              Row(
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 16,
+                    color: AppColors.brandPink,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      plan.title.trim().isEmpty ? 'AI Suggestion' : plan.title,
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textHeading,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 6),
-              Text(
-                'AI Suggestion',
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textHeading,
+              const SizedBox(height: 8),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 42),
+                  child: Text(
+                    preview,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textBody,
+                      height: 1.45,
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s8),
+              GestureDetector(
+                onTap: onTap,
+                child: Row(
+                  children: [
+                    Text(
+                      'Ask AI anything',
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.brandPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 11,
+                      color: AppColors.brandPrimary,
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Text(
-              '"Small steps today create big changes tomorrow. You\'ve got this!',
-              style: GoogleFonts.manrope(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textBody,
-                fontStyle: FontStyle.italic,
-                height: 1.55,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.s8),
-          GestureDetector(
-            onTap: onTap,
-            child: Row(
-              children: [
-                Text(
-                  'Ask AI anything',
-                  style: GoogleFonts.manrope(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.brandPrimary,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 11,
-                  color: AppColors.brandPrimary,
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -1327,6 +1404,243 @@ class _AiSuggestionCard extends StatelessWidget {
 // ═════════════════════════════════════════════════════════════════════════════
 // State cards: loading / error / empty
 // ═════════════════════════════════════════════════════════════════════════════
+
+class _HeroBars extends StatelessWidget {
+  final Color color;
+
+  const _HeroBars({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    const heights = [34.0, 50.0, 68.0, 86.0, 112.0];
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (final height in heights)
+          Container(
+            width: 16,
+            height: height,
+            margin: const EdgeInsets.only(left: 8),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MosqueSilhouette extends StatelessWidget {
+  final Color color;
+
+  const _MosqueSilhouette({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 92,
+      height: 74,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Positioned(
+            bottom: 0,
+            left: 12,
+            right: 12,
+            child: Container(
+              height: 28,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppRadius.xl2),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 22,
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            child: Container(
+              width: 12,
+              height: 64,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              width: 12,
+              height: 54,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FocusDial extends StatelessWidget {
+  final Widget child;
+
+  const _FocusDial({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _FocusDialPainter(),
+      child: Padding(padding: const EdgeInsets.all(6), child: child),
+    );
+  }
+}
+
+class _FocusDialPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2 - 4;
+    final paint = Paint()
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+
+    for (var i = 0; i < 44; i++) {
+      final angle = -math.pi / 2 + (math.pi * 2 * i / 44);
+      final isMajor = i % 5 == 0;
+      final inner = radius - (isMajor ? 8 : 5);
+      final outer = radius - 1;
+      paint.color = (isMajor ? AppColors.brandPink : AppColors.brandPrimary)
+          .withValues(alpha: isMajor ? 0.28 : 0.16);
+      canvas.drawLine(
+        center + Offset(math.cos(angle) * inner, math.sin(angle) * inner),
+        center + Offset(math.cos(angle) * outer, math.sin(angle) * outer),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _RobotIllustration extends StatelessWidget {
+  final double size;
+  final Color color;
+
+  const _RobotIllustration({required this.size, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size * 0.72,
+            height: size * 0.62,
+            decoration: BoxDecoration(
+              color: AppColors.bgSurface,
+              borderRadius: BorderRadius.circular(size * 0.24),
+              boxShadow: AppShadows.soft,
+            ),
+          ),
+          Positioned(
+            top: size * 0.20,
+            child: Container(
+              width: size * 0.48,
+              height: size * 0.32,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color, AppColors.textHeading],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(size * 0.14),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _RobotEye(color: AppColors.brandPinkSoft, size: size * 0.06),
+                  SizedBox(width: size * 0.08),
+                  _RobotEye(color: AppColors.brandPinkSoft, size: size * 0.06),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: size * 0.08,
+            child: Container(
+              width: 4,
+              height: size * 0.14,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+            ),
+          ),
+          Positioned(
+            top: size * 0.04,
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+          ),
+          Positioned(
+            left: size * 0.06,
+            child: CircleAvatar(
+              radius: size * 0.09,
+              backgroundColor: AppColors.bgSurfaceLavender,
+            ),
+          ),
+          Positioned(
+            right: size * 0.06,
+            child: CircleAvatar(
+              radius: size * 0.09,
+              backgroundColor: AppColors.bgSurfaceLavender,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RobotEye extends StatelessWidget {
+  final Color color;
+  final double size;
+
+  const _RobotEye({required this.color, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size * 1.4,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+    );
+  }
+}
 
 class _LoadingCard extends StatelessWidget {
   const _LoadingCard();
@@ -1390,7 +1704,9 @@ class _ErrorCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.bgSurface,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
-                border: Border.all(color: AppColors.errorColor.withValues(alpha: 0.4)),
+                border: Border.all(
+                  color: AppColors.errorColor.withValues(alpha: 0.4),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1492,8 +1808,9 @@ class _DashboardCustomizeSheetState
     } else {
       final error =
           ref.read(dashboardProvider).error ?? 'Dashboard not updated';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
@@ -1502,7 +1819,10 @@ class _DashboardCustomizeSheetState
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
-          AppSpacing.s20, AppSpacing.s16, AppSpacing.s20, AppSpacing.s24,
+          AppSpacing.s20,
+          AppSpacing.s16,
+          AppSpacing.s20,
+          AppSpacing.s24,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1521,7 +1841,10 @@ class _DashboardCustomizeSheetState
                 IconButton(
                   tooltip: 'Close',
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.textBody),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.textBody,
+                  ),
                 ),
               ],
             ),
@@ -1585,41 +1908,41 @@ class _DashboardCustomizeSheetState
 
 String _dashboardWidgetLabel(String widgetId) {
   return switch (widgetId) {
-    'top_tasks'          => 'Top tasks',
-    'next_prayer'        => 'Next prayer',
-    'habit_snapshot'     => 'Habits',
-    'journal_prompt'     => 'Journal prompt',
-    'ai_plan'            => 'AI plan',
-    'focus_shortcut'     => 'Focus shortcut',
+    'top_tasks' => 'Top tasks',
+    'next_prayer' => 'Next prayer',
+    'habit_snapshot' => 'Habits',
+    'journal_prompt' => 'Journal prompt',
+    'ai_plan' => 'AI plan',
+    'focus_shortcut' => 'Focus shortcut',
     'productivity_score' => 'Productivity score',
-    'quran_goal'         => 'Spiritual today',
-    _                    => widgetId,
+    'quran_goal' => 'Spiritual today',
+    _ => widgetId,
   };
 }
 
 IconData _dashboardWidgetIcon(String widgetId) {
   return switch (widgetId) {
-    'top_tasks'          => Icons.task_alt_outlined,
-    'next_prayer'        => Icons.mosque_outlined,
-    'habit_snapshot'     => Icons.track_changes_outlined,
-    'journal_prompt'     => Icons.edit_note_outlined,
-    'ai_plan'            => Icons.auto_awesome_outlined,
-    'focus_shortcut'     => Icons.timer_outlined,
+    'top_tasks' => Icons.task_alt_outlined,
+    'next_prayer' => Icons.mosque_outlined,
+    'habit_snapshot' => Icons.track_changes_outlined,
+    'journal_prompt' => Icons.edit_note_outlined,
+    'ai_plan' => Icons.auto_awesome_outlined,
+    'focus_shortcut' => Icons.timer_outlined,
     'productivity_score' => Icons.insights_outlined,
-    'quran_goal'         => Icons.menu_book_outlined,
-    _                    => Icons.dashboard_customize_outlined,
+    'quran_goal' => Icons.menu_book_outlined,
+    _ => Icons.dashboard_customize_outlined,
   };
 }
 
 String _prayerDisplayName(String? name) {
   return switch (name) {
-    'fajr'       => 'Fajr',
-    'dhuhr'      => 'Dhuhr',
-    'asr'        => 'Asr',
-    'maghrib'    => 'Maghrib',
-    'isha'       => 'Isha',
-    null || ''   => 'Next prayer',
-    _            => name,
+    'fajr' => 'Fajr',
+    'dhuhr' => 'Dhuhr',
+    'asr' => 'Asr',
+    'maghrib' => 'Maghrib',
+    'isha' => 'Isha',
+    null || '' => 'Next prayer',
+    _ => name,
   };
 }
 

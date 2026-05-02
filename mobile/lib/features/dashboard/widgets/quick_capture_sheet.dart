@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -242,210 +244,249 @@ class _QuickCaptureSheetState extends ConsumerState<QuickCaptureSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
-      padding: EdgeInsets.only(
-        left: AppSpacing.screenH,
-        right: AppSpacing.screenH,
-        top: AppSpacing.s16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.s32,
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.s12,
+        AppSpacing.s12,
+        AppSpacing.s12,
+        bottomInset + AppSpacing.s12,
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.borderSoft,
-                  borderRadius: AppRadius.pillBr,
-                ),
-              ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.xl3),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.bgSurface.withValues(alpha: 0.98),
+              borderRadius: BorderRadius.circular(AppRadius.xl3),
+              border: Border.all(color: AppColors.borderSoft),
+              boxShadow: AppShadows.floating,
             ),
-            const SizedBox(height: AppSpacing.s20),
-            Row(
-              children: [
-                Container(
-                  width: AppIconSize.avatar,
-                  height: AppIconSize.avatar,
-                  decoration: BoxDecoration(
-                    gradient: AppGradients.action,
-                    borderRadius: AppRadius.circular(AppRadius.md),
-                    boxShadow: AppShadows.glowPurple,
-                  ),
-                  child: const Icon(
-                    Icons.add_task_outlined,
-                    color: AppColors.bgSurface,
-                    size: AppIconSize.cardHeader,
-                  ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH,
+                  AppSpacing.s16,
+                  AppSpacing.screenH,
+                  AppSpacing.s24,
                 ),
-                const SizedBox(width: AppSpacing.s12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Quick Capture', style: AppTextStyles.h2Light),
-                      Text(
-                        'Drop a thought in and review before saving.',
-                        style: AppTextStyles.captionLight,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.s16),
-            Wrap(
-              spacing: AppSpacing.s8,
-              runSpacing: AppSpacing.s8,
-              children: [
-                _TypeChip(
-                  label: 'Task',
-                  icon: Icons.task_alt,
-                  selected: _type == 'task',
-                  onTap: () => setState(() => _type = 'task'),
-                ),
-                _TypeChip(
-                  label: 'Note',
-                  icon: Icons.sticky_note_2_outlined,
-                  selected: _type == 'note',
-                  onTap: () => setState(() => _type = 'note'),
-                ),
-                _TypeChip(
-                  label: 'Checklist',
-                  icon: Icons.checklist_outlined,
-                  selected: _type == 'checklist',
-                  onTap: () => setState(() => _type = 'checklist'),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.s12),
-            Wrap(
-              spacing: AppSpacing.s8,
-              runSpacing: AppSpacing.s8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _openVoiceTaskCapture,
-                  icon: const Icon(Icons.mic, size: 18),
-                  label: const Text('Voice task'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _openVoiceNoteCapture,
-                  icon: const Icon(Icons.mic_none_outlined, size: 18),
-                  label: const Text('Voice note'),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.s16),
-            if (_showAiFallback) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.s12),
-                decoration: BoxDecoration(
-                  color: AppColors.warningSoft,
-                  borderRadius: AppRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.warningColor),
-                ),
-                child: Text(
-                  _aiFallbackMessage ?? "Couldn't parse that, enter manually.",
-                  style: AppTextStyles.bodySmall(AppColors.warningColor),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.s12),
-            ],
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.bgSurface,
-                borderRadius: AppRadius.circular(AppRadius.xl),
-                border: Border.all(color: AppColors.borderSoft),
-                boxShadow: AppShadows.soft,
-              ),
-              child: TextField(
-                controller: _controller,
-                autofocus: true,
-                maxLines: 5,
-                minLines: 3,
-                style: AppTextStyles.body(AppColors.textHeading),
-                decoration: InputDecoration(
-                  hintText: _type == 'task' && _useAi
-                      ? 'e.g. Finish report tomorrow at 6 PM high priority'
-                      : _type == 'checklist'
-                      ? 'One checklist item per line'
-                      : _type == 'task'
-                      ? 'What needs to be done?'
-                      : 'Capture your thought...',
-                  hintStyle: AppTextStyles.bodySmall(AppColors.textHint),
-                  filled: true,
-                  fillColor: AppColors.bgSurface,
-                  border: OutlineInputBorder(
-                    borderRadius: AppRadius.circular(AppRadius.xl),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.all(AppSpacing.s16),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.s12),
-            if (_type == 'task' && !_useAi) ...[
-              DropdownButtonFormField<String>(
-                initialValue: _priority,
-                decoration: const InputDecoration(labelText: 'Priority'),
-                items: const [
-                  DropdownMenuItem(value: 'low', child: Text('Low')),
-                  DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                  DropdownMenuItem(value: 'high', child: Text('High')),
-                ],
-                onChanged: (v) => setState(() => _priority = v!),
-              ),
-              const SizedBox(height: AppSpacing.s12),
-            ],
-            if (_type == 'task')
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.s12,
-                  vertical: AppSpacing.s8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.featAISoft,
-                  borderRadius: AppRadius.circular(AppRadius.lg),
-                  border: Border.all(color: AppColors.borderSoft),
-                ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.auto_awesome,
-                      size: 18,
-                      color: AppColors.featAI,
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.borderSoft,
+                          borderRadius: AppRadius.pillBr,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: AppSpacing.s8),
-                    Text(
-                      'Use AI to parse task',
-                      style: AppTextStyles.bodySmall(AppColors.textHeading),
+                    const SizedBox(height: AppSpacing.s20),
+                    Row(
+                      children: [
+                        Container(
+                          width: AppIconSize.avatar,
+                          height: AppIconSize.avatar,
+                          decoration: BoxDecoration(
+                            gradient: AppGradients.action,
+                            borderRadius: AppRadius.circular(AppRadius.md),
+                            boxShadow: AppShadows.glowPurple,
+                          ),
+                          child: const Icon(
+                            Icons.add_task_outlined,
+                            color: AppColors.bgSurface,
+                            size: AppIconSize.cardHeader,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.s12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Quick Capture',
+                                style: AppTextStyles.h2Light,
+                              ),
+                              Text(
+                                'Drop a thought in and review before saving.',
+                                style: AppTextStyles.captionLight,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const Spacer(),
-                    Switch(
-                      value: _useAi,
-                      activeThumbColor: AppColors.brandPrimary,
-                      onChanged: (v) => setState(() => _useAi = v),
+                    const SizedBox(height: AppSpacing.s16),
+                    Wrap(
+                      spacing: AppSpacing.s8,
+                      runSpacing: AppSpacing.s8,
+                      children: [
+                        _TypeChip(
+                          label: 'Task',
+                          icon: Icons.task_alt,
+                          selected: _type == 'task',
+                          onTap: () => setState(() => _type = 'task'),
+                        ),
+                        _TypeChip(
+                          label: 'Note',
+                          icon: Icons.sticky_note_2_outlined,
+                          selected: _type == 'note',
+                          onTap: () => setState(() => _type = 'note'),
+                        ),
+                        _TypeChip(
+                          label: 'Checklist',
+                          icon: Icons.checklist_outlined,
+                          selected: _type == 'checklist',
+                          onTap: () => setState(() => _type = 'checklist'),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: AppSpacing.s12),
+                    Wrap(
+                      spacing: AppSpacing.s8,
+                      runSpacing: AppSpacing.s8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _openVoiceTaskCapture,
+                          icon: const Icon(Icons.mic, size: 18),
+                          label: const Text('Voice task'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _openVoiceNoteCapture,
+                          icon: const Icon(Icons.mic_none_outlined, size: 18),
+                          label: const Text('Voice note'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.s16),
+                    if (_showAiFallback) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.s12),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningSoft,
+                          borderRadius: AppRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.warningColor),
+                        ),
+                        child: Text(
+                          _aiFallbackMessage ??
+                              "Couldn't parse that, enter manually.",
+                          style: AppTextStyles.bodySmall(
+                            AppColors.warningColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s12),
+                    ],
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.bgSurface,
+                        borderRadius: AppRadius.circular(AppRadius.xl),
+                        border: Border.all(color: AppColors.borderSoft),
+                        boxShadow: AppShadows.soft,
+                      ),
+                      child: TextField(
+                        controller: _controller,
+                        autofocus: true,
+                        maxLines: 5,
+                        minLines: 3,
+                        style: AppTextStyles.body(AppColors.textHeading),
+                        decoration: InputDecoration(
+                          hintText: _type == 'task' && _useAi
+                              ? 'e.g. Finish report tomorrow at 6 PM high priority'
+                              : _type == 'checklist'
+                              ? 'One checklist item per line'
+                              : _type == 'task'
+                              ? 'What needs to be done?'
+                              : 'Capture your thought...',
+                          hintStyle: AppTextStyles.bodySmall(
+                            AppColors.textHint,
+                          ),
+                          filled: true,
+                          fillColor: AppColors.bgSurface,
+                          border: OutlineInputBorder(
+                            borderRadius: AppRadius.circular(AppRadius.xl),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.all(AppSpacing.s16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s12),
+                    if (_type == 'task' && !_useAi) ...[
+                      DropdownButtonFormField<String>(
+                        initialValue: _priority,
+                        decoration: const InputDecoration(
+                          labelText: 'Priority',
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'low', child: Text('Low')),
+                          DropdownMenuItem(
+                            value: 'medium',
+                            child: Text('Medium'),
+                          ),
+                          DropdownMenuItem(value: 'high', child: Text('High')),
+                        ],
+                        onChanged: (v) => setState(() => _priority = v!),
+                      ),
+                      const SizedBox(height: AppSpacing.s12),
+                    ],
+                    if (_type == 'task')
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s12,
+                          vertical: AppSpacing.s8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.featAISoft,
+                          borderRadius: AppRadius.circular(AppRadius.lg),
+                          border: Border.all(color: AppColors.borderSoft),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.auto_awesome,
+                              size: 18,
+                              color: AppColors.featAI,
+                            ),
+                            const SizedBox(width: AppSpacing.s8),
+                            Text(
+                              'Use AI to parse task',
+                              style: AppTextStyles.bodySmall(
+                                AppColors.textHeading,
+                              ),
+                            ),
+                            const Spacer(),
+                            Switch(
+                              value: _useAi,
+                              activeThumbColor: AppColors.brandPrimary,
+                              onChanged: (v) => setState(() => _useAi = v),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.s20),
+                    _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.brandPrimary,
+                            ),
+                          )
+                        : _GradientActionButton(
+                            label: 'Review Capture',
+                            icon: Icons.arrow_forward,
+                            onPressed: _submit,
+                          ),
                   ],
                 ),
               ),
-            const SizedBox(height: AppSpacing.s20),
-            _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.brandPrimary,
-                    ),
-                  )
-                : _GradientActionButton(
-                    label: 'Review Capture',
-                    icon: Icons.arrow_forward,
-                    onPressed: _submit,
-                  ),
-          ],
+            ),
+          ),
         ),
       ),
     );
