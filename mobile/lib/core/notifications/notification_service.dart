@@ -10,6 +10,8 @@ class NotificationService {
   static const _channelDescription = 'Reminders and alerts';
   static const _silentChannelId = 'smart_life_planner_silent_channel';
   static const _silentChannelName = 'Smart Life Planner Silent';
+  static const _focusChannelId = 'smart_life_planner_focus_channel';
+  static const _focusChannelName = 'Smart Life Planner Focus';
   static const _athanChannelId = 'smart_life_planner_athan_channel';
   static const _athanChannelName = 'Smart Life Planner Athan';
   static const _athanSound = RawResourceAndroidNotificationSound('athan_soft');
@@ -71,6 +73,15 @@ class NotificationService {
     );
     await android?.createNotificationChannel(
       const AndroidNotificationChannel(
+        _focusChannelId,
+        _focusChannelName,
+        description: 'Ongoing Pomodoro and focus timers',
+        importance: Importance.low,
+        playSound: false,
+      ),
+    );
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
         _athanChannelId,
         _athanChannelName,
         description: 'Prayer reminders with the bundled Athan sound',
@@ -78,6 +89,39 @@ class NotificationService {
         playSound: true,
         sound: _athanSound,
       ),
+    );
+  }
+
+  Future<void> showOngoingFocusNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime endsAt,
+    String? payload,
+  }) async {
+    await _plugin.show(
+      id,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _focusChannelId,
+          _focusChannelName,
+          channelDescription: 'Ongoing Pomodoro and focus timers',
+          importance: Importance.low,
+          priority: Priority.low,
+          icon: '@mipmap/ic_launcher',
+          playSound: false,
+          ongoing: true,
+          autoCancel: false,
+          onlyAlertOnce: true,
+          showWhen: true,
+          when: endsAt.millisecondsSinceEpoch,
+          usesChronometer: true,
+          chronometerCountDown: true,
+        ),
+      ),
+      payload: payload,
     );
   }
 

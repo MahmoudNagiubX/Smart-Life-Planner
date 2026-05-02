@@ -58,8 +58,9 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   }
 
   String _formatTime(int seconds) {
-    final m = (seconds ~/ 60).toString().padLeft(2, '0');
-    final s = (seconds % 60).toString().padLeft(2, '0');
+    final safeSeconds = seconds.clamp(0, 24 * 60 * 60);
+    final m = (safeSeconds ~/ 60).toString().padLeft(2, '0');
+    final s = (safeSeconds % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
 
@@ -641,6 +642,15 @@ TaskModel? _taskById(List<TaskModel> tasks, String? taskId) {
   return null;
 }
 
+String _focusMinutesLabel(int minutes) {
+  if (minutes >= 60) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return m == 0 ? '${h}h' : '${h}h ${m}m';
+  }
+  return '${minutes}m';
+}
+
 // ── Immersive control button ──────────────────────────────────────────────────
 
 class _ImmersiveIconBtn extends StatelessWidget {
@@ -1137,7 +1147,7 @@ class _TodayStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (_minutesToLabel(analytics.todayMinutes), 'Focused'),
+      (_focusMinutesLabel(analytics.todayMinutes), 'Focused'),
       ('${analytics.todaySessions}', 'Sessions'),
       ('${analytics.currentStreakDays}d', 'Streak'),
     ];
@@ -1180,14 +1190,6 @@ class _TodayStats extends StatelessWidget {
     );
   }
 
-  String _minutesToLabel(int minutes) {
-    if (minutes >= 60) {
-      final h = minutes ~/ 60;
-      final m = minutes % 60;
-      return m == 0 ? '${h}h' : '${h}h ${m}m';
-    }
-    return '${minutes}m';
-  }
 }
 
 // ── Analytics grid ────────────────────────────────────────────────────────────
@@ -1213,7 +1215,7 @@ class _AnalyticsRow extends StatelessWidget {
         Expanded(
           child: _StatCard(
             label: 'Total time',
-            value: '${analytics.todayMinutes}m',
+            value: _focusMinutesLabel(analytics.todayMinutes),
             sub: 'today',
             color: AppColors.brandViolet,
           ),
@@ -1222,7 +1224,7 @@ class _AnalyticsRow extends StatelessWidget {
         Expanded(
           child: _StatCard(
             label: 'This week',
-            value: '${analytics.weekMinutes}m',
+            value: _focusMinutesLabel(analytics.weekMinutes),
             sub: '${analytics.weekSessions} sessions',
             color: AppColors.brandPink,
           ),
@@ -1999,7 +2001,7 @@ class _ReportSummary extends StatelessWidget {
     final message = completed == null
         ? analytics?.reportSummary ??
               'Complete a focus session to build your report.'
-        : 'Last session: ${completed.actualMinutes ?? 0}m '
+        : 'Last session: ${_focusMinutesLabel(completed.actualMinutes ?? completed.plannedMinutes)} '
               '${completed.sessionType.replaceAll('_', ' ')} completed.';
 
     return Container(

@@ -89,8 +89,7 @@ async def complete_session(
     now = datetime.now(timezone.utc)
     session.status = "completed"
     session.ended_at = now
-    elapsed = now - session.started_at.replace(tzinfo=timezone.utc)
-    session.actual_minutes = max(1, int(elapsed.total_seconds() / 60))
+    session.actual_minutes = _completed_actual_minutes(session, now)
     if session.task_id and session.session_type not in {"short_break", "long_break"}:
         task = await _get_linked_task_for_session(db, session)
         if task:
@@ -127,6 +126,15 @@ async def cancel_session(
     await db.commit()
     await db.refresh(session)
     return session
+
+
+def _completed_actual_minutes(session: FocusSession, ended_at: datetime) -> int:
+    elapsed = ended_at - session.started_at.replace(tzinfo=timezone.utc)
+    elapsed_seconds = max(0, elapsed.total_seconds())
+    planned_seconds = max(60, session.planned_minutes * 60)
+    if elapsed_seconds >= planned_seconds - 2:
+        return max(1, session.planned_minutes)
+    return max(1, round(elapsed_seconds / 60))
 
 
 async def get_focus_analytics(

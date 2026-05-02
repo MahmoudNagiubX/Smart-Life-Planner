@@ -176,13 +176,8 @@ class FocusNotifier extends StateNotifier<FocusState> {
         remainingSeconds: remaining,
       );
       if (remaining > 0) {
-        await _ref
-            .read(notificationSchedulerProvider)
-            .scheduleFocusCompleteAt(
-              sessionId: session.id,
-              plannedMinutes: session.plannedMinutes,
-              fireAt: endsAt,
-            );
+        await _scheduleFocusCompleteAt(session, endsAt);
+        await _showActiveFocusNotification(session, remaining);
         _startTimer();
         await _syncAmbientSoundForSession(session);
       }
@@ -329,19 +324,14 @@ class FocusNotifier extends StateNotifier<FocusState> {
         taskId: taskId,
       );
 
-      // Schedule completion notification
-      await _ref
-          .read(notificationSchedulerProvider)
-          .scheduleFocusComplete(
-            sessionId: session.id,
-            plannedMinutes: plannedMinutes,
-          );
-
       state = state.copyWith(
         activeSession: session,
         isLoading: false,
         remainingSeconds: plannedMinutes * 60,
       );
+      final endsAt = DateTime.now().add(Duration(minutes: plannedMinutes));
+      await _scheduleFocusCompleteAt(session, endsAt);
+      await _showActiveFocusNotification(session, plannedMinutes * 60);
       _startTimer();
       await _syncAmbientSoundForSession(session);
     } on DioException catch (e) {
@@ -360,19 +350,20 @@ class FocusNotifier extends StateNotifier<FocusState> {
 
     if (cancelNotification) {
       // Cancel the scheduled notification only when the user finishes manually.
-      await _ref
-          .read(notificationSchedulerProvider)
-          .cancelFocusNotification(session.id);
+      await _cancelFocusNotifications(session, includeCompletion: true);
+    } else {
+      await _cancelActiveFocusNotification(session);
     }
 
     try {
       final service = _ref.read(focusServiceProvider);
       final completed = await service.completeSession(session.id);
       final shouldContinue = state.continuousMode;
+      final actualMinutes = _displayActualMinutes(completed);
       state = state.copyWith(
         clearSession: true,
         remainingSeconds: 0,
-        lastCompletedSession: completed,
+        lastCompletedSession: completed.copyWith(actualMinutes: actualMinutes),
       );
       if (completed.taskId != null) {
         await _ref.read(tasksProvider.notifier).loadTasks();
@@ -406,10 +397,7 @@ class FocusNotifier extends StateNotifier<FocusState> {
     _timer?.cancel();
     await _stopAmbientSound();
 
-    // Cancel the scheduled notification
-    await _ref
-        .read(notificationSchedulerProvider)
-        .cancelFocusNotification(session.id);
+    await _cancelFocusNotifications(session, includeCompletion: true);
 
     try {
       final service = _ref.read(focusServiceProvider);
@@ -428,7 +416,12 @@ class FocusNotifier extends StateNotifier<FocusState> {
         timer.cancel();
         completeSession(cancelNotification: false);
       } else {
-        state = state.copyWith(remainingSeconds: state.remainingSeconds - 1);
+        final remaining = state.remainingSeconds - 1;
+        state = state.copyWith(remainingSeconds: remaining);
+        final session = state.activeSession;
+        if (session != null && remaining > 0 && remaining % 60 == 0) {
+          unawaited(_showActiveFocusNotification(session, remaining));
+        }
       }
     });
   }
@@ -448,6 +441,65 @@ class FocusNotifier extends StateNotifier<FocusState> {
 
   Future<void> _stopAmbientSound() {
     return _ref.read(focusAmbientSoundServiceProvider).stop();
+  }
+
+  Future<void> _scheduleFocusCompleteAt(
+    FocusSession session,
+    DateTime endsAt,
+  ) async {
+    try {
+      await _ref
+          .read(notificationSchedulerProvider)
+          .scheduleFocusCompleteAt(
+            sessionId: session.id,
+            plannedMinutes: session.plannedMinutes,
+            fireAt: endsAt,
+          );
+    } catch (_) {}
+  }
+
+  Future<void> _showActiveFocusNotification(
+    FocusSession session,
+    int remainingSeconds,
+  ) async {
+    try {
+      final endsAt = DateTime.now().add(Duration(seconds: remainingSeconds));
+      await _ref
+          .read(notificationSchedulerProvider)
+          .showActiveFocus(
+            sessionId: session.id,
+            sessionType: session.sessionType,
+            remainingSeconds: remainingSeconds,
+            endsAt: endsAt,
+          );
+    } catch (_) {}
+  }
+
+  Future<void> _cancelActiveFocusNotification(FocusSession session) async {
+    try {
+      await _ref
+          .read(notificationSchedulerProvider)
+          .cancelActiveFocusNotification(session.id);
+    } catch (_) {}
+  }
+
+  Future<void> _cancelFocusNotifications(
+    FocusSession session, {
+    required bool includeCompletion,
+  }) async {
+    await _cancelActiveFocusNotification(session);
+    if (!includeCompletion) return;
+    try {
+      await _ref
+          .read(notificationSchedulerProvider)
+          .cancelFocusNotification(session.id);
+    } catch (_) {}
+  }
+
+  int _displayActualMinutes(FocusSession session) {
+    final actual = session.actualMinutes;
+    if (actual != null && actual > 0) return actual;
+    return session.plannedMinutes;
   }
 
   /// Algorithm: Modular Counting

@@ -31,6 +31,28 @@ class FocusSession {
       endedAt: json['ended_at'] as String?,
     );
   }
+
+  FocusSession copyWith({
+    String? id,
+    String? taskId,
+    String? sessionType,
+    int? plannedMinutes,
+    int? actualMinutes,
+    String? status,
+    String? startedAt,
+    String? endedAt,
+  }) {
+    return FocusSession(
+      id: id ?? this.id,
+      taskId: taskId ?? this.taskId,
+      sessionType: sessionType ?? this.sessionType,
+      plannedMinutes: plannedMinutes ?? this.plannedMinutes,
+      actualMinutes: actualMinutes ?? this.actualMinutes,
+      status: status ?? this.status,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
+    );
+  }
 }
 
 class FocusAnalytics {

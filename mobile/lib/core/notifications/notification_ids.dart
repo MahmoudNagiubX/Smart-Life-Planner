@@ -4,6 +4,9 @@ class NotificationIds {
   static int focusComplete(String sessionId) =>
       1000 + sessionId.hashCode.abs() % 8000;
 
+  static int focusActive(String sessionId) =>
+      90000 + sessionId.hashCode.abs() % 8000;
+
   // Tasks: base 10000
   static int taskReminder(String taskId) =>
       10000 + taskId.hashCode.abs() % 10000;

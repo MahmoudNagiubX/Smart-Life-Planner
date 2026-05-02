@@ -34,6 +34,25 @@ class NotificationScheduler {
     );
   }
 
+  Future<void> showActiveFocus({
+    required String sessionId,
+    required String sessionType,
+    required int remainingSeconds,
+    required DateTime endsAt,
+  }) async {
+    await _service.showOngoingFocusNotification(
+      id: NotificationIds.focusActive(sessionId),
+      title: _focusActiveTitle(sessionType),
+      body: '${_formatRemaining(remainingSeconds)} remaining',
+      endsAt: endsAt,
+      payload: 'focus',
+    );
+  }
+
+  Future<void> cancelActiveFocusNotification(String sessionId) async {
+    await _service.cancelNotification(NotificationIds.focusActive(sessionId));
+  }
+
   Future<void> cancelFocusNotification(String sessionId) async {
     await _service.cancelNotification(NotificationIds.focusComplete(sessionId));
   }
@@ -329,6 +348,21 @@ class NotificationScheduler {
       'isha': 'Isha',
     };
     return names[name] ?? name;
+  }
+
+  String _focusActiveTitle(String sessionType) {
+    return switch (sessionType) {
+      'short_break' => 'Short break running',
+      'long_break' => 'Long break running',
+      _ => 'Pomodoro running',
+    };
+  }
+
+  String _formatRemaining(int seconds) {
+    final safeSeconds = seconds.clamp(0, 24 * 60 * 60);
+    final minutes = safeSeconds ~/ 60;
+    final secs = safeSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 }
 
