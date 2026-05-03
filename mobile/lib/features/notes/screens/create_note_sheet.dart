@@ -989,12 +989,16 @@ class _NoteAttachmentImage extends StatelessWidget {
       );
     }
 
-    if (source.startsWith('/')) {
+    // Server-relative path: either "/uploads/..." or "uploads/..." style
+    if (source.startsWith('/') || _isRelativeServerPath(source)) {
       final base = Uri.tryParse(ApiClient.baseUrl);
       if (base != null && base.hasScheme) {
         final origin = base.replace(path: '', query: '', fragment: '');
+        final resolved = source.startsWith('/')
+            ? origin.resolve(source).toString()
+            : origin.resolve('/$source').toString();
         return Image.network(
-          origin.resolve(source).toString(),
+          resolved,
           width: width,
           height: height,
           fit: BoxFit.cover,
@@ -1004,6 +1008,7 @@ class _NoteAttachmentImage extends StatelessWidget {
       }
     }
 
+    // Local device file path
     final file = File(
       uri != null && uri.scheme == 'file' ? uri.toFilePath() : source,
     );
@@ -1016,6 +1021,19 @@ class _NoteAttachmentImage extends StatelessWidget {
           _MissingNoteImage(width: width, height: height),
     );
   }
+}
+
+/// Returns true when [source] looks like a relative server path
+/// (e.g. "uploads/notes/abc.jpg") rather than an absolute local path.
+bool _isRelativeServerPath(String source) {
+  if (source.isEmpty) return false;
+  final lower = source.toLowerCase();
+  return !source.contains(':') &&
+      !source.startsWith('/') &&
+      (lower.startsWith('uploads/') ||
+          lower.startsWith('media/') ||
+          lower.startsWith('static/') ||
+          lower.startsWith('files/'));
 }
 
 class _MissingNoteImage extends StatelessWidget {
