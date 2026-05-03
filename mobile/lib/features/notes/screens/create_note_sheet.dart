@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -72,6 +73,16 @@ class _CreateNoteSheetState extends ConsumerState<CreateNoteSheet> {
       _reminderAt = DateTime.tryParse(note.reminderAt!)?.toLocal();
     }
     _attachments.addAll(note.attachments);
+    final seenSources = _attachments
+        .map((attachment) => attachment.displaySource)
+        .whereType<String>()
+        .toSet();
+    for (final attachment in note.imageAttachments) {
+      final source = attachment.displaySource;
+      if (source != null && seenSources.add(source)) {
+        _attachments.add(attachment);
+      }
+    }
 
     for (final block in note.structuredBlocks) {
       _hydrateStructuredBlock(block);
@@ -906,37 +917,15 @@ class _AttachmentEditor extends StatelessWidget {
               separatorBuilder: (context, index) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final attachment = attachments[index];
-                final path = attachment.localPath;
                 return Stack(
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: path == null
-                          ? Container(
-                              width: 92,
-                              height: 92,
-                              color: AppColors.bgSurfaceLavender,
-                              child: const Icon(
-                                Icons.broken_image_outlined,
-                                color: AppColors.textHint,
-                              ),
-                            )
-                          : Image.file(
-                              File(path),
-                              width: 92,
-                              height: 92,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    width: 92,
-                                    height: 92,
-                                    color: AppColors.bgSurfaceLavender,
-                                    child: const Icon(
-                                      Icons.broken_image_outlined,
-                                      color: AppColors.textHint,
-                                    ),
-                                  ),
-                            ),
+                      child: _NoteAttachmentImage(
+                        attachment: attachment,
+                        width: 92,
+                        height: 92,
+                      ),
                     ),
                     Positioned(
                       top: 4,
@@ -966,6 +955,86 @@ class _AttachmentEditor extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _NoteAttachmentImage extends StatelessWidget {
+  final NoteAttachmentModel attachment;
+  final double width;
+  final double height;
+
+  const _NoteAttachmentImage({
+    required this.attachment,
+    required this.width,
+    required this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final source = attachment.displaySource;
+    if (source == null) {
+      return _MissingNoteImage(width: width, height: height);
+    }
+
+    final uri = Uri.tryParse(source);
+    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      return Image.network(
+        source,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            _MissingNoteImage(width: width, height: height),
+      );
+    }
+
+    if (source.startsWith('/')) {
+      final base = Uri.tryParse(ApiClient.baseUrl);
+      if (base != null && base.hasScheme) {
+        final origin = base.replace(path: '', query: '', fragment: '');
+        return Image.network(
+          origin.resolve(source).toString(),
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              _MissingNoteImage(width: width, height: height),
+        );
+      }
+    }
+
+    final file = File(
+      uri != null && uri.scheme == 'file' ? uri.toFilePath() : source,
+    );
+    return Image.file(
+      file,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) =>
+          _MissingNoteImage(width: width, height: height),
+    );
+  }
+}
+
+class _MissingNoteImage extends StatelessWidget {
+  final double width;
+  final double height;
+
+  const _MissingNoteImage({required this.width, required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      color: AppColors.bgSurfaceLavender,
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.image_not_supported_outlined,
+        color: AppColors.textHint,
+      ),
     );
   }
 }

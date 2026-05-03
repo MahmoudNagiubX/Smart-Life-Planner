@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -492,225 +493,259 @@ class _NoteCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.s12),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: _noteBackgroundColor(note.colorKey),
-        borderRadius: BorderRadius.circular(AppRadius.xl2),
-        boxShadow: AppShadows.soft,
-        border: note.isPinned
-            ? Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.35))
-            : Border.all(color: AppColors.borderSoft),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (note.isPinned)
-                const Icon(
-                  Icons.push_pin,
-                  size: 16,
-                  color: AppColors.brandPrimary,
-                ),
-              if (note.isPinned) const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  note.title ?? 'Untitled',
-                  style: AppTextStyles.h4(AppColors.textHeading),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, size: 18),
-                onSelected: (value) async {
-                  if (value == 'pin') {
-                    ref
-                        .read(notesProvider.notifier)
-                        .togglePin(note.id, note.isPinned);
-                  } else if (value == 'edit') {
-                    await showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Theme.of(
-                        context,
-                      ).scaffoldBackgroundColor,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                      ),
-                      builder: (_) => CreateNoteSheet(initialNote: note),
-                    );
-                  } else if (value == 'color') {
-                    final colorKey = await _showColorPicker(
-                      context,
-                      note.colorKey,
-                    );
-                    if (colorKey == null) return;
-                    await ref
-                        .read(notesProvider.notifier)
-                        .updateColor(note.id, colorKey);
-                  } else if (value == 'archive') {
-                    await ref
-                        .read(notesProvider.notifier)
-                        .archiveNote(note.id, !note.isArchived);
-                  } else if (value == 'tags') {
-                    final tags = await _showTagEditor(context, note.tags);
-                    if (tags == null) return;
-                    await ref
-                        .read(notesProvider.notifier)
-                        .updateTags(note.id, tags);
-                  } else if (value == 'smart') {
-                    _showSmartNoteMenu(context, note: note);
-                  } else if (value == 'delete') {
-                    final confirmed = await confirmDestructiveAction(
-                      context: context,
-                      title: 'Delete Note',
-                      message:
-                          'Delete "${note.title ?? 'Untitled'}"? This note will be removed.',
-                    );
-                    if (!confirmed) return;
-                    await ref.read(notesProvider.notifier).deleteNote(note.id);
-                  }
-                },
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'pin',
-                    child: Text(note.isPinned ? 'Unpin' : 'Pin'),
-                  ),
-                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                  const PopupMenuItem(
-                    value: 'color',
-                    child: Text('Change color'),
-                  ),
-                  PopupMenuItem(
-                    value: 'archive',
-                    child: Text(note.isArchived ? 'Unarchive' : 'Archive'),
-                  ),
-                  const PopupMenuItem(value: 'tags', child: Text('Edit tags')),
-                  const PopupMenuItem(
-                    value: 'smart',
-                    child: Text('Smart tools'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Text(
-                      'Delete',
-                      style: TextStyle(color: AppColors.error),
-                    ),
-                  ),
-                ],
-              ),
+    final imageAttachments = note.imageAttachments;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openNote(context, ref),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.s12),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: _noteBackgroundColor(note.colorKey),
+          borderRadius: BorderRadius.circular(AppRadius.xl2),
+          boxShadow: AppShadows.soft,
+          border: note.isPinned
+              ? Border.all(
+                  color: AppColors.brandPrimary.withValues(alpha: 0.35),
+                )
+              : Border.all(color: AppColors.borderSoft),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (imageAttachments.isNotEmpty) ...[
+              _AttachmentPreview(attachments: imageAttachments),
+              const SizedBox(height: 10),
             ],
-          ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: ClipRect(
-              child: SingleChildScrollView(
-                primary: false,
-                physics: const NeverScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (note.noteType == 'checklist' &&
-                        note.checklistItems.isNotEmpty)
-                      _ChecklistPreview(
-                        items: note.checklistItems,
-                        onToggle: (item) {
-                          final updatedItems = note.checklistItems
-                              .map(
-                                (current) => current.id == item.id
-                                    ? current.copyWith(
-                                        isCompleted: !current.isCompleted,
-                                      )
-                                    : current,
-                              )
-                              .toList();
-                          ref
-                              .read(notesProvider.notifier)
-                              .updateChecklistItems(note.id, updatedItems);
-                        },
-                      )
-                    else
-                      Text(
-                        note.content,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textBody,
-                          height: 1.35,
-                          fontSize: 12,
+            Row(
+              children: [
+                if (note.isPinned)
+                  const Icon(
+                    Icons.push_pin,
+                    size: 16,
+                    color: AppColors.brandPrimary,
+                  ),
+                if (note.isPinned) const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    note.title ?? 'Untitled',
+                    style: AppTextStyles.h4(AppColors.textHeading),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 18),
+                  onSelected: (value) async {
+                    if (value == 'pin') {
+                      ref
+                          .read(notesProvider.notifier)
+                          .togglePin(note.id, note.isPinned);
+                    } else if (value == 'edit') {
+                      await showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
                         ),
+                        builder: (_) => CreateNoteSheet(initialNote: note),
+                      );
+                    } else if (value == 'color') {
+                      final colorKey = await _showColorPicker(
+                        context,
+                        note.colorKey,
+                      );
+                      if (colorKey == null) return;
+                      await ref
+                          .read(notesProvider.notifier)
+                          .updateColor(note.id, colorKey);
+                    } else if (value == 'archive') {
+                      await ref
+                          .read(notesProvider.notifier)
+                          .archiveNote(note.id, !note.isArchived);
+                    } else if (value == 'tags') {
+                      final tags = await _showTagEditor(context, note.tags);
+                      if (tags == null) return;
+                      await ref
+                          .read(notesProvider.notifier)
+                          .updateTags(note.id, tags);
+                    } else if (value == 'smart') {
+                      _showSmartNoteMenu(context, note: note);
+                    } else if (value == 'delete') {
+                      final confirmed = await confirmDestructiveAction(
+                        context: context,
+                        title: 'Delete Note',
+                        message:
+                            'Delete "${note.title ?? 'Untitled'}"? This note will be removed.',
+                      );
+                      if (!confirmed) return;
+                      await ref
+                          .read(notesProvider.notifier)
+                          .deleteNote(note.id);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'pin',
+                      child: Text(note.isPinned ? 'Unpin' : 'Pin'),
+                    ),
+                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    const PopupMenuItem(
+                      value: 'color',
+                      child: Text('Change color'),
+                    ),
+                    PopupMenuItem(
+                      value: 'archive',
+                      child: Text(note.isArchived ? 'Unarchive' : 'Archive'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'tags',
+                      child: Text('Edit tags'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'smart',
+                      child: Text('Smart tools'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text(
+                        'Delete',
+                        style: TextStyle(color: AppColors.error),
                       ),
-                    if (note.structuredBlocks.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      _StructuredBlocksPreview(blocks: note.structuredBlocks),
-                    ],
-                    if (note.attachments.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      _AttachmentPreview(attachments: note.attachments),
-                    ],
-                    if (note.reminderAt != null) ...[
-                      const SizedBox(height: 8),
-                      _ReminderChip(reminderAt: note.reminderAt!),
-                    ],
-                    if (note.taskId != null) ...[
-                      const SizedBox(height: 8),
-                      const _PreviewChip(
-                        icon: Icons.task_alt,
-                        label: 'Linked task',
-                      ),
-                    ],
-                    if (note.sourceType == 'voice') ...[
-                      const SizedBox(height: 8),
-                      const _PreviewChip(
-                        icon: Icons.mic_none,
-                        label: 'Voice transcript',
-                      ),
-                    ],
-                    if (note.tags.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          ...note.tags
-                              .take(3)
-                              .map(
-                                (tag) => InkWell(
-                                  borderRadius: BorderRadius.circular(999),
-                                  onTap: () => ref
-                                      .read(notesProvider.notifier)
-                                      .loadNotes(tag: tag),
-                                  child: _TagChip(tag: tag),
-                                ),
-                              ),
-                          if (note.tags.length > 3)
-                            _TagChip(tag: '+${note.tags.length - 3}'),
-                        ],
-                      ),
-                    ],
+                    ),
                   ],
                 ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: ClipRect(
+                child: SingleChildScrollView(
+                  primary: false,
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (note.noteType == 'checklist' &&
+                          note.checklistItems.isNotEmpty)
+                        _ChecklistPreview(
+                          items: note.checklistItems,
+                          onToggle: (item) {
+                            final updatedItems = note.checklistItems
+                                .map(
+                                  (current) => current.id == item.id
+                                      ? current.copyWith(
+                                          isCompleted: !current.isCompleted,
+                                        )
+                                      : current,
+                                )
+                                .toList();
+                            ref
+                                .read(notesProvider.notifier)
+                                .updateChecklistItems(note.id, updatedItems);
+                          },
+                        )
+                      else
+                        Text(
+                          note.content,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: AppColors.textBody,
+                                height: 1.35,
+                                fontSize: 12,
+                              ),
+                        ),
+                      if (note.structuredBlocks.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _StructuredBlocksPreview(blocks: note.structuredBlocks),
+                      ],
+                      if (note.reminderAt != null) ...[
+                        const SizedBox(height: 8),
+                        _ReminderChip(reminderAt: note.reminderAt!),
+                      ],
+                      if (note.taskId != null) ...[
+                        const SizedBox(height: 8),
+                        const _PreviewChip(
+                          icon: Icons.task_alt,
+                          label: 'Linked task',
+                        ),
+                      ],
+                      if (note.sourceType == 'voice') ...[
+                        const SizedBox(height: 8),
+                        const _PreviewChip(
+                          icon: Icons.mic_none,
+                          label: 'Voice transcript',
+                        ),
+                      ],
+                      if (note.tags.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            ...note.tags
+                                .take(3)
+                                .map(
+                                  (tag) => InkWell(
+                                    borderRadius: BorderRadius.circular(999),
+                                    onTap: () => ref
+                                        .read(notesProvider.notifier)
+                                        .loadNotes(tag: tag),
+                                    child: _TagChip(tag: tag),
+                                  ),
+                                ),
+                            if (note.tags.length > 3)
+                              _TagChip(tag: '+${note.tags.length - 3}'),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            note.isArchived && note.archivedAt != null
-                ? 'Archived ${note.archivedAt!.substring(0, 10)}'
-                : note.updatedAt.substring(0, 10),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textHint,
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 8),
+            Text(
+              note.isArchived && note.archivedAt != null
+                  ? 'Archived ${note.archivedAt!.substring(0, 10)}'
+                  : note.updatedAt.substring(0, 10),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textHint,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _openNote(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => CreateNoteSheet(initialNote: note),
+    );
+    if (!context.mounted) return;
+    final state = ref.read(notesProvider);
+    await ref
+        .read(notesProvider.notifier)
+        .loadNotes(
+          search: state.search,
+          tag: state.selectedTag,
+          isArchived: state.showingArchived,
+        );
   }
 
   Future<List<String>?> _showTagEditor(
@@ -1079,37 +1114,116 @@ class _AttachmentPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 58,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: attachments.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final path = attachments[index].localPath;
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: path == null
-                ? Container(
-                    width: 58,
-                    height: 58,
-                    color: Colors.black.withValues(alpha: 0.18),
-                    child: const Icon(Icons.image_outlined),
-                  )
-                : Image.file(
-                    File(path),
-                    width: 58,
-                    height: 58,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 58,
-                      height: 58,
-                      color: Colors.black.withValues(alpha: 0.18),
-                      child: const Icon(Icons.broken_image_outlined),
-                    ),
-                  ),
-          );
-        },
+    final first = attachments.first;
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: _NoteAttachmentImage(
+            attachment: first,
+            width: double.infinity,
+            height: 112,
+          ),
+        ),
+        if (attachments.length > 1)
+          Positioned(
+            right: 8,
+            bottom: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '+${attachments.length - 1}',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _NoteAttachmentImage extends StatelessWidget {
+  final NoteAttachmentModel attachment;
+  final double width;
+  final double height;
+
+  const _NoteAttachmentImage({
+    required this.attachment,
+    required this.width,
+    required this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final source = attachment.displaySource;
+    if (source == null) {
+      return _MissingNoteImage(width: width, height: height);
+    }
+
+    final uri = Uri.tryParse(source);
+    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      return Image.network(
+        source,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            _MissingNoteImage(width: width, height: height),
+      );
+    }
+
+    if (source.startsWith('/')) {
+      final base = Uri.tryParse(ApiClient.baseUrl);
+      if (base != null && base.hasScheme) {
+        final origin = base.replace(path: '', query: '', fragment: '');
+        return Image.network(
+          origin.resolve(source).toString(),
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              _MissingNoteImage(width: width, height: height),
+        );
+      }
+    }
+
+    final file = File(
+      uri != null && uri.scheme == 'file' ? uri.toFilePath() : source,
+    );
+    return Image.file(
+      file,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) =>
+          _MissingNoteImage(width: width, height: height),
+    );
+  }
+}
+
+class _MissingNoteImage extends StatelessWidget {
+  final double width;
+  final double height;
+
+  const _MissingNoteImage({required this.width, required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      color: AppColors.bgSurfaceLavender,
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.image_not_supported_outlined,
+        color: AppColors.textHint,
       ),
     );
   }

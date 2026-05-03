@@ -144,6 +144,25 @@ class NoteAttachmentModel {
       'file_size': fileSize,
     };
   }
+
+  String? get displaySource {
+    final local = localPath?.trim();
+    if (local != null && local.isNotEmpty) return local;
+    final remote = fileUrl?.trim();
+    if (remote != null && remote.isNotEmpty) return remote;
+    return null;
+  }
+
+  bool get isImage {
+    final type = fileType.trim().toLowerCase();
+    final source = displaySource?.toLowerCase() ?? '';
+    return type.startsWith('image/') ||
+        source.endsWith('.jpg') ||
+        source.endsWith('.jpeg') ||
+        source.endsWith('.png') ||
+        source.endsWith('.webp') ||
+        source.endsWith('.heic');
+  }
 }
 
 class NoteModel {
@@ -217,6 +236,36 @@ class NoteModel {
       createdAt: _jsonString(json['created_at']),
       updatedAt: _jsonString(json['updated_at']),
     );
+  }
+
+  List<NoteAttachmentModel> get imageAttachments {
+    final merged = <NoteAttachmentModel>[];
+    final seen = <String>{};
+
+    void addAttachment(NoteAttachmentModel attachment) {
+      if (!attachment.isImage) return;
+      final source = attachment.displaySource;
+      if (source == null || source.isEmpty || !seen.add(source)) return;
+      merged.add(attachment);
+    }
+
+    for (final attachment in attachments) {
+      addAttachment(attachment);
+    }
+
+    for (final block in structuredBlocks) {
+      if (block.type != 'image') continue;
+      addAttachment(
+        NoteAttachmentModel(
+          fileUrl: block.imageUrl,
+          localPath: block.localPath,
+          fileType: block.fileType ?? 'image/jpeg',
+          fileSize: 0,
+        ),
+      );
+    }
+
+    return merged;
   }
 }
 
