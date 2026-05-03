@@ -50,16 +50,19 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final service = _ref.read(analyticsServiceProvider);
-      final results = await Future.wait([
-        service.getTodayAnalytics(),
-        service.getWeeklyAnalytics(),
-        service.getInsights(),
-      ]);
+      final today = await service.getTodayAnalytics();
+      final weekly = await service.getWeeklyAnalytics();
+      var insights = <AnalyticsInsight>[];
+      try {
+        insights = await service.getInsights();
+      } catch (_) {
+        insights = const [];
+      }
 
       state = state.copyWith(
-        today: results[0] as TodayAnalytics,
-        weekly: results[1] as WeeklyAnalytics,
-        insights: results[2] as List<AnalyticsInsight>,
+        today: today,
+        weekly: weekly,
+        insights: insights,
         isLoading: false,
       );
     } on DioException catch (e) {

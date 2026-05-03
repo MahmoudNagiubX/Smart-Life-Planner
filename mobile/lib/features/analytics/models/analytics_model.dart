@@ -25,16 +25,16 @@ class TodayAnalytics {
 
   factory TodayAnalytics.fromJson(Map<String, dynamic> json) {
     return TodayAnalytics(
-      date: json['date'] as String,
-      tasksCompleted: json['tasks_completed'] as int,
-      tasksPending: json['tasks_pending'] as int,
-      focusMinutes: json['focus_minutes'] as int,
-      focusSessions: json['focus_sessions'] as int,
-      habitsCompleted: json['habits_completed'] as int,
-      totalHabits: json['total_habits'] as int,
-      prayersCompleted: json['prayers_completed'] as int,
-      totalPrayers: json['total_prayers'] as int,
-      productivityScore: json['productivity_score'] as int,
+      date: _readString(json['date']),
+      tasksCompleted: _readInt(json['tasks_completed']),
+      tasksPending: _readInt(json['tasks_pending']),
+      focusMinutes: _readInt(json['focus_minutes']),
+      focusSessions: _readInt(json['focus_sessions']),
+      habitsCompleted: _readInt(json['habits_completed']),
+      totalHabits: _readInt(json['total_habits']),
+      prayersCompleted: _readInt(json['prayers_completed']),
+      totalPrayers: _readInt(json['total_prayers'], fallback: 5),
+      productivityScore: _readInt(json['productivity_score']),
     );
   }
 }
@@ -58,12 +58,12 @@ class DailyBreakdown {
 
   factory DailyBreakdown.fromJson(Map<String, dynamic> json) {
     return DailyBreakdown(
-      date: json['date'] as String,
-      dayLabel: json['day_label'] as String,
-      tasksCompleted: json['tasks_completed'] as int,
-      focusMinutes: json['focus_minutes'] as int,
-      habitsCompleted: json['habits_completed'] as int,
-      prayersCompleted: json['prayers_completed'] as int,
+      date: _readString(json['date']),
+      dayLabel: _readString(json['day_label']),
+      tasksCompleted: _readInt(json['tasks_completed']),
+      focusMinutes: _readInt(json['focus_minutes']),
+      habitsCompleted: _readInt(json['habits_completed']),
+      prayersCompleted: _readInt(json['prayers_completed']),
     );
   }
 }
@@ -99,17 +99,18 @@ class WeeklyAnalytics {
   /// Notes: Converts grouped backend analytics into app-ready summary models.
   factory WeeklyAnalytics.fromJson(Map<String, dynamic> json) {
     return WeeklyAnalytics(
-      weekStart: json['week_start'] as String,
-      weekEnd: json['week_end'] as String,
-      totalTasksCompleted: json['total_tasks_completed'] as int,
-      totalFocusMinutes: json['total_focus_minutes'] as int,
-      totalHabitsLogged: json['total_habits_logged'] as int,
-      totalPrayersCompleted: json['total_prayers_completed'] as int,
-      totalNotesCreated: json['total_notes_created'] as int? ?? 0,
-      bestHabitStreak: json['best_habit_streak'] as int,
-      avgProductivityScore: json['avg_productivity_score'] as int,
-      dailyBreakdown: (json['daily_breakdown'] as List<dynamic>)
-          .map((d) => DailyBreakdown.fromJson(d as Map<String, dynamic>))
+      weekStart: _readString(json['week_start']),
+      weekEnd: _readString(json['week_end']),
+      totalTasksCompleted: _readInt(json['total_tasks_completed']),
+      totalFocusMinutes: _readInt(json['total_focus_minutes']),
+      totalHabitsLogged: _readInt(json['total_habits_logged']),
+      totalPrayersCompleted: _readInt(json['total_prayers_completed']),
+      totalNotesCreated: _readInt(json['total_notes_created']),
+      bestHabitStreak: _readInt(json['best_habit_streak']),
+      avgProductivityScore: _readInt(json['avg_productivity_score']),
+      dailyBreakdown: (json['daily_breakdown'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(DailyBreakdown.fromJson)
           .toList(),
     );
   }
@@ -130,10 +131,22 @@ class AnalyticsInsight {
 
   factory AnalyticsInsight.fromJson(Map<String, dynamic> json) {
     return AnalyticsInsight(
-      type: json['type'] as String,
-      emoji: json['emoji'] as String,
-      title: json['title'] as String,
-      message: json['message'] as String,
+      type: _readString(json['type']),
+      emoji: _readString(json['emoji']),
+      title: _readString(json['title'], fallback: 'Insight'),
+      message: _readString(json['message']),
     );
   }
+}
+
+int _readInt(dynamic value, {int fallback = 0}) {
+  if (value is int) return value;
+  if (value is num) return value.round();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+String _readString(dynamic value, {String fallback = ''}) {
+  if (value is String) return value;
+  return value?.toString() ?? fallback;
 }

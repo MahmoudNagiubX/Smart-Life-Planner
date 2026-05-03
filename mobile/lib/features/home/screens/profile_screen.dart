@@ -146,49 +146,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
 
     Future<void> showEditNameDialog() async {
-      final controller = TextEditingController(text: fullName);
       final result = await showDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Display Name'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            maxLength: 120,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              hintText: 'Your display name',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('Save'),
-            ),
-          ],
-        ),
+        builder: (_) => _EditDisplayNameDialog(initialName: fullName),
       );
-      controller.dispose();
       if (result == null) return;
+      if (!context.mounted) return;
       final cleaned = result.trim().replaceAll(RegExp(r'\s+'), ' ');
       if (cleaned.isEmpty) {
-        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Display name cannot be empty.')),
         );
         return;
       }
-      final ok = await ref
-          .read(authProvider.notifier)
-          .updateProfileName(cleaned);
+      final messenger = ScaffoldMessenger.of(context);
+      final ok =
+          await ref.read(authProvider.notifier).updateProfileName(cleaned);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             ok
@@ -524,6 +499,58 @@ String _providerLabel(String provider) {
 }
 
 // ── Profile Hero Card ─────────────────────────────────────────────────────────
+
+class _EditDisplayNameDialog extends StatefulWidget {
+  final String initialName;
+
+  const _EditDisplayNameDialog({required this.initialName});
+
+  @override
+  State<_EditDisplayNameDialog> createState() => _EditDisplayNameDialogState();
+}
+
+class _EditDisplayNameDialogState extends State<_EditDisplayNameDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Display Name'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        maxLength: 120,
+        decoration: const InputDecoration(
+          labelText: 'Name',
+          hintText: 'Your display name',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
 
 class _ProfileHeroCard extends StatelessWidget {
   final String fullName;

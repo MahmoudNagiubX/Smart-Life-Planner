@@ -18,10 +18,11 @@ class AnalyticsService {
 
   Future<List<AnalyticsInsight>> getInsights() async {
     final response = await _apiClient.dio.get('/analytics/insights');
-    final data = response.data as Map<String, dynamic>;
-    return (data['insights'] as List<dynamic>)
-        .map((i) =>
-            AnalyticsInsight.fromJson(i as Map<String, dynamic>))
+    final data = response.data;
+    if (data is! Map<String, dynamic>) return const [];
+    return (data['insights'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(AnalyticsInsight.fromJson)
         .toList();
   }
 }

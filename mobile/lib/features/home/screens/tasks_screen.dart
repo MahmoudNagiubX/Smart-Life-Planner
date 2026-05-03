@@ -119,6 +119,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                 ),
                 children: [
                   _TabPill(label: 'Today', index: 0, controller: _tabController),
+                  _TabPill(label: 'Calendar', index: 8, controller: _tabController),
                   _TabPill(label: 'Inbox', index: 1, controller: _tabController),
                   _TabPill(label: 'Upcoming', index: 2, controller: _tabController),
                   _TabPill(label: 'Done', index: 3, controller: _tabController),
@@ -126,7 +127,6 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                   _TabPill(label: 'GTD', index: 5, controller: _tabController),
                   _TabPill(label: 'Kanban', index: 6, controller: _tabController),
                   _TabPill(label: 'Matrix', index: 7, controller: _tabController),
-                  _TabPill(label: 'Calendar', index: 8, controller: _tabController),
                 ],
               ),
             ),
@@ -2792,14 +2792,15 @@ class _TaskCard extends ConsumerWidget {
 
               // Task icon badge
               Container(
-                width: 34,
-                height: 34,
+                width: 32,
+                height: 32,
                 alignment: Alignment.center,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
-                child: Icon(iconData, size: 18, color: iconColor),
+                child: Icon(iconData, size: 17, color: iconColor),
               ),
               const SizedBox(width: 10.0),
 

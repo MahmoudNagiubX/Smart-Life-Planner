@@ -699,6 +699,7 @@ class _MetaRow extends StatelessWidget {
               width: 34,
               height: 34,
               alignment: Alignment.center,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -1031,7 +1032,7 @@ class _TaskIconPickerSheet extends StatelessWidget {
                   crossAxisCount: 5,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
-                  childAspectRatio: 0.75,
+                  childAspectRatio: 0.82,
                 ),
                 itemCount: _kTaskIcons.length,
                 itemBuilder: (context, index) {
@@ -1046,8 +1047,10 @@ class _TaskIconPickerSheet extends StatelessWidget {
                       children: [
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
-                          width: 52,
-                          height: 52,
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.center,
+                          clipBehavior: Clip.antiAlias,
                           decoration: BoxDecoration(
                             gradient:
                                 isSelected ? AppGradients.action : null,
@@ -1064,7 +1067,7 @@ class _TaskIconPickerSheet extends StatelessWidget {
                           ),
                           child: Icon(
                             entry.$2,
-                            size: 22,
+                            size: 20,
                             color: isSelected
                                 ? Colors.white
                                 : AppColors.brandPrimary,
