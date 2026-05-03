@@ -80,10 +80,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> updateProfileName(String fullName) async {
     try {
-      state = state.copyWith(error: null);
       await _ref.read(authServiceProvider).updateProfile(fullName: fullName);
-      // Always re-fetch the full user object so state stays consistent
-      // regardless of what the PATCH endpoint returns (may return partial data).
+      // Single state update via refreshUser — avoids double-rebuild that
+      // corrupts the render tree while the profile dialog is closing.
       await refreshUser();
       return true;
     } on DioException catch (e) {

@@ -34,8 +34,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
   late TabController _tabController;
 
   // Tab index mapping (matches cloud design order):
-  // 0=Today, 1=Inbox, 2=Upcoming, 3=Completed, 4=Smart, 5=GTD, 6=Kanban, 7=Matrix
-  static const _kTabCount = 8;
+  // 0=Today, 1=Inbox, 2=Upcoming, 3=Completed, 4=Smart, 5=GTD, 6=Kanban, 7=Matrix, 8=Calendar
+  static const _kTabCount = 9;
 
   @override
   void initState() {
@@ -126,6 +126,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                   _TabPill(label: 'GTD', index: 5, controller: _tabController),
                   _TabPill(label: 'Kanban', index: 6, controller: _tabController),
                   _TabPill(label: 'Matrix', index: 7, controller: _tabController),
+                  _TabPill(label: 'Calendar', index: 8, controller: _tabController),
                 ],
               ),
             ),
@@ -207,6 +208,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                               )
                               .toList(),
                         ),
+                        // 8 — Calendar
+                        const _TaskCalendarView(),
                       ],
                     ),
             ),
@@ -2694,6 +2697,7 @@ Color _taskIconColor(TaskModel task) {
 
 IconData _iconFromKey(String key) {
   return switch (key) {
+    'task'     => Icons.task_alt,
     'work'     => Icons.bar_chart,
     'meeting'  => Icons.phone_outlined,
     'study'    => Icons.menu_book_outlined,
@@ -2709,6 +2713,10 @@ IconData _iconFromKey(String key) {
     'sport'    => Icons.sports_outlined,
     'prayer'   => Icons.mosque_outlined,
     'idea'     => Icons.lightbulb_outline,
+    'writing'  => Icons.edit_outlined,
+    'email'    => Icons.email_outlined,
+    'video'    => Icons.videocam_outlined,
+    'data'     => Icons.analytics_outlined,
     _          => Icons.task_alt,
   };
 }
@@ -2786,11 +2794,12 @@ class _TaskCard extends ConsumerWidget {
               Container(
                 width: 34,
                 height: 34,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
-                child: Icon(iconData, size: 16, color: iconColor),
+                child: Icon(iconData, size: 18, color: iconColor),
               ),
               const SizedBox(width: 10.0),
 

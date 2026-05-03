@@ -67,6 +67,11 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
         isLoading: false,
         error: friendlyApiError(e, 'Failed to load analytics'),
       );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Analytics data could not be read: $e',
+      );
     }
   }
 }

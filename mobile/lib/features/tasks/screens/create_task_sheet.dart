@@ -698,11 +698,12 @@ class _MetaRow extends StatelessWidget {
             Container(
               width: 34,
               height: 34,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
-              child: Icon(icon, size: 16, color: iconColor),
+              child: Icon(icon, size: 18, color: iconColor),
             ),
             const SizedBox(width: AppSpacing.s12),
             Expanded(
@@ -1030,7 +1031,7 @@ class _TaskIconPickerSheet extends StatelessWidget {
                   crossAxisCount: 5,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
-                  childAspectRatio: 0.9,
+                  childAspectRatio: 0.75,
                 ),
                 itemCount: _kTaskIcons.length,
                 itemBuilder: (context, index) {
