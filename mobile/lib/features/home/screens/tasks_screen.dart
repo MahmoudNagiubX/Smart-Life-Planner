@@ -33,10 +33,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  // Tab index mapping (matches cloud design order):
+  // 0=Today, 1=Inbox, 2=Upcoming, 3=Completed, 4=Smart, 5=GTD, 6=Kanban, 7=Matrix
+  static const _kTabCount = 8;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: _kTabCount, vsync: this);
     _tabController.addListener(() => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tasksProvider.notifier).loadTasks();
@@ -73,30 +77,23 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
               child: Row(
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tasks',
-                          style: GoogleFonts.manrope(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textHeading,
-                            letterSpacing: -0.4,
-                            height: 1.2,
-                          ),
-                        ),
-                        Text(
-                          'Organize and crush your goals',
-                          style: GoogleFonts.manrope(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textBody,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Tasks',
+                      style: GoogleFonts.manrope(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textHeading,
+                        letterSpacing: -0.4,
+                        height: 1.2,
+                      ),
                     ),
                   ),
+                  _HeaderIconButton(
+                    icon: Icons.search,
+                    tooltip: 'Search tasks',
+                    onTap: () {},
+                  ),
+                  const SizedBox(width: AppSpacing.s8),
                   _HeaderIconButton(
                     icon: Icons.dashboard_customize_outlined,
                     tooltip: 'Task templates',
@@ -121,41 +118,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                   horizontal: AppSpacing.screenH,
                 ),
                 children: [
-                  _TabPill(
-                    label: 'Pending',
-                    index: 0,
-                    controller: _tabController,
-                  ),
-                  _TabPill(
-                    label: 'Completed',
-                    index: 1,
-                    controller: _tabController,
-                  ),
-                  _TabPill(
-                    label: 'Smart',
-                    index: 2,
-                    controller: _tabController,
-                  ),
-                  _TabPill(
-                    label: 'GTD',
-                    index: 3,
-                    controller: _tabController,
-                  ),
-                  _TabPill(
-                    label: 'Kanban',
-                    index: 4,
-                    controller: _tabController,
-                  ),
-                  _TabPill(
-                    label: 'Matrix',
-                    index: 5,
-                    controller: _tabController,
-                  ),
-                  _TabPill(
-                    label: 'Calendar',
-                    index: 6,
-                    controller: _tabController,
-                  ),
+                  _TabPill(label: 'Today', index: 0, controller: _tabController),
+                  _TabPill(label: 'Inbox', index: 1, controller: _tabController),
+                  _TabPill(label: 'Upcoming', index: 2, controller: _tabController),
+                  _TabPill(label: 'Done', index: 3, controller: _tabController),
+                  _TabPill(label: 'Smart', index: 4, controller: _tabController),
+                  _TabPill(label: 'GTD', index: 5, controller: _tabController),
+                  _TabPill(label: 'Kanban', index: 6, controller: _tabController),
+                  _TabPill(label: 'Matrix', index: 7, controller: _tabController),
                 ],
               ),
             ),
@@ -175,36 +145,60 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                   : TabBarView(
                       controller: _tabController,
                       children: [
+                        // 0 — Today
+                        _TodayView(
+                          tasks: state.tasks.where((t) => !t.isDeleted).toList(),
+                        ),
+                        // 1 — Inbox (pending, no due date)
                         _TaskList(
                           tasks: state.tasks
                               .where(
                                 (t) =>
-                                    t.status != 'completed' && !t.isDeleted,
+                                    t.status != 'completed' &&
+                                    !t.isDeleted &&
+                                    t.dueAt == null,
                               )
                               .toList(),
                           status: 'pending',
                         ),
+                        // 2 — Upcoming (has future due date)
+                        _TaskList(
+                          tasks: state.tasks
+                              .where(
+                                (t) =>
+                                    t.status != 'completed' &&
+                                    !t.isDeleted &&
+                                    t.dueAt != null,
+                              )
+                              .toList(),
+                          status: 'upcoming',
+                        ),
+                        // 3 — Done
                         _TaskList(
                           tasks: state.tasks
                               .where((t) => t.status == 'completed')
                               .toList(),
                           status: 'completed',
                         ),
+                        // 4 — Smart lists
                         _SmartListsView(
                           tasks: state.tasks
                               .where((t) => !t.isDeleted)
                               .toList(),
                         ),
+                        // 5 — GTD
                         _GtdBucketsView(
                           tasks: state.tasks
                               .where((t) => !t.isDeleted)
                               .toList(),
                         ),
+                        // 6 — Kanban
                         _KanbanBoardView(
                           tasks: state.tasks
                               .where((t) => !t.isDeleted)
                               .toList(),
                         ),
+                        // 7 — Matrix
                         _EisenhowerMatrixView(
                           tasks: state.tasks
                               .where(
@@ -213,7 +207,6 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                               )
                               .toList(),
                         ),
-                        const _TaskCalendarView(),
                       ],
                     ),
             ),
@@ -2340,6 +2333,240 @@ String _gtdStatusLabel(String status) {
   };
 }
 
+// ── Today view ────────────────────────────────────────────────────────────────
+
+class _TodayView extends ConsumerWidget {
+  final List<TaskModel> tasks;
+
+  const _TodayView({required this.tasks});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final pendingToday = tasks.where((t) => t.status != 'completed').toList();
+    final completedToday = tasks
+        .where((t) {
+          if (t.status != 'completed' || t.completedAt == null) return false;
+          final ca = DateTime.tryParse(t.completedAt!)?.toLocal();
+          return ca != null && _sameDay(ca, today);
+        })
+        .toList();
+
+    final doneCount = completedToday.length;
+    final remainingCount = pendingToday.length;
+    final totalCount = doneCount + remainingCount;
+    final progress = totalCount > 0 ? doneCount / totalCount : 0.0;
+
+    // Estimate total hours from estimated_minutes
+    final totalMinutes = pendingToday.fold<int>(
+      0,
+      (sum, t) => sum + (t.estimatedMinutes ?? 25),
+    );
+
+    // Group pending tasks by time of day
+    final morning = <TaskModel>[];
+    final afternoon = <TaskModel>[];
+    final evening = <TaskModel>[];
+    final noTime = <TaskModel>[];
+
+    for (final task in pendingToday) {
+      if (task.dueAt == null) {
+        noTime.add(task);
+        continue;
+      }
+      final due = DateTime.tryParse(task.dueAt!)?.toLocal();
+      if (due == null) { noTime.add(task); continue; }
+      final hour = due.hour;
+      if (hour < 12) {
+        morning.add(task);
+      } else if (hour < 17) {
+        afternoon.add(task);
+      } else {
+        evening.add(task);
+      }
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(tasksProvider.notifier).loadTasks(),
+      color: AppColors.brandPrimary,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenH, 0, AppSpacing.screenH, 138,
+        ),
+        children: [
+          // Progress card
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.s16),
+            decoration: BoxDecoration(
+              color: AppColors.bgSurface,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(color: AppColors.borderSoft),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.brandPrimary.withValues(alpha: 0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Donut ring
+                SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 5,
+                        backgroundColor: AppColors.borderSoft,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.brandPrimary,
+                        ),
+                        strokeCap: StrokeCap.round,
+                      ),
+                      Text(
+                        '$doneCount/$totalCount',
+                        style: GoogleFonts.manrope(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textHeading,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Today's progress",
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textHeading,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$doneCount done · $remainingCount remaining'
+                        '${totalMinutes > 0 ? ' · ${_formatHours(totalMinutes)}' : ''}',
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          color: AppColors.textBody,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {},
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgSurfaceLavender,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome,
+                          size: 12,
+                          color: AppColors.brandPrimary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'AI Plan',
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.brandPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s20),
+
+          if (morning.isNotEmpty) ...[
+            _TimeGroupHeader(label: 'MORNING'),
+            const SizedBox(height: AppSpacing.s8),
+            ...morning.map((t) => _TaskCard(task: t)),
+            const SizedBox(height: AppSpacing.s12),
+          ],
+          if (afternoon.isNotEmpty) ...[
+            _TimeGroupHeader(label: 'AFTERNOON'),
+            const SizedBox(height: AppSpacing.s8),
+            ...afternoon.map((t) => _TaskCard(task: t)),
+            const SizedBox(height: AppSpacing.s12),
+          ],
+          if (evening.isNotEmpty) ...[
+            _TimeGroupHeader(label: 'EVENING'),
+            const SizedBox(height: AppSpacing.s8),
+            ...evening.map((t) => _TaskCard(task: t)),
+            const SizedBox(height: AppSpacing.s12),
+          ],
+          if (noTime.isNotEmpty) ...[
+            if (morning.isNotEmpty || afternoon.isNotEmpty || evening.isNotEmpty)
+              _TimeGroupHeader(label: 'ANYTIME'),
+            if (morning.isNotEmpty || afternoon.isNotEmpty || evening.isNotEmpty)
+              const SizedBox(height: AppSpacing.s8),
+            ...noTime.map((t) => _TaskCard(task: t)),
+          ],
+          if (pendingToday.isEmpty)
+            AppEmptyState(
+              icon: Icons.task_alt_outlined,
+              title: 'All clear for today',
+              message: 'No pending tasks. Add one to start planning.',
+              accentColor: AppColors.brandPrimary,
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _formatHours(int minutes) {
+    if (minutes < 60) return '${minutes}m';
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return m == 0 ? '${h}h' : '${h}h ${m}m';
+  }
+}
+
+class _TimeGroupHeader extends StatelessWidget {
+  final String label;
+
+  const _TimeGroupHeader({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: GoogleFonts.manrope(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textHint,
+        letterSpacing: 0.8,
+      ),
+    );
+  }
+}
+
 // ── Task list ─────────────────────────────────────────────────────────────────
 
 class _TaskList extends ConsumerWidget {
@@ -2403,6 +2630,89 @@ class _TaskList extends ConsumerWidget {
   }
 }
 
+// ── Task icon helpers ─────────────────────────────────────────────────────────
+
+IconData _taskIconData(TaskModel task) {
+  final cat = (task.category ?? '').toLowerCase();
+  if (cat.isEmpty) return Icons.task_alt;
+  if (cat.contains('work') || cat.contains('job') || cat.contains('office')) {
+    return Icons.bar_chart;
+  }
+  if (cat.contains('meeting') || cat.contains('call') || cat.contains('phone')) {
+    return Icons.phone_outlined;
+  }
+  if (cat.contains('read') || cat.contains('study') || cat.contains('book') ||
+      cat.contains('learn')) {
+    return Icons.menu_book_outlined;
+  }
+  if (cat.contains('shop') || cat.contains('errand') || cat.contains('buy') ||
+      cat.contains('grocery')) {
+    return Icons.shopping_cart_outlined;
+  }
+  if (cat.contains('code') || cat.contains('dev') || cat.contains('tech') ||
+      cat.contains('programming')) {
+    return Icons.terminal_outlined;
+  }
+  if (cat.contains('health') || cat.contains('gym') || cat.contains('exercise') ||
+      cat.contains('fitness')) {
+    return Icons.fitness_center_outlined;
+  }
+  if (cat.contains('focus') || cat.contains('deep')) {
+    return Icons.psychology_outlined;
+  }
+  if (cat.contains('prayer') || cat.contains('spiritual')) {
+    return Icons.mosque_outlined;
+  }
+  if (cat.contains('family') || cat.contains('home')) {
+    return Icons.home_outlined;
+  }
+  if (cat.contains('travel') || cat.contains('trip')) {
+    return Icons.flight_outlined;
+  }
+  // icon: prefix used by icon picker
+  if (cat.startsWith('icon:')) {
+    return _iconFromKey(cat.substring(5));
+  }
+  return Icons.task_alt;
+}
+
+Color _taskIconColor(TaskModel task) {
+  final cat = (task.category ?? '').toLowerCase();
+  if (cat.contains('work') || cat.contains('job')) return AppColors.brandPink;
+  if (cat.contains('meeting') || cat.contains('call')) return AppColors.infoColor;
+  if (cat.contains('read') || cat.contains('study') || cat.contains('book')) {
+    return AppColors.brandPrimary;
+  }
+  if (cat.contains('shop') || cat.contains('errand')) return AppColors.brandGold;
+  if (cat.contains('code') || cat.contains('dev')) return AppColors.brandViolet;
+  if (cat.contains('health') || cat.contains('gym')) return AppColors.successColor;
+  if (cat.contains('focus')) return AppColors.brandPrimary;
+  if (cat.contains('prayer')) return AppColors.brandViolet;
+  if (cat.startsWith('icon:')) return AppColors.brandPrimary;
+  return AppColors.textBody;
+}
+
+IconData _iconFromKey(String key) {
+  return switch (key) {
+    'work'     => Icons.bar_chart,
+    'meeting'  => Icons.phone_outlined,
+    'study'    => Icons.menu_book_outlined,
+    'shopping' => Icons.shopping_cart_outlined,
+    'code'     => Icons.terminal_outlined,
+    'health'   => Icons.fitness_center_outlined,
+    'home'     => Icons.home_outlined,
+    'travel'   => Icons.flight_outlined,
+    'finance'  => Icons.account_balance_outlined,
+    'creative' => Icons.palette_outlined,
+    'food'     => Icons.restaurant_outlined,
+    'music'    => Icons.music_note_outlined,
+    'sport'    => Icons.sports_outlined,
+    'prayer'   => Icons.mosque_outlined,
+    'idea'     => Icons.lightbulb_outline,
+    _          => Icons.task_alt,
+  };
+}
+
 // ── Task card ─────────────────────────────────────────────────────────────────
 
 class _TaskCard extends ConsumerWidget {
@@ -2414,6 +2724,8 @@ class _TaskCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pColor = _priorityColor(task.priority);
     final isCompleted = task.status == 'completed';
+    final iconData = _taskIconData(task);
+    final iconColor = _taskIconColor(task);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.listGap),
@@ -2454,10 +2766,12 @@ class _TaskCard extends ConsumerWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isCompleted
-                        ? AppColors.successColor
+                        ? AppColors.brandViolet
                         : Colors.transparent,
                     border: Border.all(
-                      color: isCompleted ? AppColors.successColor : pColor,
+                      color: isCompleted
+                          ? AppColors.brandViolet
+                          : AppColors.borderSoft,
                       width: 2,
                     ),
                   ),
@@ -2466,15 +2780,29 @@ class _TaskCard extends ConsumerWidget {
                       : null,
                 ),
               ),
-              const SizedBox(width: AppSpacing.s12),
+              const SizedBox(width: 10.0),
 
-              // Title + due
+              // Task icon badge
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(iconData, size: 16, color: iconColor),
+              ),
+              const SizedBox(width: 10.0),
+
+              // Title + metadata
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       task.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.manrope(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -2486,16 +2814,38 @@ class _TaskCard extends ConsumerWidget {
                             : null,
                       ),
                     ),
-                    if (task.dueAt != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        'Due ${task.dueAt!.substring(0, 10)}',
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          color: AppColors.textBody,
-                        ),
-                      ),
-                    ],
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        if (task.category != null &&
+                            !task.category!.startsWith('icon:'))
+                          Text(
+                            task.category!,
+                            style: GoogleFonts.manrope(
+                              fontSize: 11,
+                              color: AppColors.textBody,
+                            ),
+                          ),
+                        if (task.category != null &&
+                            !task.category!.startsWith('icon:') &&
+                            task.dueAt != null)
+                          Text(
+                            ' · ',
+                            style: GoogleFonts.manrope(
+                              fontSize: 11,
+                              color: AppColors.textHint,
+                            ),
+                          ),
+                        if (task.dueAt != null)
+                          Text(
+                            _shortDueLabel(task.dueAt!),
+                            style: GoogleFonts.manrope(
+                              fontSize: 11,
+                              color: AppColors.textBody,
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -2503,7 +2853,7 @@ class _TaskCard extends ConsumerWidget {
               // Priority badge
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
+                  horizontal: 9,
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
@@ -2511,7 +2861,11 @@ class _TaskCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: Text(
-                  task.priority,
+                  task.priority == 'high'
+                      ? 'High'
+                      : task.priority == 'medium'
+                      ? 'Med'
+                      : 'Low',
                   style: GoogleFonts.manrope(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -2525,7 +2879,7 @@ class _TaskCard extends ConsumerWidget {
                 PopupMenuButton<String>(
                   tooltip: 'Move task',
                   icon: Icon(
-                    Icons.drive_file_move_outlined,
+                    Icons.more_vert,
                     size: 18,
                     color: AppColors.textHint,
                   ),
@@ -2533,11 +2887,11 @@ class _TaskCard extends ConsumerWidget {
                       .read(tasksProvider.notifier)
                       .moveTaskToStatus(task: task, status: status),
                   itemBuilder: (context) => _gtdMoveStatuses
-                      .where((status) => status != task.status)
+                      .where((s) => s != task.status)
                       .map(
-                        (status) => PopupMenuItem(
-                          value: status,
-                          child: Text('Move to ${_gtdStatusLabel(status)}'),
+                        (s) => PopupMenuItem(
+                          value: s,
+                          child: Text('Move to ${_gtdStatusLabel(s)}'),
                         ),
                       )
                       .toList(),
@@ -2556,7 +2910,7 @@ class _TaskCard extends ConsumerWidget {
                   await ref.read(tasksProvider.notifier).deleteTask(task.id);
                 },
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 4),
+                  padding: const EdgeInsets.only(left: 2),
                   child: Icon(
                     Icons.delete_outline,
                     size: 18,
@@ -2570,4 +2924,19 @@ class _TaskCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _shortDueLabel(String iso) {
+  final d = DateTime.tryParse(iso)?.toLocal();
+  if (d == null) return '';
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final due = DateTime(d.year, d.month, d.day);
+  final diff = due.difference(today).inDays;
+  if (diff == 0) return 'Today · ${_timeLabel(iso)}';
+  if (diff == 1) return 'Tomorrow';
+  if (diff == -1) return 'Yesterday';
+  if (diff < 0) return 'Overdue';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return '${months[d.month - 1]} ${d.day}';
 }
