@@ -144,6 +144,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           return _HabitCard(
                             habit: habit,
                             isCompletedToday: isCompleted,
+                            onEdit: _openCreateHabitSheet,
                           );
                         },
                       ),
@@ -161,13 +162,13 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
     );
   }
 
-  Future<void> _openCreateHabitSheet() async {
+  Future<void> _openCreateHabitSheet([HabitModel? habit]) async {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.sheetBr),
-      builder: (_) => const CreateHabitSheet(),
+      builder: (_) => CreateHabitSheet(habit: habit),
     );
   }
 }
@@ -419,8 +420,13 @@ class _HabitFilterChip extends StatelessWidget {
 class _HabitCard extends ConsumerWidget {
   final HabitModel habit;
   final bool isCompletedToday;
+  final ValueChanged<HabitModel> onEdit;
 
-  const _HabitCard({required this.habit, required this.isCompletedToday});
+  const _HabitCard({
+    required this.habit,
+    required this.isCompletedToday,
+    required this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -446,11 +452,18 @@ class _HabitCard extends ConsumerWidget {
               color: _habitAccentColor(habit).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: Icon(
-              _iconForCategory(habit.category ?? habit.frequencyType),
-              color: _habitAccentColor(habit),
-              size: AppIconSize.cardHeader,
-            ),
+            child: _displayHabitEmoji(habit) != null
+                ? Center(
+                    child: Text(
+                      _displayHabitEmoji(habit)!,
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                  )
+                : Icon(
+                    _iconForCategory(habit.category ?? habit.frequencyType),
+                    color: _habitAccentColor(habit),
+                    size: AppIconSize.cardHeader,
+                  ),
           ),
           const SizedBox(width: AppSpacing.s12),
           GestureDetector(
@@ -541,6 +554,10 @@ class _HabitCard extends ConsumerWidget {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, size: 18),
             onSelected: (value) async {
+              if (value == 'edit') {
+                onEdit(habit);
+                return;
+              }
               if (value == 'set_reminder') {
                 final picked = await showTimePicker(
                   context: context,
@@ -578,6 +595,7 @@ class _HabitCard extends ConsumerWidget {
               }
             },
             itemBuilder: (_) => [
+              const PopupMenuItem(value: 'edit', child: Text('Edit habit')),
               const PopupMenuItem(
                 value: 'set_reminder',
                 child: Text('Set reminder'),
@@ -670,6 +688,12 @@ Color _habitAccentColor(HabitModel habit) {
     default:
       return AppColors.brandPrimary;
   }
+}
+
+String? _displayHabitEmoji(HabitModel habit) {
+  final emoji = habit.emoji?.trim();
+  if (emoji == null || emoji.isEmpty) return null;
+  return emoji;
 }
 
 String _labelForCategory(String category) {

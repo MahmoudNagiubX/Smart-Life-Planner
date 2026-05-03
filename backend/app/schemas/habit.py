@@ -21,6 +21,7 @@ class HabitCreate(BaseModel):
     frequency_type: Optional[str] = "daily"
     frequency_config: Optional[dict[str, Any]] = None
     category: Optional[str] = None
+    emoji: Optional[str] = None
     reminder_time: Optional[time] = None
 
     @field_validator("title")
@@ -47,6 +48,18 @@ class HabitCreate(BaseModel):
             raise ValueError("Invalid habit category")
         return normalized
 
+    @field_validator("emoji")
+    @classmethod
+    def emoji_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip()
+        if not normalized:
+            return None
+        if len(normalized) > 16:
+            raise ValueError("Habit emoji must be short")
+        return normalized
+
 
 class HabitUpdate(BaseModel):
     title: Optional[str] = None
@@ -54,6 +67,7 @@ class HabitUpdate(BaseModel):
     frequency_type: Optional[str] = None
     frequency_config: Optional[dict[str, Any]] = None
     category: Optional[str] = None
+    emoji: Optional[str] = None
     reminder_time: Optional[time] = None
     is_active: Optional[bool] = None
 
@@ -72,6 +86,18 @@ class HabitUpdate(BaseModel):
         normalized = v.strip().lower()
         if normalized not in VALID_HABIT_CATEGORIES:
             raise ValueError("Invalid habit category")
+        return normalized
+
+    @field_validator("emoji")
+    @classmethod
+    def update_emoji_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip()
+        if not normalized:
+            return None
+        if len(normalized) > 16:
+            raise ValueError("Habit emoji must be short")
         return normalized
 
 
@@ -94,6 +120,7 @@ class HabitResponse(BaseModel):
     frequency_type: str
     frequency_config: Optional[dict[str, Any]]
     category: Optional[str]
+    emoji: Optional[str]
     reminder_time: Optional[time]
     is_active: bool
     current_streak: int

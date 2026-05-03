@@ -38,6 +38,7 @@ class HabitService {
     String frequencyType = 'daily',
     Map<String, dynamic>? frequencyConfig,
     String? category,
+    String? emoji,
     String? reminderTime,
   }) async {
     final data = <String, dynamic>{
@@ -47,6 +48,7 @@ class HabitService {
     if (description != null) data['description'] = description;
     if (frequencyConfig != null) data['frequency_config'] = frequencyConfig;
     if (category != null) data['category'] = category;
+    if (emoji != null) data['emoji'] = emoji;
     if (reminderTime != null) data['reminder_time'] = reminderTime;
 
     final response = await _apiClient.dio.post('/habits', data: data);
@@ -57,19 +59,30 @@ class HabitService {
     required String habitId,
     String? title,
     String? description,
+    bool clearDescription = false,
     String? frequencyType,
     Map<String, dynamic>? frequencyConfig,
+    bool clearFrequencyConfig = false,
     String? category,
+    String? emoji,
     String? reminderTime,
+    bool clearEmoji = false,
     bool clearReminderTime = false,
     bool? isActive,
   }) async {
     final data = <String, dynamic>{};
     if (title != null) data['title'] = title;
-    if (description != null) data['description'] = description;
+    if (description != null || clearDescription) {
+      data['description'] = clearDescription ? null : description;
+    }
     if (frequencyType != null) data['frequency_type'] = frequencyType;
-    if (frequencyConfig != null) data['frequency_config'] = frequencyConfig;
+    if (frequencyConfig != null || clearFrequencyConfig) {
+      data['frequency_config'] = clearFrequencyConfig ? null : frequencyConfig;
+    }
     if (category != null) data['category'] = category;
+    if (emoji != null || clearEmoji) {
+      data['emoji'] = clearEmoji ? null : emoji;
+    }
     if (reminderTime != null || clearReminderTime) {
       data['reminder_time'] = clearReminderTime ? null : reminderTime;
     }

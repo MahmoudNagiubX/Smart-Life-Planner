@@ -5,6 +5,7 @@ class HabitModel {
   final String frequencyType;
   final Map<String, dynamic>? frequencyConfig;
   final String? category;
+  final String? emoji;
   final String? reminderTime;
   final bool isActive;
   final int currentStreak;
@@ -18,6 +19,7 @@ class HabitModel {
     required this.frequencyType,
     this.frequencyConfig,
     this.category,
+    this.emoji,
     this.reminderTime,
     required this.isActive,
     required this.currentStreak,
@@ -37,6 +39,7 @@ class HabitModel {
       frequencyType: _asString(json['frequency_type'], fallback: 'daily'),
       frequencyConfig: _asMap(json['frequency_config']),
       category: _asNullableString(json['category']),
+      emoji: _asNullableString(json['emoji']),
       reminderTime: _asNullableString(json['reminder_time']),
       isActive: _asBool(json['is_active'], fallback: true),
       currentStreak: _asInt(json['current_streak']),

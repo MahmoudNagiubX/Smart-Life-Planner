@@ -70,6 +70,7 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
     String frequencyType = 'daily',
     Map<String, dynamic>? frequencyConfig,
     String? category,
+    String? emoji,
     String? reminderTime,
   }) async {
     try {
@@ -80,6 +81,7 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
         frequencyType: frequencyType,
         frequencyConfig: frequencyConfig,
         category: category,
+        emoji: emoji,
         reminderTime: reminderTime,
       );
       await loadHabits();
@@ -189,6 +191,53 @@ class HabitsNotifier extends StateNotifier<HabitsState> {
     } catch (error) {
       debugPrint('Habit reminder update failed: $error');
       state = state.copyWith(error: 'Failed to update habit reminder');
+    }
+  }
+
+  Future<void> updateHabit({
+    required String habitId,
+    String? title,
+    String? description,
+    bool clearDescription = false,
+    String? frequencyType,
+    Map<String, dynamic>? frequencyConfig,
+    bool clearFrequencyConfig = false,
+    String? category,
+    String? emoji,
+    bool clearEmoji = false,
+    String? reminderTime,
+    bool clearReminderTime = false,
+  }) async {
+    try {
+      final updated = await _ref
+          .read(habitServiceProvider)
+          .updateHabit(
+            habitId: habitId,
+            title: title,
+            description: description,
+            clearDescription: clearDescription,
+            frequencyType: frequencyType,
+            frequencyConfig: frequencyConfig,
+            clearFrequencyConfig: clearFrequencyConfig,
+            category: category,
+            emoji: emoji,
+            clearEmoji: clearEmoji,
+            reminderTime: reminderTime,
+            clearReminderTime: clearReminderTime,
+          );
+      await _syncHabitReminder(updated);
+      state = state.copyWith(
+        habits: state.habits
+            .map((habit) => habit.id == habitId ? updated : habit)
+            .toList(),
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: friendlyApiError(e, 'Failed to update habit'),
+      );
+    } catch (error) {
+      debugPrint('Habit update failed: $error');
+      state = state.copyWith(error: 'Failed to update habit');
     }
   }
 

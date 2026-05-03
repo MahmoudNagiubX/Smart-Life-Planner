@@ -16,6 +16,7 @@ class Habit(Base):
     frequency_type: Mapped[str] = mapped_column(String(30), nullable=False, default="daily")
     frequency_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     category: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    emoji: Mapped[str | None] = mapped_column(String(32), nullable=True)
     reminder_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
