@@ -389,17 +389,119 @@ class _DashboardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = data.personalization;
-    final enabledWidgets = p.dailyDashboardWidgets
+    final ordered = p.dailyDashboardWidgets
         .where(defaultDashboardWidgets.contains)
         .toList();
+    final enabled = ordered.toSet();
 
-    if (enabledWidgets.isEmpty) {
+    if (enabled.isEmpty) {
       return _DashboardAllHiddenCard(onCustomize: onOpenCustomize);
     }
 
     final sections = <Widget>[];
-    for (final widgetId in enabledWidgets) {
-      final section = switch (widgetId) {
+    final done = <String>{};
+
+    for (final id in ordered) {
+      if (done.contains(id)) continue;
+
+      // ── Prayer + Focus → side-by-side row ──────────────────────────────
+      if (id == 'next_prayer' || id == 'focus_shortcut') {
+        final hasPrayer = enabled.contains('next_prayer');
+        final hasFocus = enabled.contains('focus_shortcut');
+        if (hasPrayer && hasFocus) {
+          sections.add(
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _NextPrayerCard(
+                      nextPrayer: p.nextPrayer,
+                      onTap: () => context.go(AppRoutes.prayer),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s16),
+                  Expanded(
+                    child: _FocusSessionCard(
+                      suggestedMinutes: p.focusShortcut.suggestedMinutes,
+                      onTap: () => context.go(AppRoutes.focus),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+          done.addAll(['next_prayer', 'focus_shortcut']);
+        } else if (hasPrayer && id == 'next_prayer') {
+          sections.add(
+            _NextPrayerCard(
+              nextPrayer: p.nextPrayer,
+              onTap: () => context.go(AppRoutes.prayer),
+            ),
+          );
+          done.add('next_prayer');
+        } else if (hasFocus && id == 'focus_shortcut') {
+          sections.add(
+            _FocusSessionCard(
+              suggestedMinutes: p.focusShortcut.suggestedMinutes,
+              onTap: () => context.go(AppRoutes.focus),
+            ),
+          );
+          done.add('focus_shortcut');
+        }
+        continue;
+      }
+
+      // ── Habits + AI → side-by-side row ─────────────────────────────────
+      if (id == 'habit_snapshot' || id == 'ai_plan') {
+        final hasHabits = enabled.contains('habit_snapshot');
+        final hasAI = enabled.contains('ai_plan');
+        if (hasHabits && hasAI) {
+          sections.add(
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _HabitsCard(
+                      snapshot: p.habitSnapshot,
+                      onTap: () => context.go(AppRoutes.habits),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s16),
+                  Expanded(
+                    child: _AiSuggestionCard(
+                      plan: p.aiPlanCard,
+                      onTap: () => context.go(AppRoutes.aiCoach),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+          done.addAll(['habit_snapshot', 'ai_plan']);
+        } else if (hasHabits && id == 'habit_snapshot') {
+          sections.add(
+            _HabitsCard(
+              snapshot: p.habitSnapshot,
+              onTap: () => context.go(AppRoutes.habits),
+            ),
+          );
+          done.add('habit_snapshot');
+        } else if (hasAI && id == 'ai_plan') {
+          sections.add(
+            _AiSuggestionCard(
+              plan: p.aiPlanCard,
+              onTap: () => context.go(AppRoutes.aiCoach),
+            ),
+          );
+          done.add('ai_plan');
+        }
+        continue;
+      }
+
+      // ── Single full-width widgets ───────────────────────────────────────
+      final section = switch (id) {
         'productivity_score' => _DailySummaryCard(
           progress: dayProgress,
           headline: summaryData.$1,
@@ -408,35 +510,10 @@ class _DashboardBody extends StatelessWidget {
           pendingCount: data.pendingCount,
           onViewDay: () => context.go(AppRoutes.tasks),
         ),
-        'next_prayer' => SizedBox(
-          height: 236,
-          child: _NextPrayerCard(
-            nextPrayer: p.nextPrayer,
-            onTap: () => context.go(AppRoutes.prayer),
-          ),
-        ),
-        'focus_shortcut' => SizedBox(
-          height: 286,
-          child: _FocusSessionCard(
-            suggestedMinutes: p.focusShortcut.suggestedMinutes,
-            onTap: () => context.go(AppRoutes.focus),
-          ),
-        ),
         'top_tasks' => _TodayTasksCard(
           topTasks: data.topTasks,
           onCompleteTask: onCompleteTask,
           onViewAll: () => context.go(AppRoutes.tasks),
-        ),
-        'habit_snapshot' => _HabitsCard(
-          snapshot: p.habitSnapshot,
-          onTap: () => context.go(AppRoutes.habits),
-        ),
-        'ai_plan' => SizedBox(
-          height: 160,
-          child: _AiSuggestionCard(
-            plan: p.aiPlanCard,
-            onTap: () => context.go(AppRoutes.aiCoach),
-          ),
         ),
         'journal_prompt' => _JournalPromptCard(
           prompt: p.journalPrompt,
@@ -448,15 +525,18 @@ class _DashboardBody extends StatelessWidget {
         ),
         _ => null,
       };
-      if (section != null) sections.add(section);
+      if (section != null) {
+        sections.add(section);
+        done.add(id);
+      }
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var index = 0; index < sections.length; index++) ...[
-          sections[index],
-          if (index != sections.length - 1) const SizedBox(height: 16),
+        for (var i = 0; i < sections.length; i++) ...[
+          sections[i],
+          if (i != sections.length - 1) const SizedBox(height: 16),
         ],
       ],
     );

@@ -1,12 +1,12 @@
 const defaultDashboardWidgets = [
-  'top_tasks',
-  'next_prayer',
-  'habit_snapshot',
-  'journal_prompt',
-  'ai_plan',
-  'focus_shortcut',
-  'productivity_score',
-  'quran_goal',
+  'productivity_score', // 1. Hero summary card
+  'next_prayer',        // 2a. Prayer (paired row with focus_shortcut)
+  'focus_shortcut',     // 2b. Focus (paired row with next_prayer)
+  'top_tasks',          // 3. Today's Tasks
+  'habit_snapshot',     // 4a. Habits (paired row with ai_plan)
+  'ai_plan',            // 4b. AI Suggestion (paired row with habit_snapshot)
+  'journal_prompt',     // 5. Optional journal prompt
+  'quran_goal',         // 6. Optional Quran goal
 ];
 
 class DashboardTopTask {
