@@ -38,6 +38,7 @@ abstract class AppRoutes {
   static const notificationSettings = '/home/settings/notifications';
   static const languageSettings = '/home/settings/language';
   static const analytics = '/home/analytics';
+  static const schedule = '/home/schedule';
   static const rankedTasks = '/home/ranked-tasks';
   static const voiceCapture = '/home/voice-capture';
   static const contextIntelligence = '/home/context-intelligence';

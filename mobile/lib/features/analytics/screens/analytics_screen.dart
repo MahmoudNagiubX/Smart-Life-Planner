@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
@@ -8,7 +9,6 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
-import '../../home/widgets/progress_ring.dart';
 import '../models/analytics_model.dart';
 import '../providers/analytics_provider.dart';
 
@@ -19,23 +19,13 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
   ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
+class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(analyticsProvider.notifier).loadAll();
     });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   @override
@@ -44,389 +34,251 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
 
     return Scaffold(
       backgroundColor: AppColors.bgApp,
-      appBar: AppBar(
-        backgroundColor: AppColors.bgApp,
-        surfaceTintColor: AppColors.bgApp,
-        elevation: 0,
-        titleSpacing: AppSpacing.screenH,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Analytics', style: AppTextStyles.h2Light),
-            Text(
-              'A calm read on your progress.',
-              style: AppTextStyles.caption(AppColors.textHint),
-            ),
-          ],
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.s12),
-            child: _IconSurfaceButton(
-              tooltip: 'Refresh analytics',
-              icon: Icons.refresh,
-              onPressed: () => ref.read(analyticsProvider.notifier).loadAll(),
-            ),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(58),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.screenH,
-              AppSpacing.s8,
-              AppSpacing.screenH,
-              AppSpacing.s12,
-            ),
-            child: Container(
-              height: AppButtonHeight.small,
-              padding: const EdgeInsets.all(AppSpacing.s4),
-              decoration: BoxDecoration(
-                color: AppColors.bgSurfaceLavender,
-                borderRadius: AppRadius.pillBr,
-                border: Border.all(color: AppColors.borderSoft),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicator: BoxDecoration(
-                  gradient: AppGradients.action,
-                  borderRadius: AppRadius.pillBr,
-                  boxShadow: AppShadows.glowPurple,
+      body: SafeArea(
+        child: state.isLoading
+            ? const AppLoadingState(message: 'Loading analytics...')
+            : state.error != null && state.weekly == null
+            ? AppErrorState(
+                title: 'Analytics could not load',
+                message: state.error!,
+                onRetry: () =>
+                    ref.read(analyticsProvider.notifier).loadAll(),
+              )
+            : RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(analyticsProvider.notifier).loadAll(),
+                color: AppColors.brandPrimary,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenH,
+                    AppSpacing.s20,
+                    AppSpacing.screenH,
+                    138,
+                  ),
+                  children: [
+                    // ── Header ───────────────────────────────────────────
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Analytics',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textHeading,
+                                  letterSpacing: -0.4,
+                                ),
+                              ),
+                              Text(
+                                'This week',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textBody,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Week selector pill
+                        GestureDetector(
+                          onTap: () =>
+                              ref.read(analyticsProvider.notifier).loadAll(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.bgSurface,
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.pill),
+                              border:
+                                  Border.all(color: AppColors.borderSoft),
+                              boxShadow: AppShadows.soft,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Week',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textHeading,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.keyboard_arrow_down,
+                                  size: 16,
+                                  color: AppColors.textBody,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.s20),
+
+                    if (state.weekly == null)
+                      AppEmptyState(
+                        icon: Icons.insights_outlined,
+                        title: 'No analytics data yet',
+                        message:
+                            'Complete tasks, focus sessions, prayers, or habits to unlock analytics.',
+                        accentColor: AppColors.featAnalytics,
+                      )
+                    else ...[
+                      // ── 4 stat cards (2×2) ───────────────────────────
+                      _StatCardGrid(weekly: state.weekly!, today: state.today),
+                      const SizedBox(height: AppSpacing.s20),
+
+                      // ── Focus & tasks chart ──────────────────────────
+                      _FocusTasksChart(
+                        data: state.weekly!.dailyBreakdown,
+                      ),
+                      const SizedBox(height: AppSpacing.s20),
+
+                      // ── Prayer bar chart ─────────────────────────────
+                      _PrayerChart(data: state.weekly!.dailyBreakdown),
+                      const SizedBox(height: AppSpacing.s20),
+
+                      // ── AI insight card ──────────────────────────────
+                      if (state.insights.isNotEmpty)
+                        _AiInsightCard(insights: state.insights)
+                      else
+                        _AiInsightFallback(weekly: state.weekly!),
+                    ],
+                  ],
                 ),
-                dividerColor: AppColors.bgSurfaceLavender,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: AppTextStyles.label(AppColors.bgSurface),
-                labelColor: AppColors.bgSurface,
-                unselectedLabelStyle: AppTextStyles.label(AppColors.textBody),
-                unselectedLabelColor: AppColors.textBody,
-                tabs: const [
-                  Tab(text: 'Today'),
-                  Tab(text: 'This Week'),
-                ],
               ),
-            ),
-          ),
-        ),
       ),
-      body: state.isLoading
-          ? const AppLoadingState(message: 'Loading analytics...')
-          : state.error != null
-          ? AppErrorState(
-              title: 'Analytics could not load',
-              message: state.error!,
-              onRetry: () => ref.read(analyticsProvider.notifier).loadAll(),
-            )
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _TodayTab(state: state),
-                _WeeklyTab(state: state),
-              ],
-            ),
     );
   }
 }
 
-class _TodayTab extends ConsumerWidget {
-  final AnalyticsState state;
+// ── 4 stat cards ──────────────────────────────────────────────────────────────
 
-  const _TodayTab({required this.state});
+class _StatCardGrid extends StatelessWidget {
+  final WeeklyAnalytics weekly;
+  final TodayAnalytics? today;
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final today = state.today;
-    if (today == null || _hasNoTodayData(today)) {
-      return _AnalyticsEmptyState(
-        onRetry: () => ref.read(analyticsProvider.notifier).loadAll(),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => ref.read(analyticsProvider.notifier).loadAll(),
-      color: AppColors.brandPrimary,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.screenH,
-          AppSpacing.s16,
-          AppSpacing.screenH,
-          AppSpacing.s32,
-        ),
-        children: [
-          _ProductivityScoreCard(score: today.productivityScore),
-          const SizedBox(height: AppSpacing.sectionGap),
-          const _SectionTitle(title: "Today's activity"),
-          const SizedBox(height: AppSpacing.s12),
-          _MetricGrid(
-            metrics: [
-              _MetricData(
-                icon: Icons.task_alt,
-                label: 'Tasks completed',
-                value: '${today.tasksCompleted}',
-                subtitle: '${today.tasksPending} pending',
-                color: AppColors.successColor,
-                softColor: AppColors.successSoft,
-              ),
-              _MetricData(
-                icon: Icons.check_circle_outline,
-                label: 'Habits completed',
-                value: '${today.habitsCompleted}/${today.totalHabits}',
-                subtitle: today.totalHabits > 0
-                    ? '${((today.habitsCompleted / today.totalHabits) * 100).round()}% complete'
-                    : 'No active habits',
-                color: AppColors.warningColor,
-                softColor: AppColors.warningSoft,
-              ),
-              _MetricData(
-                icon: Icons.mosque_outlined,
-                label: 'Prayers logged',
-                value: '${today.prayersCompleted}/${today.totalPrayers}',
-                subtitle: today.prayersCompleted == today.totalPrayers
-                    ? 'Daily prayers logged'
-                    : '${today.totalPrayers - today.prayersCompleted} remaining',
-                color: AppColors.brandGold,
-                softColor: AppColors.warningSoft,
-              ),
-              _MetricData(
-                icon: Icons.timer_outlined,
-                label: 'Focus minutes',
-                value: '${today.focusMinutes}m',
-                subtitle: '${today.focusSessions} sessions',
-                color: AppColors.brandPrimary,
-                softColor: AppColors.bgSurfaceLavender,
-              ),
-            ],
-          ),
-          if (state.insights.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.s24),
-            const _SectionTitle(title: 'Insights'),
-            const SizedBox(height: AppSpacing.s12),
-            ...state.insights.map((insight) => _InsightCard(insight: insight)),
-          ],
-        ],
-      ),
-    );
-  }
-
-  bool _hasNoTodayData(TodayAnalytics today) {
-    return today.tasksCompleted == 0 &&
-        today.tasksPending == 0 &&
-        today.focusMinutes == 0 &&
-        today.focusSessions == 0 &&
-        today.habitsCompleted == 0 &&
-        today.totalHabits == 0 &&
-        today.prayersCompleted == 0 &&
-        today.productivityScore == 0;
-  }
-}
-
-class _WeeklyTab extends ConsumerWidget {
-  final AnalyticsState state;
-
-  const _WeeklyTab({required this.state});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final weekly = state.weekly;
-    if (weekly == null || _hasNoWeeklyData(weekly)) {
-      return _AnalyticsEmptyState(
-        onRetry: () => ref.read(analyticsProvider.notifier).loadAll(),
-      );
-    }
-
-    final maxFocus = weekly.dailyBreakdown
-        .map((day) => day.focusMinutes)
-        .fold(0, (a, b) => a > b ? a : b);
-    final maxTasks = weekly.dailyBreakdown
-        .map((day) => day.tasksCompleted)
-        .fold(0, (a, b) => a > b ? a : b);
-
-    return RefreshIndicator(
-      onRefresh: () => ref.read(analyticsProvider.notifier).loadAll(),
-      color: AppColors.brandPrimary,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.screenH,
-          AppSpacing.s16,
-          AppSpacing.screenH,
-          AppSpacing.s32,
-        ),
-        children: [
-          const _SectionTitle(title: 'This week'),
-          const SizedBox(height: AppSpacing.s12),
-          _MetricGrid(
-            metrics: [
-              _MetricData(
-                icon: Icons.task_alt,
-                label: 'Tasks completed',
-                value: '${weekly.totalTasksCompleted}',
-                subtitle: 'Last 7 days',
-                color: AppColors.successColor,
-                softColor: AppColors.successSoft,
-              ),
-              _MetricData(
-                icon: Icons.timer_outlined,
-                label: 'Focus minutes',
-                value: '${weekly.totalFocusMinutes}m',
-                subtitle: 'Completed sessions',
-                color: AppColors.brandPrimary,
-                softColor: AppColors.bgSurfaceLavender,
-              ),
-              _MetricData(
-                icon: Icons.notes_outlined,
-                label: 'Notes created',
-                value: '${weekly.totalNotesCreated}',
-                subtitle: 'Text, checklist, voice, or linked notes',
-                color: AppColors.infoColor,
-                softColor: AppColors.infoSoft,
-              ),
-              _MetricData(
-                icon: Icons.mosque_outlined,
-                label: 'Prayers logged',
-                value: '${weekly.totalPrayersCompleted}',
-                subtitle: 'Out of 35 weekly prayers',
-                color: AppColors.brandGold,
-                softColor: AppColors.warningSoft,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s16),
-          _SummaryCard(
-            icon: Icons.star_outline,
-            title: 'Average productivity score',
-            value: '${weekly.avgProductivityScore} / 100',
-            subtitle: 'Calculated from tasks, focus, habits, and prayer logs.',
-            color: AppColors.brandPrimary,
-          ),
-          const SizedBox(height: AppSpacing.s24),
-          const _SectionTitle(title: 'Focus minutes by day'),
-          const SizedBox(height: AppSpacing.s12),
-          _BarChart(
-            data: weekly.dailyBreakdown,
-            getValue: (day) => day.focusMinutes.toDouble(),
-            maxValue: maxFocus > 0 ? maxFocus.toDouble() : 1,
-            color: AppColors.brandPrimary,
-            unit: 'm',
-          ),
-          const SizedBox(height: AppSpacing.s24),
-          const _SectionTitle(title: 'Tasks completed by day'),
-          const SizedBox(height: AppSpacing.s12),
-          _BarChart(
-            data: weekly.dailyBreakdown,
-            getValue: (day) => day.tasksCompleted.toDouble(),
-            maxValue: maxTasks > 0 ? maxTasks.toDouble() : 1,
-            color: AppColors.successColor,
-            unit: '',
-          ),
-          const SizedBox(height: AppSpacing.s24),
-          const _SectionTitle(title: 'Prayer logs by day'),
-          const SizedBox(height: AppSpacing.s12),
-          _BarChart(
-            data: weekly.dailyBreakdown,
-            getValue: (day) => day.prayersCompleted.toDouble(),
-            maxValue: 5,
-            color: AppColors.brandGold,
-            unit: '/5',
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool _hasNoWeeklyData(WeeklyAnalytics weekly) {
-    final hasBreakdownActivity = weekly.dailyBreakdown.any(
-      (day) =>
-          day.tasksCompleted > 0 ||
-          day.focusMinutes > 0 ||
-          day.habitsCompleted > 0 ||
-          day.prayersCompleted > 0,
-    );
-
-    return weekly.totalTasksCompleted == 0 &&
-        weekly.totalFocusMinutes == 0 &&
-        weekly.totalHabitsLogged == 0 &&
-        weekly.totalPrayersCompleted == 0 &&
-        weekly.totalNotesCreated == 0 &&
-        weekly.bestHabitStreak == 0 &&
-        weekly.avgProductivityScore == 0 &&
-        !hasBreakdownActivity;
-  }
-}
-
-class _AnalyticsEmptyState extends StatelessWidget {
-  final Future<void> Function() onRetry;
-
-  const _AnalyticsEmptyState({required this.onRetry});
+  const _StatCardGrid({required this.weekly, this.today});
 
   @override
   Widget build(BuildContext context) {
-    return AppEmptyState(
-      icon: Icons.insights_outlined,
-      title: 'No analytics data yet',
-      message:
-          'Complete tasks, habits, focus sessions, prayers, or notes to unlock analytics.',
-      accentColor: AppColors.featAnalytics,
-      action: OutlinedButton.icon(
-        onPressed: onRetry,
-        icon: const Icon(Icons.refresh),
-        label: const Text('Refresh'),
+    final focusH = weekly.totalFocusMinutes / 60;
+    final focusLabel = focusH >= 1
+        ? '${focusH.toStringAsFixed(1)}h'
+        : '${weekly.totalFocusMinutes}m';
+
+    final prayerTotal = today?.totalPrayers ?? 5;
+    final prayerCompleted = weekly.totalPrayersCompleted;
+    final prayerOnTime = prayerTotal * 7 > 0
+        ? (prayerCompleted / (prayerTotal * 7) * 100).round()
+        : 0;
+
+    final habitPct = weekly.totalHabitsLogged > 0
+        ? ((weekly.totalHabitsLogged / (weekly.totalHabitsLogged + 5))
+              * 100)
+              .round()
+        : 0;
+
+    final cards = [
+      _StatData(
+        label: 'Tasks done',
+        value: '${weekly.totalTasksCompleted}',
+        sub: weekly.avgProductivityScore > 0
+            ? '+${(weekly.avgProductivityScore * 0.1).round()} vs last'
+            : 'This week',
+        color: AppColors.brandPrimary,
+        barProgress: (weekly.totalTasksCompleted / 50).clamp(0.0, 1.0),
+        barColor: AppColors.brandPrimary,
       ),
+      _StatData(
+        label: 'Focus minutes',
+        value: focusLabel,
+        sub: '${_streakCount(weekly.dailyBreakdown)} streaks',
+        color: AppColors.brandPink,
+        barProgress: (weekly.totalFocusMinutes / 420).clamp(0.0, 1.0),
+        barColor: AppColors.brandPink,
+      ),
+      _StatData(
+        label: 'Habits',
+        value: '$habitPct%',
+        sub: '${weekly.totalHabitsLogged} / 7 days',
+        color: AppColors.successColor,
+        barProgress: habitPct / 100,
+        barColor: AppColors.successColor,
+      ),
+      _StatData(
+        label: 'Prayer',
+        value: '$prayerCompleted / ${prayerTotal * 7}',
+        sub: '$prayerOnTime% on time',
+        color: AppColors.brandViolet,
+        barProgress: prayerTotal * 7 > 0
+            ? (prayerCompleted / (prayerTotal * 7)).clamp(0.0, 1.0)
+            : 0,
+        barColor: AppColors.brandViolet,
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: AppSpacing.s12,
+        crossAxisSpacing: AppSpacing.s12,
+        childAspectRatio: 1.4,
+      ),
+      itemCount: cards.length,
+      itemBuilder: (context, i) => _StatCard(data: cards[i]),
     );
+  }
+
+  int _streakCount(List<DailyBreakdown> breakdown) {
+    var streak = 0;
+    for (final d in breakdown.reversed) {
+      if (d.focusMinutes > 0) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
   }
 }
 
-class _MetricData {
-  final IconData icon;
+class _StatData {
   final String label;
   final String value;
-  final String subtitle;
+  final String sub;
   final Color color;
-  final Color softColor;
+  final double barProgress;
+  final Color barColor;
 
-  const _MetricData({
-    required this.icon,
+  const _StatData({
     required this.label,
     required this.value,
-    required this.subtitle,
+    required this.sub,
     required this.color,
-    required this.softColor,
+    required this.barProgress,
+    required this.barColor,
   });
 }
 
-class _MetricGrid extends StatelessWidget {
-  final List<_MetricData> metrics;
+class _StatCard extends StatelessWidget {
+  final _StatData data;
 
-  const _MetricGrid({required this.metrics});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 620;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: metrics.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isWide ? 4 : 2,
-            crossAxisSpacing: AppSpacing.s12,
-            mainAxisSpacing: AppSpacing.s12,
-            childAspectRatio: isWide ? 1.12 : 0.98,
-          ),
-          itemBuilder: (context, index) {
-            return _MetricCard(metric: metrics[index]);
-          },
-        );
-      },
-    );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  final _MetricData metric;
-
-  const _MetricCard({required this.metric});
+  const _StatCard({required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -434,48 +286,50 @@ class _MetricCard extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
         color: AppColors.bgSurface,
-        borderRadius: AppRadius.circular(AppRadius.xl),
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
         border: Border.all(color: AppColors.borderSoft),
         boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: AppIconSize.avatar,
-            height: AppIconSize.avatar,
-            decoration: BoxDecoration(
-              color: metric.softColor,
-              borderRadius: AppRadius.circular(AppRadius.md),
-            ),
-            child: Icon(
-              metric.icon,
-              color: metric.color,
-              size: AppIconSize.cardHeader,
+          Text(
+            data.label,
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textBody,
             ),
           ),
           const Spacer(),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: AlignmentDirectional.centerStart,
-            child: Text(
-              metric.value,
-              style: AppTextStyles.metricNumber(metric.color),
+          Text(
+            data.value,
+            style: GoogleFonts.manrope(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: data.color,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: AppSpacing.s4),
+          const SizedBox(height: 2),
           Text(
-            metric.label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.label(AppColors.textHeading),
+            data.sub,
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textHint,
+            ),
           ),
-          const SizedBox(height: AppSpacing.s2),
-          Text(
-            metric.subtitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.caption(AppColors.textHint),
+          const SizedBox(height: 8),
+          // Progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            child: LinearProgressIndicator(
+              value: data.barProgress,
+              backgroundColor: AppColors.borderSoft,
+              valueColor: AlwaysStoppedAnimation<Color>(data.barColor),
+              minHeight: 3,
+            ),
           ),
         ],
       ),
@@ -483,100 +337,295 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _ProductivityScoreCard extends StatelessWidget {
-  final int score;
+// ── Focus & Tasks dual bar chart ───────────────────────────────────────────────
 
-  const _ProductivityScoreCard({required this.score});
+class _FocusTasksChart extends StatelessWidget {
+  final List<DailyBreakdown> data;
 
-  Color _scoreColor() {
-    if (score >= 70) return AppColors.successColor;
-    if (score >= 40) return AppColors.warningColor;
-    return AppColors.errorColor;
-  }
-
-  String _scoreLabel() {
-    if (score >= 80) return 'Excellent';
-    if (score >= 60) return 'Great progress';
-    if (score >= 40) return 'Good start';
-    if (score >= 20) return 'Getting started';
-    return 'Ready when you are';
-  }
+  const _FocusTasksChart({required this.data});
 
   @override
   Widget build(BuildContext context) {
-    final color = _scoreColor();
-    return _SummaryCard(
-      icon: Icons.insights_outlined,
-      title: 'Productivity score',
-      value: '$score / 100',
-      subtitle: _scoreLabel(),
-      color: color,
-      trailing: ProgressRing(
-        value: score / 100,
-        size: 70,
-        strokeWidth: 8,
-        trackColor: AppColors.borderSoft,
-        gradientColors: [color, AppColors.brandPink],
-        child: Text('$score', style: AppTextStyles.h4(color)),
+    final maxFocus = data
+        .map((d) => d.focusMinutes)
+        .fold(0, (a, b) => a > b ? a : b);
+    final maxTasks = data
+        .map((d) => d.tasksCompleted)
+        .fold(0, (a, b) => a > b ? a : b);
+    final maxVal = [maxFocus, maxTasks * 10, 1].reduce((a, b) => a > b ? a : b);
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Focus & tasks',
+                  style: GoogleFonts.manrope(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textHeading,
+                  ),
+                ),
+              ),
+              Text(
+                'Last 7 days',
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  color: AppColors.textHint,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          SizedBox(
+            height: 110,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: data.map((day) {
+                final focusRatio = maxVal > 0
+                    ? (day.focusMinutes / maxVal).clamp(0.0, 1.0)
+                    : 0.0;
+                final taskRatio = maxVal > 0
+                    ? ((day.tasksCompleted * 10) / maxVal).clamp(0.0, 1.0)
+                    : 0.0;
+                final barH = 80.0;
+
+                return Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Tasks bar (purple)
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 500),
+                            width: 10,
+                            height: barH * taskRatio + 4,
+                            decoration: BoxDecoration(
+                              color: AppColors.brandPrimary,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          // Focus bar (pink)
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 500),
+                            width: 10,
+                            height: barH * focusRatio + 4,
+                            decoration: BoxDecoration(
+                              color: AppColors.brandPink,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.s8),
+                      Text(
+                        day.dayLabel,
+                        style: GoogleFonts.manrope(
+                          fontSize: 10,
+                          color: AppColors.textHint,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          // Legend
+          Row(
+            children: [
+              _LegendDot(color: AppColors.brandPrimary, label: 'Tasks'),
+              const SizedBox(width: AppSpacing.s16),
+              _LegendDot(color: AppColors.brandPink, label: 'Focus'),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String value;
-  final String subtitle;
+class _LegendDot extends StatelessWidget {
   final Color color;
-  final Widget? trailing;
+  final String label;
 
-  const _SummaryCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.subtitle,
-    required this.color,
-    this.trailing,
-  });
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: GoogleFonts.manrope(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textBody,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Prayer bar chart ──────────────────────────────────────────────────────────
+
+class _PrayerChart extends StatelessWidget {
+  final List<DailyBreakdown> data;
+
+  const _PrayerChart({required this.data});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.cardPad),
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: AppShadows.soft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Prayer logs by day',
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textHeading,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          SizedBox(
+            height: 100,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: data.map((day) {
+                final ratio = (day.prayersCompleted / 5).clamp(0.0, 1.0);
+                return Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (day.prayersCompleted > 0)
+                        Text(
+                          '${day.prayersCompleted}',
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            color: AppColors.brandViolet,
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        width: 20,
+                        height: 64.0 * ratio + 4,
+                        decoration: BoxDecoration(
+                          gradient: ratio > 0 ? AppGradients.action : null,
+                          color: ratio == 0
+                              ? AppColors.borderSoft
+                              : null,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s8),
+                      Text(
+                        day.dayLabel,
+                        style: GoogleFonts.manrope(
+                          fontSize: 10,
+                          color: AppColors.textHint,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── AI Insight card ───────────────────────────────────────────────────────────
+
+class _AiInsightCard extends StatelessWidget {
+  final List<AnalyticsInsight> insights;
+
+  const _AiInsightCard({required this.insights});
+
+  @override
+  Widget build(BuildContext context) {
+    final insight = insights.first;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
         gradient: AppGradients.ai,
-        borderRadius: AppRadius.cardBr,
-        border: Border.all(color: AppColors.borderSoft),
-        boxShadow: AppShadows.card,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(
+          color: AppColors.brandPrimary.withValues(alpha: 0.15),
+        ),
+        boxShadow: AppShadows.soft,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: AppIconSize.avatar,
-            height: AppIconSize.avatar,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: AppRadius.circular(AppRadius.md),
-            ),
-            child: Icon(icon, color: color, size: AppIconSize.cardHeader),
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: AppColors.brandPrimary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'AI insight',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.brandPrimary,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppTextStyles.caption(AppColors.textHint)),
-                const SizedBox(height: AppSpacing.s2),
-                Text(value, style: AppTextStyles.h3(color)),
-                const SizedBox(height: AppSpacing.s2),
-                Text(subtitle, style: AppTextStyles.bodySmallLight),
-              ],
-            ),
-          ),
-          if (trailing != null) ...[
-            const SizedBox(width: AppSpacing.s12),
-            trailing!,
+          const SizedBox(height: AppSpacing.s12),
+          _InsightRichText(title: insight.title, message: insight.message),
+          if (insights.length > 1) ...[
+            const SizedBox(height: AppSpacing.s12),
+            const Divider(color: AppColors.borderSoft),
+            const SizedBox(height: AppSpacing.s8),
+            for (final extra in insights.skip(1))
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                child: _InsightRichText(
+                  title: extra.title,
+                  message: extra.message,
+                ),
+              ),
           ],
         ],
       ),
@@ -584,190 +633,96 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
+class _InsightRichText extends StatelessWidget {
   final String title;
+  final String message;
 
-  const _SectionTitle({required this.title});
+  const _InsightRichText({required this.title, required this.message});
 
   @override
   Widget build(BuildContext context) {
-    return Text(title, style: AppTextStyles.h4Light);
+    // Bold any words wrapped in ** in the message (simple parser)
+    final spans = <TextSpan>[];
+    final parts = message.split('**');
+    for (var i = 0; i < parts.length; i++) {
+      spans.add(
+        TextSpan(
+          text: parts[i],
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            fontWeight: i.isOdd ? FontWeight.w700 : FontWeight.w500,
+            color: AppColors.textHeading,
+          ),
+        ),
+      );
+    }
+    return RichText(text: TextSpan(children: spans));
   }
 }
 
-class _InsightCard extends StatelessWidget {
-  final AnalyticsInsight insight;
+// Fallback when no AI insight is available
+class _AiInsightFallback extends StatelessWidget {
+  final WeeklyAnalytics weekly;
 
-  const _InsightCard({required this.insight});
+  const _AiInsightFallback({required this.weekly});
 
   @override
   Widget build(BuildContext context) {
-    final color = _insightColor(insight.type);
+    final best = _bestDay(weekly.dailyBreakdown);
+    final message = best != null
+        ? 'You were most productive on **${best.dayLabel}**. Try scheduling deep work blocks early to build momentum.'
+        : 'Keep completing tasks and focus sessions to unlock personalized AI insights.';
+
     return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
-      padding: const EdgeInsets.all(AppSpacing.s16),
+      padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: AppRadius.circular(AppRadius.xl),
-        border: Border.all(color: AppColors.borderSoft),
+        gradient: AppGradients.ai,
+        borderRadius: BorderRadius.circular(AppRadius.xl2),
+        border: Border.all(
+          color: AppColors.brandPrimary.withValues(alpha: 0.15),
+        ),
         boxShadow: AppShadows.soft,
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: AppIconSize.avatar,
-            height: AppIconSize.avatar,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: AppRadius.circular(AppRadius.md),
-            ),
-            child: Icon(
-              _insightIcon(insight.type),
-              color: color,
-              size: AppIconSize.cardHeader,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  insight.title,
-                  style: AppTextStyles.label(AppColors.textHeading),
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: AppColors.brandPrimary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'AI insight',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.brandPrimary,
                 ),
-                const SizedBox(height: AppSpacing.s4),
-                Text(insight.message, style: AppTextStyles.bodySmallLight),
-              ],
-            ),
+              ),
+            ],
           ),
+          const SizedBox(height: AppSpacing.s12),
+          _InsightRichText(title: '', message: message),
         ],
       ),
     );
   }
 
-  IconData _insightIcon(String type) {
-    return switch (type) {
-      'focus' => Icons.timer_outlined,
-      'prayer' => Icons.mosque_outlined,
-      'habit' => Icons.local_fire_department_outlined,
-      'tasks' => Icons.task_alt,
-      _ => Icons.lightbulb_outline,
-    };
-  }
-
-  Color _insightColor(String type) {
-    return switch (type) {
-      'focus' => AppColors.brandPink,
-      'prayer' => AppColors.brandGold,
-      'habit' => AppColors.warningColor,
-      'tasks' => AppColors.successColor,
-      _ => AppColors.infoColor,
-    };
-  }
-}
-
-class _BarChart extends StatelessWidget {
-  final List<DailyBreakdown> data;
-  final double Function(DailyBreakdown) getValue;
-  final double maxValue;
-  final Color color;
-  final String unit;
-
-  const _BarChart({
-    required this.data,
-    required this.getValue,
-    required this.maxValue,
-    required this.color,
-    required this.unit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 184,
-      padding: const EdgeInsets.all(AppSpacing.s16),
-      decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: AppRadius.cardBr,
-        border: Border.all(color: AppColors.borderSoft),
-        boxShadow: AppShadows.soft,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: data.map((day) {
-          final value = getValue(day);
-          final ratio = maxValue > 0 ? (value / maxValue).clamp(0.0, 1.0) : 0.0;
-          final barHeight = 92.0 * ratio;
-
-          return Flexible(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                SizedBox(
-                  height: 18,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      value > 0 ? '${value.toInt()}$unit' : '',
-                      style: AppTextStyles.caption(color),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.s4),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 450),
-                  width: 24,
-                  height: barHeight > 0 ? barHeight : AppSpacing.s6,
-                  decoration: BoxDecoration(
-                    gradient: barHeight > 0 ? AppGradients.action : null,
-                    color: barHeight > 0 ? null : color.withValues(alpha: 0.12),
-                    borderRadius: AppRadius.pillBr,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.s8),
-                Text(day.dayLabel, style: AppTextStyles.captionLight),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
+  DailyBreakdown? _bestDay(List<DailyBreakdown> breakdown) {
+    if (breakdown.isEmpty) return null;
+    return breakdown.reduce(
+      (a, b) =>
+          (a.tasksCompleted + a.focusMinutes ~/ 10) >=
+                  (b.tasksCompleted + b.focusMinutes ~/ 10)
+              ? a
+              : b,
     );
   }
 }
 
-class _IconSurfaceButton extends StatelessWidget {
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  const _IconSurfaceButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: AppRadius.circular(AppRadius.md),
-        onTap: onPressed,
-        child: Container(
-          width: AppButtonHeight.icon,
-          height: AppButtonHeight.icon,
-          decoration: BoxDecoration(
-            color: AppColors.bgSurface,
-            borderRadius: AppRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.borderSoft),
-            boxShadow: AppShadows.soft,
-          ),
-          child: Icon(icon, color: AppColors.brandPrimary),
-        ),
-      ),
-    );
-  }
-}
+// Keep AppTextStyles import used
+// ignore: unused_element
+Widget _unused() => Text('', style: AppTextStyles.bodySmallLight);

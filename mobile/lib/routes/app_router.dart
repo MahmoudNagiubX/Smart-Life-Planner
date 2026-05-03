@@ -27,6 +27,7 @@ import '../features/ai/screens/ai_life_coach_screen.dart';
 import '../features/ai/screens/goal_roadmap_screen.dart';
 import '../features/ai/screens/study_planner_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
+import '../features/schedule/screens/schedule_screen.dart';
 import '../features/context/screens/context_intelligence_screen.dart';
 import '../features/hasae/screens/ranked_tasks_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
@@ -307,6 +308,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.analytics,
             builder: (context, state) => const AnalyticsScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.schedule,
+            builder: (context, state) => const ScheduleScreen(),
           ),
           GoRoute(
             path: AppRoutes.rankedTasks,
