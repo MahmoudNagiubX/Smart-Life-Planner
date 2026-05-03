@@ -119,7 +119,7 @@ class _GoalRoadmapScreenState extends ConsumerState<GoalRoadmapScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Goal Roadmap',
+          'Goal Roadmap Generator',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),

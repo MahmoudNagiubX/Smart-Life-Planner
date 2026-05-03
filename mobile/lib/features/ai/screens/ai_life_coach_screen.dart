@@ -24,8 +24,8 @@ class AiCoachFeature {
 const aiCoachFeatures = [
   AiCoachFeature(
     id: 'goal-roadmap',
-    title: 'Goal Roadmap',
-    description: 'Future guided roadmap for turning goals into milestones.',
+    title: 'Goal Roadmap Generator',
+    description: 'Turn a goal into milestones and editable task suggestions.',
     icon: Icons.flag_outlined,
   ),
   AiCoachFeature(
@@ -79,7 +79,7 @@ class AiLifeCoachScreen extends StatelessWidget {
           children: [
             Text('AI Assistant', style: AppTextStyles.h2Light),
             Text(
-              'Ready to help when AI flows are available.',
+              'Plan safely with editable previews and confirmation.',
               style: AppTextStyles.caption(AppColors.textHint),
             ),
           ],
@@ -159,7 +159,7 @@ class _AiHeaderCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.s4),
                 Text(
-                  'Coaching surfaces stay read-only until their safe AI flows are connected.',
+                  'Generate plans, review them, and create tasks only when you confirm.',
                   style: AppTextStyles.bodySmall(
                     AppColors.bgSurface.withValues(alpha: 0.86),
                   ),
@@ -213,7 +213,7 @@ class _AssistantMessageCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.s4),
                 Text(
-                  'Choose a prepared coaching area to preview what is coming next. No data is changed automatically from this screen.',
+                  'Choose a prepared coaching area. No tasks or projects are created automatically from this screen.',
                   style: AppTextStyles.bodySmallLight,
                 ),
               ],

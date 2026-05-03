@@ -102,6 +102,11 @@ class GoalRoadmapNotifier extends StateNotifier<GoalRoadmapState> {
           status: 'pending',
         );
       }
+      try {
+        await _ref.read(tasksProvider.notifier).loadTasks();
+      } catch (_) {
+        // Task creation succeeded; list refresh can recover on next screen open.
+      }
       state = state.copyWith(isConfirming: false, createdProjectId: project.id);
       return true;
     } on DioException catch (error) {
