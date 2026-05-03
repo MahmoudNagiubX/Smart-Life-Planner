@@ -494,6 +494,7 @@ class _NoteCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s12),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: _noteBackgroundColor(note.colorKey),
         borderRadius: BorderRadius.circular(AppRadius.xl2),
@@ -606,76 +607,97 @@ class _NoteCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 6),
-          if (note.noteType == 'checklist' && note.checklistItems.isNotEmpty)
-            _ChecklistPreview(
-              items: note.checklistItems,
-              onToggle: (item) {
-                final updatedItems = note.checklistItems
-                    .map(
-                      (current) => current.id == item.id
-                          ? current.copyWith(isCompleted: !current.isCompleted)
-                          : current,
-                    )
-                    .toList();
-                ref
-                    .read(notesProvider.notifier)
-                    .updateChecklistItems(note.id, updatedItems);
-              },
-            )
-          else
-            Text(
-              note.content,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textBody,
-                height: 1.35,
-                fontSize: 12,
+          Expanded(
+            child: ClipRect(
+              child: SingleChildScrollView(
+                primary: false,
+                physics: const NeverScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (note.noteType == 'checklist' &&
+                        note.checklistItems.isNotEmpty)
+                      _ChecklistPreview(
+                        items: note.checklistItems,
+                        onToggle: (item) {
+                          final updatedItems = note.checklistItems
+                              .map(
+                                (current) => current.id == item.id
+                                    ? current.copyWith(
+                                        isCompleted: !current.isCompleted,
+                                      )
+                                    : current,
+                              )
+                              .toList();
+                          ref
+                              .read(notesProvider.notifier)
+                              .updateChecklistItems(note.id, updatedItems);
+                        },
+                      )
+                    else
+                      Text(
+                        note.content,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textBody,
+                          height: 1.35,
+                          fontSize: 12,
+                        ),
+                      ),
+                    if (note.structuredBlocks.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _StructuredBlocksPreview(blocks: note.structuredBlocks),
+                    ],
+                    if (note.attachments.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _AttachmentPreview(attachments: note.attachments),
+                    ],
+                    if (note.reminderAt != null) ...[
+                      const SizedBox(height: 8),
+                      _ReminderChip(reminderAt: note.reminderAt!),
+                    ],
+                    if (note.taskId != null) ...[
+                      const SizedBox(height: 8),
+                      const _PreviewChip(
+                        icon: Icons.task_alt,
+                        label: 'Linked task',
+                      ),
+                    ],
+                    if (note.sourceType == 'voice') ...[
+                      const SizedBox(height: 8),
+                      const _PreviewChip(
+                        icon: Icons.mic_none,
+                        label: 'Voice transcript',
+                      ),
+                    ],
+                    if (note.tags.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          ...note.tags
+                              .take(3)
+                              .map(
+                                (tag) => InkWell(
+                                  borderRadius: BorderRadius.circular(999),
+                                  onTap: () => ref
+                                      .read(notesProvider.notifier)
+                                      .loadNotes(tag: tag),
+                                  child: _TagChip(tag: tag),
+                                ),
+                              ),
+                          if (note.tags.length > 3)
+                            _TagChip(tag: '+${note.tags.length - 3}'),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
-          if (note.structuredBlocks.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            _StructuredBlocksPreview(blocks: note.structuredBlocks),
-          ],
-          if (note.attachments.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            _AttachmentPreview(attachments: note.attachments),
-          ],
-          if (note.reminderAt != null) ...[
-            const SizedBox(height: 10),
-            _ReminderChip(reminderAt: note.reminderAt!),
-          ],
-          if (note.taskId != null) ...[
-            const SizedBox(height: 10),
-            const Chip(
-              avatar: Icon(Icons.task_alt, size: 15),
-              label: Text('Linked task'),
-            ),
-          ],
-          if (note.sourceType == 'voice') ...[
-            const SizedBox(height: 10),
-            const Chip(
-              avatar: Icon(Icons.mic_none, size: 15),
-              label: Text('Voice transcript'),
-            ),
-          ],
-          if (note.tags.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: note.tags
-                  .map(
-                    (tag) => InkWell(
-                      borderRadius: BorderRadius.circular(999),
-                      onTap: () =>
-                          ref.read(notesProvider.notifier).loadNotes(tag: tag),
-                      child: _TagChip(tag: tag),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
+          ),
           const SizedBox(height: 8),
           Text(
             note.isArchived && note.archivedAt != null
@@ -807,7 +829,53 @@ class _TagChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.borderSoft),
       ),
-      child: Text('#$tag', style: AppTextStyles.label(AppColors.brandPrimary)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 92),
+        child: Text(
+          tag.startsWith('+') ? tag : '#$tag',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.label(AppColors.brandPrimary),
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _PreviewChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.bgSurface.withValues(alpha: 0.58),
+          borderRadius: AppRadius.pillBr,
+          border: Border.all(color: AppColors.borderSoft),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppColors.brandPrimary),
+            const SizedBox(width: 5),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 82),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption(AppColors.textSecondary),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -820,7 +888,7 @@ class _ChecklistPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visibleItems = items.take(4).toList();
+    final visibleItems = items.take(3).toList();
     final remaining = items.length - visibleItems.length;
 
     return Column(
@@ -834,8 +902,8 @@ class _ChecklistPreview extends StatelessWidget {
               child: Row(
                 children: [
                   SizedBox(
-                    width: 28,
-                    height: 28,
+                    width: 24,
+                    height: 24,
                     child: Checkbox(
                       value: item.isCompleted,
                       onChanged: (_) => onToggle(item),
@@ -959,11 +1027,11 @@ class _StructuredBlocksPreview extends StatelessWidget {
         if (imageBlock != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),
-            child: Chip(
-              avatar: const Icon(Icons.image_outlined, size: 15),
-              label: Text(
-                imageBlock.localPath == null ? 'Image block' : 'Local image',
-              ),
+            child: _PreviewChip(
+              icon: Icons.image_outlined,
+              label: imageBlock.localPath == null
+                  ? 'Image block'
+                  : 'Local image',
             ),
           ),
         if (taskBlock != null)
@@ -973,12 +1041,10 @@ class _StructuredBlocksPreview extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
-                Chip(
-                  avatar: const Icon(Icons.task_alt, size: 15),
-                  label: Text(
-                    taskBlock.taskTitle ?? taskBlock.taskId ?? 'Linked task',
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                _PreviewChip(
+                  icon: Icons.task_alt,
+                  label:
+                      taskBlock.taskTitle ?? taskBlock.taskId ?? 'Linked task',
                 ),
               ],
             ),
@@ -1001,10 +1067,7 @@ class _ReminderChip extends StatelessWidget {
         reminderAt.substring(0, safeEnd);
     return Align(
       alignment: Alignment.centerLeft,
-      child: Chip(
-        avatar: const Icon(Icons.notifications_outlined, size: 15),
-        label: Text(label),
-      ),
+      child: _PreviewChip(icon: Icons.notifications_outlined, label: label),
     );
   }
 }
@@ -1017,7 +1080,7 @@ class _AttachmentPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 76,
+      height: 58,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: attachments.length,
@@ -1028,19 +1091,19 @@ class _AttachmentPreview extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: path == null
                 ? Container(
-                    width: 76,
-                    height: 76,
+                    width: 58,
+                    height: 58,
                     color: Colors.black.withValues(alpha: 0.18),
                     child: const Icon(Icons.image_outlined),
                   )
                 : Image.file(
                     File(path),
-                    width: 76,
-                    height: 76,
+                    width: 58,
+                    height: 58,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
-                      width: 76,
-                      height: 76,
+                      width: 58,
+                      height: 58,
                       color: Colors.black.withValues(alpha: 0.18),
                       child: const Icon(Icons.broken_image_outlined),
                     ),

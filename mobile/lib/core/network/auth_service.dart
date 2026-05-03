@@ -120,6 +120,14 @@ class AuthService {
     return response.data;
   }
 
+  Future<Map<String, dynamic>> updateProfile({required String fullName}) async {
+    final response = await _apiClient.dio.patch(
+      '/auth/me',
+      data: {'full_name': fullName},
+    );
+    return response.data;
+  }
+
   Future<void> deleteAccount({String? password, String? confirmation}) async {
     await _apiClient.dio.delete(
       '/auth/delete-account',

@@ -41,6 +41,20 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UserProfileUpdate(BaseModel):
+    full_name: str
+
+    @field_validator("full_name")
+    @classmethod
+    def full_name_valid(cls, v: str) -> str:
+        cleaned = " ".join(v.split())
+        if not cleaned:
+            raise ValueError("Full name cannot be empty")
+        if len(cleaned) > 120:
+            raise ValueError("Full name is too long")
+        return cleaned
+
+
 class RegisterResponse(UserResponse):
     message: str = "Account created. Check your email for the verification code."
     development_code: str | None = None

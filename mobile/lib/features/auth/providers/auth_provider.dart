@@ -78,6 +78,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
+  Future<bool> updateProfileName(String fullName) async {
+    try {
+      state = state.copyWith(error: null);
+      final user = await _ref
+          .read(authServiceProvider)
+          .updateProfile(fullName: fullName);
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: user,
+        error: null,
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(error: _authDioError(e, 'Profile update failed'));
+      return false;
+    } catch (_) {
+      state = state.copyWith(error: 'Profile update failed');
+      return false;
+    }
+  }
+
   Future<String?> register({
     required String email,
     required String fullName,

@@ -70,6 +70,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return 'Good night';
   }
 
+  // ignore: unused_element
   String _greetingEmoji() {
     final hour = DateTime.now().hour;
     if (hour < 5 || hour >= 20) return '🌙';
@@ -140,9 +141,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final dashState = ref.watch(dashboardProvider);
-    final firstName = (authState.user?['full_name'] as String? ?? 'Mahmoud')
-        .split(' ')
-        .first;
+    final fullName = (authState.user?['full_name'] as String? ?? 'Mahmoud')
+        .trim();
+    final displayName = fullName.isEmpty ? 'Mahmoud' : fullName;
 
     return Scaffold(
       backgroundColor: AppColors.bgApp,
@@ -167,11 +168,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   children: [
                     // ── Header ────────────────────────────────────────────
                     _HomeHeader(
-                      greeting:
-                          '${_greeting()}, $firstName ${_greetingEmoji()}',
+                      greeting: '${_greeting()},',
+                      displayName: displayName,
                       dateLabel: _dateLabel(),
-                      initials: firstName.isNotEmpty
-                          ? firstName[0].toUpperCase()
+                      initials: displayName.isNotEmpty
+                          ? displayName[0].toUpperCase()
                           : 'M',
                       onCustomize: dashState.data != null
                           ? () => _openCustomize(dashState.data!)
@@ -221,12 +222,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 class _HomeHeader extends StatelessWidget {
   final String greeting;
+  final String displayName;
   final String dateLabel;
   final String initials;
   final VoidCallback? onCustomize;
 
   const _HomeHeader({
     required this.greeting,
+    required this.displayName,
     required this.dateLabel,
     required this.initials,
     this.onCustomize,
@@ -276,14 +279,26 @@ class _HomeHeader extends StatelessWidget {
               Text(
                 greeting,
                 style: GoogleFonts.manrope(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textHeading,
-                  letterSpacing: -0.3,
-                  height: 1.2,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textHint,
+                  letterSpacing: 0,
+                  height: 1.15,
                 ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                overflow: TextOverflow.clip,
+              ),
+              Text(
+                displayName,
+                style: GoogleFonts.manrope(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textHeading,
+                  letterSpacing: 0,
+                  height: 1.12,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.visible,
               ),
               const SizedBox(height: 2),
               Text(

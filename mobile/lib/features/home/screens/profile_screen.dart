@@ -99,6 +99,61 @@ class ProfileScreen extends ConsumerWidget {
       }
     }
 
+    Future<void> showEditNameDialog() async {
+      final controller = TextEditingController(text: fullName);
+      final result = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Display Name'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            maxLength: 120,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              hintText: 'Your display name',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(controller.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (result == null) return;
+      final cleaned = result.trim().replaceAll(RegExp(r'\s+'), ' ');
+      if (cleaned.isEmpty) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Display name cannot be empty.')),
+        );
+        return;
+      }
+      final ok = await ref
+          .read(authProvider.notifier)
+          .updateProfileName(cleaned);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? 'Display name updated.'
+                : ref.read(authProvider).error ?? 'Could not update name.',
+          ),
+          backgroundColor: ok ? AppColors.brandPrimary : AppColors.errorColor,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bgApp,
       body: CustomScrollView(
@@ -157,6 +212,14 @@ class ProfileScreen extends ConsumerWidget {
               child: _SettingsSection(
                 label: 'Account',
                 rows: [
+                  _SettingsRow(
+                    icon: Icons.badge_outlined,
+                    iconColor: AppColors.brandPrimary,
+                    iconBg: AppColors.bgSurfaceLavender,
+                    label: 'Display Name',
+                    value: fullName.isEmpty ? 'User' : fullName,
+                    onTap: showEditNameDialog,
+                  ),
                   _SettingsRow(
                     icon: Icons.lock_outlined,
                     iconColor: AppColors.textBody,
@@ -635,7 +698,15 @@ class _SettingsRow extends StatelessWidget {
               ),
             ),
             if (value != null) ...[
-              Text(value!, style: AppTextStyles.body(AppColors.textHint)),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: Text(
+                  value!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.body(AppColors.textHint),
+                ),
+              ),
               const SizedBox(width: 4),
             ],
             const Icon(

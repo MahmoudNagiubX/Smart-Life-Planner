@@ -160,7 +160,7 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen>
         return _StateCard(
           icon: Icons.mic_none_outlined,
           title: 'Tap to start recording',
-          subtitle: 'Speak naturally in Arabic or English. Max 60 seconds.',
+          subtitle: 'Speak a task in Arabic or English.',
           accentColor: AppColors.brandPrimary,
           child: Container(
             width: double.infinity,
@@ -171,7 +171,7 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen>
               border: Border.all(color: AppColors.borderSoft),
             ),
             child: Text(
-              '"Tomorrow I need to finish the assignment, prepare the slides, and buy milk"',
+              '"Tomorrow, finish the assignment and prepare slides"',
               textAlign: TextAlign.center,
               style: AppTextStyles.bodySmall(AppColors.brandPrimary),
             ),

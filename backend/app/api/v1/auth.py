@@ -48,6 +48,7 @@ from app.schemas.user import (
     VerifyResetCodeRequest,
     SetNewPasswordRequest,
     ChangePasswordRequest,
+    UserProfileUpdate,
     GoogleSignInRequest,
     AppleSignInRequest,
     DeleteAccountRequest,
@@ -511,6 +512,28 @@ async def get_me(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    settings = await get_settings_by_user_id(db, current_user.id)
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "auth_provider": current_user.auth_provider.value,
+        "is_active": current_user.is_active,
+        "is_verified": current_user.is_verified,
+        "created_at": current_user.created_at,
+        "onboarding_completed": settings.onboarding_completed if settings else False,
+    }
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    payload: UserProfileUpdate,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    current_user.full_name = payload.full_name
+    await db.commit()
+    await db.refresh(current_user)
     settings = await get_settings_by_user_id(db, current_user.id)
     return {
         "id": current_user.id,
