@@ -19,6 +19,12 @@ def generate_study_plan(
         difficulty.lower(),
         2,
     )
+    practice_target = {"easy": 10, "medium": 15, "hard": 20}.get(
+        difficulty.lower(),
+        15,
+    )
+    practice_minutes = min(practice_target, max(5, daily_minutes // 3))
+    study_minutes = max(10, daily_minutes - practice_minutes)
     plan = []
     for offset in range(usable_days):
         topic = clean_topics[offset % len(clean_topics)]
@@ -31,20 +37,23 @@ def generate_study_plan(
                 "title": (
                     f"Revise {topic}" if is_revision else f"Study {topic}"
                 ),
-                "study_minutes": max(20, daily_minutes - 15),
-                "practice_minutes": 15 + difficulty_factor * 5,
+                "study_minutes": study_minutes,
+                "practice_minutes": practice_minutes,
                 "revision": is_revision,
                 "priority": "high" if is_revision else "medium",
             }
         )
 
-    total_minutes = sum(item["study_minutes"] + item["practice_minutes"] for item in plan)
-    available_minutes = usable_days * daily_minutes
+    recommended_daily_minutes = 45 + difficulty_factor * 15
+    topic_load = len(clean_topics) * difficulty_factor
+    available_blocks = max(1, usable_days * max(1, daily_minutes // 45))
     return {
         "subject": subject,
         "exam_date": exam_date,
         "daily_plan": plan,
         "confidence": "medium",
-        "overload_warning": total_minutes > available_minutes,
+        "overload_warning": (
+            daily_minutes < recommended_daily_minutes or topic_load > available_blocks
+        ),
         "requires_confirmation": True,
     }

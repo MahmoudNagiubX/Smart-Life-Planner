@@ -31,7 +31,7 @@ const aiCoachFeatures = [
   AiCoachFeature(
     id: 'study-planner',
     title: 'Study Planner AI',
-    description: 'Future study plan suggestions based on deadlines and energy.',
+    description: 'Create an editable exam plan with study and practice tasks.',
     icon: Icons.school_outlined,
   ),
   AiCoachFeature(
