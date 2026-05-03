@@ -32,6 +32,9 @@ class TasksScreen extends ConsumerStatefulWidget {
 class _TasksScreenState extends ConsumerState<TasksScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  bool _isSearchVisible = false;
 
   // Tab index mapping (matches cloud design order):
   // 0=Today, 1=Inbox, 2=Upcoming, 3=Completed, 4=Smart, 5=GTD, 6=Kanban, 7=Matrix, 8=Calendar
@@ -53,12 +56,15 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(tasksProvider);
+    final searchedTasks = _filterTasks(state.tasks);
+    final isSearching = _searchQuery.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.bgApp,
@@ -89,9 +95,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                     ),
                   ),
                   _HeaderIconButton(
-                    icon: Icons.search,
+                    icon: _isSearchVisible ? Icons.close : Icons.search,
                     tooltip: 'Search tasks',
-                    onTap: () {},
+                    onTap: _toggleSearch,
                   ),
                   const SizedBox(width: AppSpacing.s8),
                   _HeaderIconButton(
@@ -108,6 +114,51 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                 ],
               ),
             ),
+            if (_isSearchVisible)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH,
+                  0,
+                  AppSpacing.screenH,
+                  AppSpacing.s12,
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: InputDecoration(
+                    hintText: 'Search tasks...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchQuery.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Clear search',
+                            icon: const Icon(Icons.close),
+                            onPressed: _clearSearch,
+                          ),
+                    filled: true,
+                    fillColor: AppColors.bgSurface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      borderSide: const BorderSide(
+                        color: AppColors.borderSoft,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      borderSide: const BorderSide(
+                        color: AppColors.borderSoft,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      borderSide: const BorderSide(
+                        color: AppColors.brandPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
             // ── Tab pills ─────────────────────────────────────────────
             SizedBox(
@@ -143,16 +194,26 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                       onRetry: () =>
                           ref.read(tasksProvider.notifier).loadTasks(),
                     )
+                  : isSearching && searchedTasks.isEmpty
+                  ? const AppEmptyState(
+                      icon: Icons.search_off_outlined,
+                      title: 'No matching tasks',
+                      message:
+                          'Try another task title, description, or category.',
+                      accentColor: AppColors.brandPrimary,
+                    )
                   : TabBarView(
                       controller: _tabController,
                       children: [
                         // 0 — Today
                         _TodayView(
-                          tasks: state.tasks.where((t) => !t.isDeleted).toList(),
+                          tasks: searchedTasks
+                              .where((t) => !t.isDeleted)
+                              .toList(),
                         ),
                         // 1 — Inbox (pending, no due date)
                         _TaskList(
-                          tasks: state.tasks
+                          tasks: searchedTasks
                               .where(
                                 (t) =>
                                     t.status != 'completed' &&
@@ -164,7 +225,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                         ),
                         // 2 — Upcoming (has future due date)
                         _TaskList(
-                          tasks: state.tasks
+                          tasks: searchedTasks
                               .where(
                                 (t) =>
                                     t.status != 'completed' &&
@@ -176,32 +237,32 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
                         ),
                         // 3 — Done
                         _TaskList(
-                          tasks: state.tasks
+                          tasks: searchedTasks
                               .where((t) => t.status == 'completed')
                               .toList(),
                           status: 'completed',
                         ),
                         // 4 — Smart lists
                         _SmartListsView(
-                          tasks: state.tasks
+                          tasks: searchedTasks
                               .where((t) => !t.isDeleted)
                               .toList(),
                         ),
                         // 5 — GTD
                         _GtdBucketsView(
-                          tasks: state.tasks
+                          tasks: searchedTasks
                               .where((t) => !t.isDeleted)
                               .toList(),
                         ),
                         // 6 — Kanban
                         _KanbanBoardView(
-                          tasks: state.tasks
+                          tasks: searchedTasks
                               .where((t) => !t.isDeleted)
                               .toList(),
                         ),
                         // 7 — Matrix
                         _EisenhowerMatrixView(
-                          tasks: state.tasks
+                          tasks: searchedTasks
                               .where(
                                 (t) =>
                                     t.status != 'completed' && !t.isDeleted,
@@ -245,6 +306,44 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
         ),
       ),
     );
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      if (_isSearchVisible && _searchQuery.trim().isNotEmpty) {
+        _searchController.clear();
+        _searchQuery = '';
+        return;
+      }
+      _isSearchVisible = !_isSearchVisible;
+    });
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+    });
+  }
+
+  List<TaskModel> _filterTasks(List<TaskModel> tasks) {
+    final query = _normalizeSearchText(_searchQuery);
+    if (query.isEmpty) return tasks;
+    return tasks.where((task) => _matchesTaskSearch(task, query)).toList();
+  }
+
+  bool _matchesTaskSearch(TaskModel task, String query) {
+    final fields = <String>[
+      task.title,
+      if (task.description != null) task.description!,
+      if (task.category != null) task.category!,
+      if (task.projectId != null) task.projectId!,
+    ];
+    return fields.any((field) => _normalizeSearchText(field).contains(query));
+  }
+
+  String _normalizeSearchText(String value) {
+    return value.trim().toLowerCase();
   }
 
   Future<void> _showTaskTemplatePicker(BuildContext context) async {
