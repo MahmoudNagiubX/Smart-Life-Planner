@@ -15,6 +15,8 @@ import '../../tasks/models/task_model.dart';
 import '../../habits/models/habit_model.dart';
 import '../../prayer/models/prayer_model.dart';
 import '../../focus/models/focus_model.dart';
+import '../models/schedule_model.dart';
+import '../providers/schedule_provider.dart';
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
@@ -48,7 +50,14 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       ref.read(habitsProvider.notifier).loadHabits();
       ref.read(prayerProvider.notifier).loadTodayPrayers();
       ref.read(focusProvider.notifier).loadAnalytics();
+      _loadScheduleForSelectedDate();
     });
+  }
+
+  void _loadScheduleForSelectedDate() {
+    ref
+        .read(scheduleProvider.notifier)
+        .loadSchedule(date: _isoDate(_selectedDate));
   }
 
   @override
@@ -57,8 +66,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final habitsState = ref.watch(habitsProvider);
     final prayerState = ref.watch(prayerProvider);
     final focusState = ref.watch(focusProvider);
+    final scheduleState = ref.watch(scheduleProvider);
 
     final items = _buildScheduleItems(
+      blocks: scheduleState.schedule?.blocks ?? const [],
       tasks: tasksState.tasks,
       habits: habitsState.habits,
       prayers: prayerState.data?.prayers ?? [],
@@ -174,7 +185,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                   final isSelected = _sameDay(day, _selectedDate);
                   final isToday = _sameDay(day, _today());
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedDate = day),
+                    onTap: () {
+                      setState(() => _selectedDate = day);
+                      _loadScheduleForSelectedDate();
+                    },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       width: 44,
@@ -220,9 +234,28 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
 
             const SizedBox(height: AppSpacing.s12),
 
+            if (scheduleState.schedule?.overloadDetected == true)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH, 0,
+                  AppSpacing.screenH, AppSpacing.s12,
+                ),
+                child: _ScheduleOverloadBanner(
+                  message: scheduleState.schedule?.overloadMessage ??
+                      'Your day is overloaded. H-ASAE suggests moving lower-priority work.',
+                ),
+              ),
+
             // ── Timeline ─────────────────────────────────────────────────
             Expanded(
-              child: items.isEmpty
+              child: scheduleState.isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.brandPrimary,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : items.isEmpty
                   ? _EmptySchedule(date: _selectedDate)
                   : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(
@@ -241,6 +274,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   }
 
   List<_ScheduleItem> _buildScheduleItems({
+    required List<ScheduleBlockModel> blocks,
     required List<TaskModel> tasks,
     required List<HabitModel> habits,
     required List<PrayerTime> prayers,
@@ -249,10 +283,28 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   }) {
     final items = <_ScheduleItem>[];
     final isToday = _sameDay(date, _today());
+    final scheduledTaskIds = <String>{};
+    final hasPlannedPrayers = blocks.any((b) => b.blockType == 'prayer');
+
+    // H-ASAE persisted blocks are the authoritative smart plan on this screen.
+    for (final block in blocks) {
+      final start = DateTime.tryParse(block.startTime)?.toLocal();
+      if (start == null || !_sameDay(start, date)) continue;
+      if (block.taskId != null) scheduledTaskIds.add(block.taskId!);
+      items.add(_ScheduleItem(
+        time: start,
+        title: block.title,
+        subtitle: _blockSubtitle(block),
+        type: _typeFromBlock(block.blockType),
+        isCompleted: block.isCompleted,
+        hasAiBadge: block.explanation?.startsWith('[H-ASAE]') == true,
+      ));
+    }
 
     // Tasks with due date on this day
     for (final task in tasks) {
       if (task.status == 'completed' || task.isDeleted) continue;
+      if (scheduledTaskIds.contains(task.id)) continue;
       if (task.dueAt == null) continue;
       final due = DateTime.tryParse(task.dueAt!)?.toLocal();
       if (due == null || !_sameDay(due, date)) continue;
@@ -267,7 +319,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     }
 
     // Prayers (only shown for today)
-    if (isToday) {
+    if (isToday && !hasPlannedPrayers) {
       for (final prayer in prayers) {
         if (prayer.scheduledAt == null) continue;
         final t = DateTime.tryParse(prayer.scheduledAt!)?.toLocal();
@@ -505,6 +557,48 @@ class _ScheduleItemTile extends StatelessWidget {
 
 // ── Empty state ────────────────────────────────────────────────────────────────
 
+class _ScheduleOverloadBanner extends StatelessWidget {
+  final String message;
+
+  const _ScheduleOverloadBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.s12),
+      decoration: BoxDecoration(
+        color: AppColors.errorSoft,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: AppColors.errorColor.withValues(alpha: 0.22),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            size: 18,
+            color: AppColors.errorColor,
+          ),
+          const SizedBox(width: AppSpacing.s8),
+          Expanded(
+            child: Text(
+              message,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.errorColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptySchedule extends StatelessWidget {
   final DateTime date;
 
@@ -543,7 +637,7 @@ class _EmptySchedule extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.s8),
             Text(
-              'Tasks with due times, prayers, habits, and focus sessions will appear here.',
+              'Generate a H-ASAE plan or add timed tasks to build this day.',
               textAlign: TextAlign.center,
               style: GoogleFonts.manrope(
                 fontSize: 13,
@@ -558,6 +652,42 @@ class _EmptySchedule extends StatelessWidget {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+
+String _isoDate(DateTime date) {
+  final y = date.year.toString().padLeft(4, '0');
+  final m = date.month.toString().padLeft(2, '0');
+  final d = date.day.toString().padLeft(2, '0');
+  return '$y-$m-$d';
+}
+
+_ScheduleItemType _typeFromBlock(String blockType) {
+  return switch (blockType) {
+    'prayer' => _ScheduleItemType.prayer,
+    'focus' => _ScheduleItemType.focus,
+    'habit' => _ScheduleItemType.habit,
+    'break' || 'blocked' => _ScheduleItemType.break_,
+    _ => _ScheduleItemType.task,
+  };
+}
+
+String _blockSubtitle(ScheduleBlockModel block) {
+  final parts = <String>[
+    switch (block.blockType) {
+      'prayer' => 'Prayer-aware block',
+      'focus' => 'Focus block',
+      'habit' => 'Habit',
+      'break' => 'Break',
+      'blocked' => 'Protected time',
+      _ => 'Task block',
+    },
+  ];
+  final minutes = block.durationMinutes;
+  if (minutes > 0) parts.add('$minutes min');
+  if (block.explanation?.startsWith('[H-ASAE]') == true) {
+    parts.add('H-ASAE');
+  }
+  return parts.join(' - ');
+}
 
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;

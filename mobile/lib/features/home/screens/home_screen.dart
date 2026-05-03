@@ -12,6 +12,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dashboard/models/dashboard_model.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
+import '../../hasae/providers/hasae_provider.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../../routes/app_routes.dart';
 import '../widgets/progress_ring.dart';
@@ -485,9 +486,8 @@ class _DashboardBody extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.s16),
                   Expanded(
-                    child: _AiSuggestionCard(
-                      plan: p.aiPlanCard,
-                      onTap: () => context.go(AppRoutes.aiCoach),
+                    child: _HasaeDashboardCard(
+                      onTap: () => context.go(AppRoutes.dailyPlan),
                     ),
                   ),
                 ],
@@ -505,9 +505,8 @@ class _DashboardBody extends StatelessWidget {
           done.add('habit_snapshot');
         } else if (hasAI && id == 'ai_plan') {
           sections.add(
-            _AiSuggestionCard(
-              plan: p.aiPlanCard,
-              onTap: () => context.go(AppRoutes.aiCoach),
+            _HasaeDashboardCard(
+              onTap: () => context.go(AppRoutes.dailyPlan),
             ),
           );
           done.add('ai_plan');
@@ -1459,17 +1458,38 @@ class _HabitsCard extends StatelessWidget {
 // AI Suggestion Card
 // ═════════════════════════════════════════════════════════════════════════════
 
-class _AiSuggestionCard extends StatelessWidget {
-  final DashboardAiPlanCard plan;
+class _HasaeDashboardCard extends ConsumerStatefulWidget {
   final VoidCallback onTap;
 
-  const _AiSuggestionCard({required this.plan, required this.onTap});
+  const _HasaeDashboardCard({required this.onTap});
+
+  @override
+  ConsumerState<_HasaeDashboardCard> createState() =>
+      _HasaeDashboardCardState();
+}
+
+class _HasaeDashboardCardState extends ConsumerState<_HasaeDashboardCard> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(hasaeProvider.notifier).loadAll();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final preview = plan.preview.trim().isEmpty
-        ? "Small steps today create big changes tomorrow. You've got this!"
-        : plan.preview.trim();
+    final state = ref.watch(hasaeProvider);
+    final next = state.nextAction;
+    final overload = state.overload;
+    final isOverloaded = overload?.overloadDetected == true;
+    final title = isOverloaded ? 'H-ASAE Warning' : 'H-ASAE Plan';
+    final preview = isOverloaded
+        ? overload?.message ??
+            'Your day is overloaded. Replan to protect focus and prayer windows.'
+        : next?.title != null
+            ? 'Next: ${next!.title}'
+            : 'Generate a prayer-aware smart plan for today.';
 
     return Container(
       decoration: BoxDecoration(
@@ -1502,7 +1522,7 @@ class _AiSuggestionCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      plan.title.trim().isEmpty ? 'AI Suggestion' : plan.title,
+                      title,
                       style: GoogleFonts.manrope(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -1533,11 +1553,11 @@ class _AiSuggestionCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.s8),
               GestureDetector(
-                onTap: onTap,
+                onTap: widget.onTap,
                 child: Row(
                   children: [
                     Text(
-                      'Ask AI anything',
+                      'Generate plan',
                       style: GoogleFonts.manrope(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -2402,7 +2422,7 @@ String _dashboardWidgetLabel(String widgetId) {
     'next_prayer' => 'Next prayer',
     'habit_snapshot' => 'Habits',
     'journal_prompt' => 'Journal prompt',
-    'ai_plan' => 'AI plan',
+    'ai_plan' => 'H-ASAE smart plan',
     'focus_shortcut' => 'Focus shortcut',
     'productivity_score' => 'Productivity score',
     'quran_goal' => 'Spiritual today',
@@ -2416,7 +2436,7 @@ IconData _dashboardWidgetIcon(String widgetId) {
     'next_prayer' => Icons.mosque_outlined,
     'habit_snapshot' => Icons.track_changes_outlined,
     'journal_prompt' => Icons.edit_note_outlined,
-    'ai_plan' => Icons.auto_awesome_outlined,
+    'ai_plan' => Icons.psychology_alt_outlined,
     'focus_shortcut' => Icons.timer_outlined,
     'productivity_score' => Icons.insights_outlined,
     'quran_goal' => Icons.menu_book_outlined,

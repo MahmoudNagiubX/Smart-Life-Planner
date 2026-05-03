@@ -32,4 +32,20 @@ class HasaeService {
         .get('/hasae/replan', queryParameters: {'event': event});
     return response.data as Map<String, dynamic>;
   }
+
+  Future<HasaeDailyPlan> generateDailyPlan({String? date}) async {
+    final response = await _apiClient.dio.post(
+      '/hasae/daily-plan',
+      data: {'date': date}..removeWhere((_, value) => value == null),
+    );
+    return HasaeDailyPlan.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<HasaeDailyPlan> acceptDailyPlan({String? date}) async {
+    final response = await _apiClient.dio.post(
+      '/hasae/daily-plan/accept',
+      data: {'date': date}..removeWhere((_, value) => value == null),
+    );
+    return HasaeDailyPlan.fromJson(response.data as Map<String, dynamic>);
+  }
 }

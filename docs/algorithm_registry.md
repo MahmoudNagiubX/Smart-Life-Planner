@@ -187,3 +187,54 @@ submission and the existing algorithmic logic already used by Smart Life Planner
 - **Why it was chosen:** Mobile clients must tolerate old, partial, or unexpected data safely.
 - **Manual/demo explanation for instructor:** Before using a value, the app checks its type and supplies a safe fallback if the data is missing or malformed.
 
+## 15. H-ASAE - Human-Aware Adaptive Scheduling
+
+- **Status:** Flagship app feature / academic implementation
+- **Category:** Adaptive scheduling and optimization heuristic
+- **Where it exists in code:** `backend/app/services/hasae_engine.py`, `backend/app/api/v1/hasae.py`, `mobile/lib/features/ai/screens/daily_plan_screen.dart`, `mobile/lib/features/schedule/screens/schedule_screen.dart`
+- **App connection:** Generates a prayer-aware daily plan, previews it for the user, and persists accepted schedule blocks.
+- **Input:** Pending tasks, priority, due dates, estimated duration, completed tasks, prayer times, wake/sleep time, and protected existing schedule blocks.
+- **Output:** Ordered task/focus/prayer schedule blocks, selected tasks, skipped tasks, overload warning, and explanation.
+- **Time complexity:** O(n log n + p + b), where n is tasks, p is prayers, and b is protected blocks.
+- **Space complexity:** O(n + p + b)
+- **Why it was chosen:** It is explainable, deterministic, demo-ready, and connects algorithms directly to Smart Life Planner's core value.
+- **Manual/demo explanation for instructor:** H-ASAE scores tasks, removes prayer/protected intervals from the day, greedily places the best tasks that fit, and warns if lower-priority work should move.
+
+## 16. Interval Conflict Detection
+
+- **Status:** Existing H-ASAE logic
+- **Category:** Interval scheduling support
+- **Where it exists in code:** `backend/app/services/hasae_engine.py`
+- **App connection:** Prevents generated focus and task blocks from overlapping prayer or protected schedule blocks.
+- **Input:** Available time windows plus blocked start/end intervals.
+- **Output:** Remaining free windows.
+- **Time complexity:** O(b * w), where b is blocked intervals and w is current windows.
+- **Space complexity:** O(w)
+- **Why it was chosen:** Schedule generation must respect hard time constraints.
+- **Manual/demo explanation for instructor:** Each prayer or protected block cuts time out of the day, leaving only safe windows where tasks can be scheduled.
+
+## 17. Prayer-Aware Blocking
+
+- **Status:** Existing H-ASAE logic
+- **Category:** Constraint handling
+- **Where it exists in code:** `backend/app/services/hasae_engine.py`
+- **App connection:** Inserts locked prayer blocks and keeps generated work away from those times.
+- **Input:** Prayer log names and scheduled times.
+- **Output:** Locked prayer schedule blocks and reduced free windows.
+- **Time complexity:** O(p * w)
+- **Space complexity:** O(p + w)
+- **Why it was chosen:** Smart Life Planner's scheduling should respect spiritual routines.
+- **Manual/demo explanation for instructor:** Prayer times are treated as fixed constraints before the greedy task scheduler runs.
+
+## 18. Overload Detection In H-ASAE
+
+- **Status:** Existing H-ASAE logic
+- **Category:** Aggregation and threshold classification
+- **Where it exists in code:** `backend/app/services/hasae_engine.py`, `mobile/lib/features/ai/screens/daily_plan_screen.dart`
+- **App connection:** Warns the user when pending work exceeds the prayer-aware available time.
+- **Input:** Total eligible task minutes and available free minutes.
+- **Output:** Overload flag, message, selected tasks, and skipped tasks.
+- **Time complexity:** O(n)
+- **Space complexity:** O(n) for skipped task reporting.
+- **Why it was chosen:** A planner should tell the user when the day is unrealistic.
+- **Manual/demo explanation for instructor:** The engine sums task durations and compares them with available windows after prayer/protected blocks are removed.
