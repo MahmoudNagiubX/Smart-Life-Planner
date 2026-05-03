@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../routes/app_routes.dart';
 import '../../focus/models/focus_model.dart';
 import '../../focus/providers/focus_provider.dart';
@@ -423,7 +424,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
               AppSpacing.screenH,
               _kNavClearance,
             ),
-            child: Column(
+            child: AppFadeSlide(
+             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Header ───────────────────────────────────────────
@@ -624,6 +626,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                       .map((s) => _SessionTile(session: s)),
                 ],
               ],
+             ),
             ),
           ),
         ),

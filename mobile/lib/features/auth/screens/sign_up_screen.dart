@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../providers/auth_provider.dart';
 import '../../../routes/app_routes.dart';
 import '../widgets/auth_gradient_button.dart';
@@ -126,7 +127,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ── Back button ───────────────────────────────────────
-                    GestureDetector(
+                    AppPressable(
                       onTap: () => context.go(AppRoutes.welcome),
                       child: Container(
                         width: 40,
@@ -299,7 +300,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
 
                     // ── Footer link ───────────────────────────────────────
                     Center(
-                      child: GestureDetector(
+                      child: AppPressable(
                         onTap: () => context.go(AppRoutes.signIn),
                         child: RichText(
                           text: TextSpan(

@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../routes/app_routes.dart';
 import '../../../features/auth/providers/auth_provider.dart';
@@ -211,18 +212,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 AppSpacing.screenH,
                 0,
               ),
-              child: _ProfileHeroCard(
-                fullName: fullName,
-                email: email,
-                provider: provider,
-                isVerified: isVerified,
-                isActive: isActive,
-                photoPath: photoState.photoPath,
-                isPhotoLoading: photoState.isLoading,
-                onChangePhoto: userId == null ? null : chooseProfilePhoto,
-                onRemovePhoto: photoState.photoPath == null
-                    ? null
-                    : removeProfilePhoto,
+              child: AppFadeSlide(
+                child: _ProfileHeroCard(
+                  fullName: fullName,
+                  email: email,
+                  provider: provider,
+                  isVerified: isVerified,
+                  isActive: isActive,
+                  photoPath: photoState.photoPath,
+                  isPhotoLoading: photoState.isLoading,
+                  onChangePhoto: userId == null ? null : chooseProfilePhoto,
+                  onRemovePhoto: photoState.photoPath == null
+                      ? null
+                      : removeProfilePhoto,
+                ),
               ),
             ),
           ),

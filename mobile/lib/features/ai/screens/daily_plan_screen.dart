@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
@@ -113,7 +114,9 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                           AppSpacing.screenH,
                           0,
                         ),
-                        child: _PlanSummaryCard(plan: plan),
+                        child: AppFadeSlide(
+                          child: _PlanSummaryCard(plan: plan),
+                        ),
                       ),
                     ),
                     if (plan.overloadWarning)
@@ -139,7 +142,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                           AppSpacing.screenH,
                           0,
                         ),
-                        child: _PlanTimeline(blocks: plan.blocks),
+                        child: AppFadeSlide(
+                          delay: const Duration(milliseconds: 60),
+                          child: _PlanTimeline(blocks: plan.blocks),
+                        ),
                       ),
                     ),
                     SliverToBoxAdapter(
@@ -150,12 +156,16 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                           AppSpacing.screenH,
                           0,
                         ),
-                        child: _PlanActions(
-                          isPersisted: plan.persisted,
-                          isAccepting: state.isPlanAccepting,
-                          onReject: () => context.pop(),
-                          onAccept: _acceptPlan,
-                          onViewSchedule: () => context.go(AppRoutes.schedule),
+                        child: AppFadeSlide(
+                          delay: const Duration(milliseconds: 120),
+                          child: _PlanActions(
+                            isPersisted: plan.persisted,
+                            isAccepting: state.isPlanAccepting,
+                            onReject: () => context.pop(),
+                            onAccept: _acceptPlan,
+                            onViewSchedule: () =>
+                                context.go(AppRoutes.schedule),
+                          ),
                         ),
                       ),
                     ),

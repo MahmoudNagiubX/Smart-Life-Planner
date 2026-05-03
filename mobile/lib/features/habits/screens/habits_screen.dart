@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
@@ -141,10 +142,15 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           final isCompleted = state.completedTodayIds.contains(
                             habit.id,
                           );
-                          return _HabitCard(
-                            habit: habit,
-                            isCompletedToday: isCompleted,
-                            onEdit: _openCreateHabitSheet,
+                          return AppFadeSlide(
+                            delay: Duration(
+                              milliseconds: ((index - 2) % 8) * 40,
+                            ),
+                            child: _HabitCard(
+                              habit: habit,
+                              isCompletedToday: isCompleted,
+                              onEdit: _openCreateHabitSheet,
+                            ),
                           );
                         },
                       ),

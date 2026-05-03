@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
@@ -291,7 +292,12 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                           ),
                       itemCount: state.notes.length,
                       itemBuilder: (context, index) {
-                        return _NoteCard(note: state.notes[index]);
+                        return AppFadeSlide(
+                          delay: Duration(
+                            milliseconds: (index % 8) * 40,
+                          ),
+                          child: _NoteCard(note: state.notes[index]),
+                        );
                       },
                     ),
                   ),

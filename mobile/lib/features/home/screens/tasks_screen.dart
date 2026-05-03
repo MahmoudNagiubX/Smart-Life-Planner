@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_empty_state.dart';
@@ -73,45 +74,47 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Header ────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH,
-                AppSpacing.s20,
-                AppSpacing.screenH,
-                AppSpacing.s12,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Tasks',
-                      style: GoogleFonts.manrope(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textHeading,
-                        letterSpacing: -0.4,
-                        height: 1.2,
+            AppFadeSlide(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH,
+                  AppSpacing.s20,
+                  AppSpacing.screenH,
+                  AppSpacing.s12,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Tasks',
+                        style: GoogleFonts.manrope(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textHeading,
+                          letterSpacing: -0.4,
+                          height: 1.2,
+                        ),
                       ),
                     ),
-                  ),
-                  _HeaderIconButton(
-                    icon: _isSearchVisible ? Icons.close : Icons.search,
-                    tooltip: 'Search tasks',
-                    onTap: _toggleSearch,
-                  ),
-                  const SizedBox(width: AppSpacing.s8),
-                  _HeaderIconButton(
-                    icon: Icons.dashboard_customize_outlined,
-                    tooltip: 'Task templates',
-                    onTap: () => _showTaskTemplatePicker(context),
-                  ),
-                  const SizedBox(width: AppSpacing.s8),
-                  _HeaderIconButton(
-                    icon: Icons.account_tree_outlined,
-                    tooltip: 'Project timelines',
-                    onTap: () => _showProjectTimelinePicker(context, ref),
-                  ),
-                ],
+                    _HeaderIconButton(
+                      icon: _isSearchVisible ? Icons.close : Icons.search,
+                      tooltip: 'Search tasks',
+                      onTap: _toggleSearch,
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    _HeaderIconButton(
+                      icon: Icons.dashboard_customize_outlined,
+                      tooltip: 'Task templates',
+                      onTap: () => _showTaskTemplatePicker(context),
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    _HeaderIconButton(
+                      icon: Icons.account_tree_outlined,
+                      tooltip: 'Project timelines',
+                      onTap: () => _showProjectTimelinePicker(context, ref),
+                    ),
+                  ],
+                ),
               ),
             ),
             if (_isSearchVisible)
@@ -277,31 +280,34 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
           ],
         ),
       ),
-      floatingActionButton: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          gradient: AppGradients.action,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.brandPrimary.withValues(alpha: 0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
+      floatingActionButton: AppFadeSlide(
+        delay: const Duration(milliseconds: 200),
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            gradient: AppGradients.action,
             borderRadius: BorderRadius.circular(AppRadius.pill),
-            onTap: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (_) => const CreateTaskSheet(),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.brandPrimary.withValues(alpha: 0.35),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              onTap: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const CreateTaskSheet(),
+              ),
+              child: const Icon(Icons.add, color: Colors.white, size: 24),
             ),
-            child: const Icon(Icons.add, color: Colors.white, size: 24),
           ),
         ),
       ),

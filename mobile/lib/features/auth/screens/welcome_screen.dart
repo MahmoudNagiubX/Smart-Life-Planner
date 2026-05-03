@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../routes/app_routes.dart';
 import '../widgets/auth_gradient_button.dart';
 
@@ -89,22 +90,31 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   const SizedBox(height: AppSpacing.s20),
 
                   // ── Feature bullets ───────────────────────────────────
-                  _FeatureBullet(
-                    icon: Icons.check_circle_outline_rounded,
-                    iconColor: AppColors.brandPrimary,
-                    label: 'Capture everything quickly',
+                  AppFadeSlide(
+                    delay: const Duration(milliseconds: 80),
+                    child: _FeatureBullet(
+                      icon: Icons.check_circle_outline_rounded,
+                      iconColor: AppColors.brandPrimary,
+                      label: 'Capture everything quickly',
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.s12),
-                  _FeatureBullet(
-                    icon: Icons.auto_awesome_rounded,
-                    iconColor: AppColors.brandPink,
-                    label: 'Plan your day with AI support',
+                  AppFadeSlide(
+                    delay: const Duration(milliseconds: 130),
+                    child: _FeatureBullet(
+                      icon: Icons.auto_awesome_rounded,
+                      iconColor: AppColors.brandPink,
+                      label: 'Plan your day with AI support',
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.s12),
-                  _FeatureBullet(
-                    icon: Icons.nightlight_round,
-                    iconColor: AppColors.brandViolet,
-                    label: 'Balance productivity with spiritual routines',
+                  AppFadeSlide(
+                    delay: const Duration(milliseconds: 180),
+                    child: _FeatureBullet(
+                      icon: Icons.nightlight_round,
+                      iconColor: AppColors.brandViolet,
+                      label: 'Balance productivity with spiritual routines',
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.s28),
 
@@ -118,7 +128,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                   // ── Secondary CTA ─────────────────────────────────────
                   Center(
-                    child: GestureDetector(
+                    child: AppPressable(
                       onTap: () => context.go(AppRoutes.signIn),
                       child: Text(
                         'I already have an account',

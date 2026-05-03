@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../../routes/app_routes.dart';
@@ -158,7 +159,8 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                   .read(appSettingsProvider.notifier)
                   .loadSettings(force: true),
             )
-          : RefreshIndicator(
+          : AppFadeSlide(
+              child: RefreshIndicator(
               color: AppColors.brandPrimary,
               onRefresh: () => ref
                   .read(appSettingsProvider.notifier)
@@ -376,6 +378,7 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                 ],
               ),
             ),
+          ),
     );
   }
 }

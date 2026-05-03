@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../../routes/app_routes.dart';
@@ -113,29 +114,31 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                           AppSpacing.screenH,
                           0,
                         ),
-                        child: Builder(
-                          builder: (_) {
-                            final next = _findNextPrayer(data.prayers);
-                            return _NextPrayerHeroCard(
-                              next: next,
-                              nextDisplayName: next != null
-                                  ? _prayerDisplayName(next.prayerName)
-                                  : '',
-                              formattedTime: _formatTime(next?.scheduledAt),
-                              completedCount: data.completedCount,
-                              totalCount: data.totalCount,
-                              onMarkPrayed: () {
-                                if (next != null) {
-                                  ref
-                                      .read(prayerProvider.notifier)
-                                      .togglePrayer(
-                                        next.prayerName,
-                                        next.completed,
-                                      );
-                                }
-                              },
-                            );
-                          },
+                        child: AppFadeSlide(
+                          child: Builder(
+                            builder: (_) {
+                              final next = _findNextPrayer(data.prayers);
+                              return _NextPrayerHeroCard(
+                                next: next,
+                                nextDisplayName: next != null
+                                    ? _prayerDisplayName(next.prayerName)
+                                    : '',
+                                formattedTime: _formatTime(next?.scheduledAt),
+                                completedCount: data.completedCount,
+                                totalCount: data.totalCount,
+                                onMarkPrayed: () {
+                                  if (next != null) {
+                                    ref
+                                        .read(prayerProvider.notifier)
+                                        .togglePrayer(
+                                          next.prayerName,
+                                          next.completed,
+                                        );
+                                  }
+                                },
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
@@ -147,16 +150,19 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                           AppSpacing.screenH,
                           0,
                         ),
-                        child: _DailyPrayerListCard(
-                          prayers: data.prayers,
-                          displayNameOf: _prayerDisplayName,
-                          formatTime: _formatTime,
-                          nextPrayer: _findNextPrayer(data.prayers),
-                          onToggle: (p) => ref
-                              .read(prayerProvider.notifier)
-                              .togglePrayer(p.prayerName, p.completed),
-                          onLongPress: (p) =>
-                              _showPrayerStatusSheet(context, ref, p),
+                        child: AppFadeSlide(
+                          delay: const Duration(milliseconds: 60),
+                          child: _DailyPrayerListCard(
+                            prayers: data.prayers,
+                            displayNameOf: _prayerDisplayName,
+                            formatTime: _formatTime,
+                            nextPrayer: _findNextPrayer(data.prayers),
+                            onToggle: (p) => ref
+                                .read(prayerProvider.notifier)
+                                .togglePrayer(p.prayerName, p.completed),
+                            onLongPress: (p) =>
+                                _showPrayerStatusSheet(context, ref, p),
+                          ),
                         ),
                       ),
                     ),
@@ -168,10 +174,13 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                           AppSpacing.screenH,
                           0,
                         ),
-                        child: _SpiritualProgressCard(
-                          completedCount: data.completedCount,
-                          totalCount: data.totalCount,
-                          missedCount: data.missedCount,
+                        child: AppFadeSlide(
+                          delay: const Duration(milliseconds: 120),
+                          child: _SpiritualProgressCard(
+                            completedCount: data.completedCount,
+                            totalCount: data.totalCount,
+                            missedCount: data.missedCount,
+                          ),
                         ),
                       ),
                     ),

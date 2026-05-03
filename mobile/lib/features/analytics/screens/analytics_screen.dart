@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading_state.dart';
@@ -137,24 +138,39 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                       )
                     else ...[
                       // ── 4 stat cards (2×2) ───────────────────────────
-                      _StatCardGrid(weekly: state.weekly!, today: state.today),
+                      AppFadeSlide(
+                        child: _StatCardGrid(
+                          weekly: state.weekly!,
+                          today: state.today,
+                        ),
+                      ),
                       const SizedBox(height: AppSpacing.s20),
 
                       // ── Focus & tasks chart ──────────────────────────
-                      _FocusTasksChart(
-                        data: state.weekly!.dailyBreakdown,
+                      AppFadeSlide(
+                        delay: const Duration(milliseconds: 60),
+                        child: _FocusTasksChart(
+                          data: state.weekly!.dailyBreakdown,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.s20),
 
                       // ── Prayer bar chart ─────────────────────────────
-                      _PrayerChart(data: state.weekly!.dailyBreakdown),
+                      AppFadeSlide(
+                        delay: const Duration(milliseconds: 120),
+                        child: _PrayerChart(
+                          data: state.weekly!.dailyBreakdown,
+                        ),
+                      ),
                       const SizedBox(height: AppSpacing.s20),
 
                       // ── AI insight card ──────────────────────────────
-                      if (state.insights.isNotEmpty)
-                        _AiInsightCard(insights: state.insights)
-                      else
-                        _AiInsightFallback(weekly: state.weekly!),
+                      AppFadeSlide(
+                        delay: const Duration(milliseconds: 180),
+                        child: state.insights.isNotEmpty
+                            ? _AiInsightCard(insights: state.insights)
+                            : _AiInsightFallback(weekly: state.weekly!),
+                      ),
                     ],
                   ],
                 ),

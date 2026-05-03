@@ -10,6 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dashboard/models/dashboard_model.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
@@ -585,7 +586,10 @@ class _DashboardBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < sections.length; i++) ...[
-          sections[i],
+          AppFadeSlide(
+            delay: Duration(milliseconds: i * 60),
+            child: sections[i],
+          ),
           if (i != sections.length - 1) const SizedBox(height: 16),
         ],
       ],

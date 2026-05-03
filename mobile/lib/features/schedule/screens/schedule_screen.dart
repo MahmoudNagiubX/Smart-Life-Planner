@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../routes/app_routes.dart';
 import '../../focus/providers/focus_provider.dart';
 import '../../habits/providers/habit_provider.dart';
@@ -134,7 +135,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     ),
                   ),
                   // Replan button
-                  GestureDetector(
+                  AppPressable(
                     onTap: () => context.push(AppRoutes.dailyPlan),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -263,8 +264,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                         AppSpacing.screenH, 138,
                       ),
                       itemCount: items.length,
-                      itemBuilder: (context, index) =>
-                          _ScheduleItemTile(item: items[index]),
+                      itemBuilder: (context, index) => AppFadeSlide(
+                        delay: Duration(milliseconds: (index % 8) * 40),
+                        child: _ScheduleItemTile(item: items[index]),
+                      ),
                     ),
             ),
           ],
