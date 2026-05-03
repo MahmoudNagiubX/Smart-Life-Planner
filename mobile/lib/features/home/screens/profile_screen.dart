@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,14 +11,22 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../routes/app_routes.dart';
 import '../../../features/auth/providers/auth_provider.dart';
+import '../../profile_photo/providers/profile_photo_provider.dart';
 
 const _kNavClearance = 138.0;
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  String? _loadedPhotoUserId;
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
     final provider = user?['auth_provider'] as String? ?? 'email';
@@ -25,6 +35,42 @@ class ProfileScreen extends ConsumerWidget {
     final fullName = user?['full_name'] as String? ?? '';
     final email = user?['email'] as String? ?? '';
     final isSocialProvider = provider == 'google' || provider == 'apple';
+    final userId = user?['id'] as String?;
+    final photoState = ref.watch(profilePhotoProvider);
+
+    if (userId != null && _loadedPhotoUserId != userId) {
+      _loadedPhotoUserId = userId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(profilePhotoProvider.notifier).loadPhoto(userId);
+        }
+      });
+    }
+
+    Future<void> chooseProfilePhoto() async {
+      if (userId == null) return;
+      final ok =
+          await ref.read(profilePhotoProvider.notifier).pickPhoto(userId);
+      if (!context.mounted || !ok) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile photo updated.')),
+      );
+    }
+
+    Future<void> removeProfilePhoto() async {
+      if (userId == null) return;
+      final ok =
+          await ref.read(profilePhotoProvider.notifier).removePhoto(userId);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ok
+              ? 'Profile photo removed.'
+              : ref.read(profilePhotoProvider).error ??
+                  'Could not remove profile photo.'),
+        ),
+      );
+    }
 
     Future<void> showDeleteDialog() async {
       final controller = TextEditingController();
@@ -196,6 +242,12 @@ class ProfileScreen extends ConsumerWidget {
                 provider: provider,
                 isVerified: isVerified,
                 isActive: isActive,
+                photoPath: photoState.photoPath,
+                isPhotoLoading: photoState.isLoading,
+                onChangePhoto: userId == null ? null : chooseProfilePhoto,
+                onRemovePhoto: photoState.photoPath == null
+                    ? null
+                    : removeProfilePhoto,
               ),
             ),
           ),
@@ -212,6 +264,22 @@ class ProfileScreen extends ConsumerWidget {
               child: _SettingsSection(
                 label: 'Account',
                 rows: [
+                  _SettingsRow(
+                    icon: Icons.photo_camera_outlined,
+                    iconColor: AppColors.brandPink,
+                    iconBg: AppColors.bgSurfaceLavender,
+                    label: 'Profile Photo',
+                    value: photoState.photoPath == null ? 'Add' : 'Change',
+                    onTap: userId == null ? () {} : chooseProfilePhoto,
+                  ),
+                  if (photoState.photoPath != null)
+                    _SettingsRow(
+                      icon: Icons.delete_outline,
+                      iconColor: AppColors.errorColor,
+                      iconBg: AppColors.errorSoft,
+                      label: 'Remove Photo',
+                      onTap: removeProfilePhoto,
+                    ),
                   _SettingsRow(
                     icon: Icons.badge_outlined,
                     iconColor: AppColors.brandPrimary,
@@ -463,6 +531,10 @@ class _ProfileHeroCard extends StatelessWidget {
   final String provider;
   final bool isVerified;
   final bool isActive;
+  final String? photoPath;
+  final bool isPhotoLoading;
+  final VoidCallback? onChangePhoto;
+  final VoidCallback? onRemovePhoto;
 
   const _ProfileHeroCard({
     required this.fullName,
@@ -470,11 +542,17 @@ class _ProfileHeroCard extends StatelessWidget {
     required this.provider,
     required this.isVerified,
     required this.isActive,
+    this.photoPath,
+    this.isPhotoLoading = false,
+    this.onChangePhoto,
+    this.onRemovePhoto,
   });
 
   @override
   Widget build(BuildContext context) {
     final initial = fullName.isNotEmpty ? fullName.trim()[0].toUpperCase() : '';
+    final photoFile = photoPath == null ? null : File(photoPath!);
+    final hasPhoto = photoFile != null && photoFile.existsSync();
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.cardPad),
@@ -486,25 +564,58 @@ class _ProfileHeroCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Avatar circle
-          Container(
-            width: 56,
-            height: 56,
-            decoration: const BoxDecoration(
-              color: AppColors.bgSurfaceLavender,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: initial.isNotEmpty
-                  ? Text(
-                      initial,
-                      style: AppTextStyles.h2(AppColors.brandPrimary),
-                    )
-                  : const Icon(
-                      Icons.person,
-                      color: AppColors.brandPrimary,
-                      size: 28,
+          GestureDetector(
+            onTap: onChangePhoto,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: const BoxDecoration(
+                    color: AppColors.bgSurfaceLavender,
+                    shape: BoxShape.circle,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: isPhotoLoading
+                      ? const Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.brandPrimary,
+                            ),
+                          ),
+                        )
+                      : hasPhoto
+                          ? Image.file(
+                              photoFile,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) =>
+                                  _InitialAvatar(initial: initial),
+                            )
+                          : _InitialAvatar(initial: initial),
+                ),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      gradient: AppGradients.action,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.bgSurface, width: 2),
                     ),
+                    child: const Icon(
+                      Icons.photo_camera_outlined,
+                      color: Colors.white,
+                      size: 13,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: AppSpacing.s16),
@@ -550,13 +661,51 @@ class _ProfileHeroCard extends StatelessWidget {
                         label: 'Inactive',
                         color: AppColors.errorColor,
                       ),
+                    if (hasPhoto)
+                      _StatusBadge(
+                        icon: Icons.image_outlined,
+                        label: 'Photo set',
+                        color: AppColors.brandPink,
+                      ),
                   ],
                 ),
+                if (onRemovePhoto != null) ...[
+                  const SizedBox(height: AppSpacing.s8),
+                  GestureDetector(
+                    onTap: onRemovePhoto,
+                    child: Text(
+                      'Remove photo',
+                      style: AppTextStyles.caption(AppColors.errorColor),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _InitialAvatar extends StatelessWidget {
+  final String initial;
+
+  const _InitialAvatar({required this.initial});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: initial.isNotEmpty
+          ? Text(
+              initial,
+              style: AppTextStyles.h2(AppColors.brandPrimary),
+            )
+          : const Icon(
+              Icons.person,
+              color: AppColors.brandPrimary,
+              size: 28,
+            ),
     );
   }
 }

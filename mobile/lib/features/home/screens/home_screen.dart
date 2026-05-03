@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../dashboard/models/dashboard_model.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
 import '../../hasae/providers/hasae_provider.dart';
+import '../../profile_photo/providers/profile_photo_provider.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../../routes/app_routes.dart';
 import '../widgets/progress_ring.dart';
@@ -37,6 +39,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   late final AnimationController _ctrl;
   late final Animation<double> _fade;
   late final Animation<Offset> _slide;
+  String? _loadedPhotoUserId;
 
   @override
   void initState() {
@@ -142,6 +145,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final dashState = ref.watch(dashboardProvider);
+    final photoState = ref.watch(profilePhotoProvider);
+    final userId = authState.user?['id'] as String?;
+    if (userId != null && _loadedPhotoUserId != userId) {
+      _loadedPhotoUserId = userId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(profilePhotoProvider.notifier).loadPhoto(userId);
+        }
+      });
+    }
     final fullName = (authState.user?['full_name'] as String? ?? 'Mahmoud')
         .trim();
     final displayName = fullName.isEmpty ? 'Mahmoud' : fullName;
@@ -175,6 +188,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       initials: displayName.isNotEmpty
                           ? displayName[0].toUpperCase()
                           : 'M',
+                      profilePhotoPath: photoState.photoPath,
                       onCustomize: dashState.data != null
                           ? () => _openCustomize(dashState.data!)
                           : null,
@@ -226,6 +240,7 @@ class _HomeHeader extends StatelessWidget {
   final String displayName;
   final String dateLabel;
   final String initials;
+  final String? profilePhotoPath;
   final VoidCallback? onCustomize;
 
   const _HomeHeader({
@@ -233,11 +248,16 @@ class _HomeHeader extends StatelessWidget {
     required this.displayName,
     required this.dateLabel,
     required this.initials,
+    this.profilePhotoPath,
     this.onCustomize,
   });
 
   @override
   Widget build(BuildContext context) {
+    final photoFile =
+        profilePhotoPath == null ? null : File(profilePhotoPath!);
+    final hasPhoto = photoFile != null && photoFile.existsSync();
+
     return Row(
       children: [
         // Logo
@@ -366,16 +386,32 @@ class _HomeHeader extends StatelessWidget {
               gradient: AppGradients.action,
               shape: BoxShape.circle,
             ),
-            child: Center(
-              child: Text(
-                initials,
-                style: GoogleFonts.manrope(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+            clipBehavior: Clip.antiAlias,
+            child: hasPhoto
+                ? Image.file(
+                    photoFile,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Center(
+                      child: Text(
+                        initials,
+                        style: GoogleFonts.manrope(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  )
+                : Center(
+                    child: Text(
+                      initials,
+                      style: GoogleFonts.manrope(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
           ),
         ),
       ],
