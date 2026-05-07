@@ -1,1105 +1,537 @@
-# 🚀 Smart Life Planner  
-## AI-Powered Productivity, Lifestyle & Spiritual Assistant
+<div align="center">
 
-<img src="docs/Cover.png" alt="System Architecture Diagram" width="600">
+# 🌌 Smart Life Planner
 
----
+### AI-Powered Productivity, Lifestyle & Spiritual Planning App
 
-# 🌍 1. Project Overview
+**A modern personal life operating system that combines tasks, notes, habits, focus, voice capture, reminders, spiritual planning, and intelligent suggestions in one organized mobile experience.**
 
-## 💡 Proposed Concept
+<br />
 
-**Smart Life Planner** is a **smart all-in-one productivity and lifestyle platform** designed to help users manage their **work, study, personal growth, and spiritual routines** from a single application.
+![Flutter](https://img.shields.io/badge/Flutter-Mobile-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Riverpod](https://img.shields.io/badge/Riverpod-State%20Management-6C5CE7?style=for-the-badge)
+![AI](https://img.shields.io/badge/AI-Assisted%20Planning-FF4FD8?style=for-the-badge)
 
-Modern users often rely on multiple apps to manage their daily life:
+<br />
 
-- ✅ Task managers  
-- 📝 Note taking apps  
-- ⏱️ Focus timers  
-- 📈 Habit trackers  
-- 📓 Journaling tools  
-- 🕌 Prayer apps  
-- ⏰ Reminder systems  
+<img src="docs/Cover.png" alt="Smart Life Planner Cover" width="780" />
 
-This fragmentation causes:
+<br />
 
-- ❌ inefficiency  
-- ❌ distraction  
-- ❌ lack of integration between important parts of daily life  
+**Built by [Mahmoud Nagiub](https://github.com/MahmoudNagiubX)**  
+AI & ML Engineer · Data Scientist & Analyst · Software Engineering Student
 
-Smart Life Planner solves this problem by combining all these capabilities into **one intelligent and unified system**.
-
-The application integrates:
-
-- 📋 Task Management  
-- 📝 Notes and Quick Capture  
-- 🎯 Deep Focus Tools  
-- 📊 Habit Tracking  
-- 📓 Journaling and Reflection  
-- 🕌 Prayer Times and Islamic Utilities  
-- 🎙️ AI Voice Assistant (Arabic + English)  
-- 🤖 AI Daily Planning  
-- 📈 Life Analytics and Insights  
-
-The result is **not just another productivity app**.
-
-It becomes a **Personal Life Operating System** that intelligently helps users manage their time, goals, productivity, and personal well-being.
+</div>
 
 ---
 
-# 🎯 2. Core Vision
+## 📌 Table of Contents
 
-The goal is to create an application that behaves like:
-
-> **🧠 Your Intelligent Life Assistant**
-
-Instead of users constantly organizing their life manually, the system helps them:
-
-- 📅 plan their day  
-- ⚡ capture ideas instantly  
-- 🎯 focus deeply  
-- 🔁 maintain healthy routines  
-- 📈 track personal growth  
-- 🕌 stay spiritually connected  
-- 🤖 receive intelligent insights about their habits and productivity  
-
-The application merges:
-
-**Productivity Tools + AI + Lifestyle Management**
-
-into one seamless experience.
+- [Overview](#-overview)
+- [Why Smart Life Planner?](#-why-smart-life-planner)
+- [Key Features](#-key-features)
+- [HumanAware Scheduling Automation Engine](#-humanaware-scheduling-automation-engine)
+- [Architecture](#-architecture)
+- [Project Structure](#-project-structure)
+- [How to Run](#-how-to-run)
+- [Testing](#-testing)
+- [Current Status](#-current-status)
+- [Future Work](#-future-work)
+- [Author](#-author)
 
 ---
 
-# ❗ 3. Problem Statement
+## 🌍 Overview
 
-People currently use **many separate apps** to manage their life.
+**Smart Life Planner** is a full-stack Flutter + FastAPI application designed to help users manage their day from one place.
 
-Example:
+Instead of switching between separate apps for tasks, notes, focus, habits, reminders, and prayer tools, Smart Life Planner unifies them into a single intelligent workflow.
 
-| Purpose | Typical App |
-|------|------|
-| 📋 Task management | TickTick / Todoist |
-| 📝 Notes | Google Keep |
-| ⏱️ Focus timer | Focus To-Do |
-| 📈 Habit building | Fabulous |
-| 🕌 Prayer times | Muslim apps |
+> **Smart Life Planner is more than a task manager — it is a personal life operating system.**
 
-Using many apps creates several problems:
+It helps users:
 
-- 🔁 fragmented workflow  
-- 📱 switching between applications  
-- ⚠️ lack of integration between tasks and habits  
-- 📊 difficulty understanding overall productivity  
-- 🧩 disconnected personal and spiritual routines  
-
-There is currently **no single intelligent system** that manages:
-
-- productivity  
-- personal development  
-- daily planning  
-- spiritual routine  
-- AI assistance  
-
-in one platform.
-
-**Smart Life OS aims to solve this.**
+- plan their day clearly
+- capture ideas instantly
+- organize tasks with multiple productivity views
+- stay focused with structured focus sessions
+- build consistent habits
+- track prayer, Quran, Ramadan, and spiritual goals
+- receive smart suggestions based on real daily context
 
 ---
 
-# 👥 4. Target Audience
+## 🎯 Why Smart Life Planner?
 
-The application targets a **wide and growing user base**.
+Most productivity tools solve only one part of life:
 
-## 🎓 Primary Users
+| Need | Typical App Type | Limitation |
+|---|---|---|
+| Tasks | Todoist / TickTick style tools | Task-focused only |
+| Notes | Google Keep style tools | Notes are disconnected from planning |
+| Focus | Pomodoro apps | Timer without full daily context |
+| Habits | Habit trackers | Separate from tasks and goals |
+| Prayer | Prayer apps | Spiritual routine isolated from productivity |
 
-- 👨‍🎓 university students  
-- 💻 freelancers  
-- 🧑‍💼 professionals  
-- 👨‍💻 developers  
-- 🚀 entrepreneurs  
-- 📈 productivity enthusiasts  
-- 🕌 Muslim users seeking lifestyle + spiritual balance  
-
-## 💡 Why this audience matters
-
-These groups rely heavily on **digital tools to manage their lives**.
-
-However, they often use **5–10 different applications simultaneously**.
-
-Smart Life OS simplifies this by offering **a unified ecosystem**.
+**Smart Life Planner combines productivity, self-improvement, and spiritual balance in one connected system.**
 
 ---
 
-# 🔄 5. App Flow & User Journey
+## ✨ Key Features
 
-The application is designed to be **simple, intuitive, and intelligent**.
+### 🔐 Authentication & Account
 
----
+- Email/password registration and login
+- Email verification and password reset codes
+- Google Sign-In support with setup-aware error handling
+- Profile, settings, support, and delete-account flow
 
-# 🧭 5.1 Onboarding Flow
+### 🧭 Personalized Onboarding
 
-When the user launches the application for the first time, the onboarding system **personalizes the experience**.
+The onboarding flow asks for language, country/city, goals, wake/sleep time, daily rhythm, prayer preferences, and permissions.
 
-The app asks for:
+This allows the app to personalize the dashboard, habits, prayer setup, and suggestions from the first launch.
 
-- 🌐 preferred language (Arabic / English)  
-- 📍 country or city  
-- 🕌 prayer calculation method  
-- 🎯 main goals (study / work / self improvement / fitness / spiritual growth)  
-- 🌅 preferred wake-up time  
-- 🌙 preferred sleep time  
-- 🔔 permission for notifications  
-- 🎙️ permission for microphone (voice assistant)  
-- 📍 permission for location (prayer times)  
+### 🏠 Smart Dashboard
 
-After onboarding, the system automatically configures:
+The Home dashboard gives a clear daily overview:
 
-- 📊 daily dashboard  
-- 🕌 prayer schedule  
-- 📈 default habits  
-- 🤖 AI recommendations  
-- 📋 initial task environment  
+- daily progress
+- today’s tasks
+- next prayer
+- focus shortcut
+- habits overview
+- AI suggestion card
+- quick access through the center action button
 
-This makes the app feel **personalized from the first launch**.
+### ⚡ Quick Capture + Voice
 
----
+Users can quickly create:
 
-# 🏠 5.2 Home Dashboard Flow
+- tasks
+- notes
+- checklists
+- voice tasks
+- voice notes
 
-The dashboard acts as the **central control center** for the user's day.
+Voice capture can analyze a transcript, extract tasks, detect dates or deadlines, assign priority, and prepare the result before adding it to the task system.
 
-The dashboard displays:
+### 📋 Task Management
 
-- 👋 greeting and current date  
-- 📋 today's tasks  
-- 🕌 next prayer time  
-- 📈 habit progress  
-- ➕ quick add button  
-- 🎯 focus timer shortcut  
-- 📓 journal prompt  
-- 📊 productivity summary  
+Task management supports several productivity styles:
 
-The goal is that the user can **understand their entire day from one screen**.
+- task list
+- pending / completed tasks
+- GTD workflow
+- Kanban board
+- Eisenhower Matrix
+- Calendar view
+- project and timeline views
 
----
+### 🎯 Focus System
 
-# ⚡ 5.3 Quick Capture Flow
+The Focus module helps users turn plans into action with focus sessions, timer-based work, focus tracking, and visual progress.
 
-Users must be able to **capture thoughts instantly**.
+### 🔁 Habit Tracking
 
-The system supports multiple capture methods:
+The habit system supports habit creation, completion, streaks, reminders, progress summaries, and categories for personal growth.
 
-- ⌨️ typing  
-- 🎙️ voice input  
-- ✅ checklist notes  
-- ⏰ quick reminders  
+### 📝 Notes System
 
-### Example Voice Command
-```
-Add task: finish database assignment tomorrow at 8 PM
-### Arabic Command
-أضف مهمة: مراجعة المحاضرة الساعة ٨ مساء
-```
+The notes module supports text notes, structured blocks, checklists, tags, pinned notes, archive state, reminders, voice-note flows, and task-linked notes.
 
-The system converts **natural language into structured tasks automatically**.
+### 🕌 Spiritual Planning
 
----
+Smart Life Planner includes a dedicated spiritual module:
 
-# 📋 5.4 Task Management Flow
+- prayer tracking
+- missed prayer tracking
+- prayer history
+- Qibla direction
+- Quran goal tracking
+- Ramadan mode
+- Islamic calendar
+- Dhikr reminders
+- prayer settings
 
-Users can organize tasks effectively.
+This is one of the main areas that makes the app different from normal productivity apps.
 
-Flow:
+### 🔔 Reminders & Notifications
 
-Create task → set deadline → assign priority → set reminder → save
-
-Features include:
-
-- 🔴 priority levels  
-- 📂 subtasks  
-- 🏷️ task categories  
-- 🔁 recurring tasks  
-- 🔔 reminders  
-- 📝 task notes  
-- 📁 project grouping  
-
-The AI system can also recommend the **best time to perform tasks**.
+The reminder system supports task, note, habit, prayer, and Ramadan reminders with snooze/reschedule logic, notification center support, and stale reminder invalidation.
 
 ---
 
-# 🎯 5.5 Focus Session Flow
+## 🧠 HumanAware Scheduling Automation Engine
 
-Users can activate **deep focus sessions**.
+The **HumanAware Scheduling Automation Engine** is the intelligence layer behind Smart Life Planner.
 
-Flow:
+Traditional task apps usually ask:
 
-Select task → choose focus duration → start focus session.
+> “What tasks are due?”
 
-During focus mode:
+Smart Life Planner asks:
 
-- 🔕 notifications are minimized  
-- 🚫 distractions are reduced  
-- 🎧 optional ambient sound plays  
+> “What makes sense for this user right now?”
 
-After completion:
+The engine considers:
 
-- 📊 focus time is recorded  
-- 📈 productivity statistics update  
-- 🎉 user receives summary feedback  
-
----
-
-# 🕌 5.6 Prayer & Spiritual Flow
-
-The app integrates **spiritual life with daily productivity**.
-
-Users can:
-
-- 🕌 view prayer times  
-- 🔔 receive athan notifications  
-- 🧭 access qibla direction  
-- 📊 track completed prayers  
-- 📖 track Quran reading  
-- 🌙 enable Ramadan mode  
-
-Prayer times also influence scheduling.
-
-Example:
-
-AI avoids scheduling **deep work sessions during prayer times**.
-
----
-
-# 📝 5.7 Notes & Journal Flow
-
-Users can capture ideas, reflections, and information.
-
-Supported note types:
-
-- 📝 text notes  
-- ☑️ checklist notes  
-- 🎙️ voice notes  
-- 📌 pinned notes  
-
-### Example Night Prompt
-```
-How was your day today?
-```
-
-Users can respond via **typing or voice**.
-
----
-
-# 📊 5.8 Insight & Analytics Flow
-
-The system analyzes behavior over time.
-
-Examples of insights:
-
-- ⏰ peak focus hours  
-- 📋 task completion patterns  
-- 🔁 habit consistency  
-- 🕌 prayer tracking  
-- 📈 productivity trends  
-
-These insights help users **improve their routines**.
-
----
-
-# 🧩 6. Detailed Feature Set
-
----
-
-# 📋 6.1 Smart Task Manager
-
-Core features:
-
-- create tasks  
-- deadlines  
-- reminders  
-- recurring tasks  
-- priority levels  
-- subtasks  
-- project grouping  
-- categories  
-- drag-and-drop ordering  
-- completion history  
-
-Advanced features:
-
-- 🤖 AI scheduling recommendations  
-- 🧠 natural language task creation  
-- 🎙️ voice task creation  
-
-Example:
-```
-Meeting tomorrow at 4 PM
-```
-
-The system detects:
-
-- title  
-- date  
-- reminder  
-
----
-
-# 🎯 6.2 Focus & Deep Work Module
-
-Features include:
-
-- ⏱️ Pomodoro timer  
-- ⌛ custom focus durations  
-- ☕ break timers  
-- 📊 productivity statistics  
-- 🎯 task-linked focus sessions  
-- 🔕 distraction-free mode  
-- 🔥 focus streak tracking  
-
-Future features:
-
-- 📵 app blocking  
-- 🤖 AI focus recommendations  
-- 📈 productivity prediction  
-
----
-
-# 📝 6.3 Notes & Quick Capture
-
-The note system supports:
-
-- 📝 text notes  
-- ☑️ checklists  
-- 🎙️ voice notes  
-- 📌 pinned notes  
-- 🏷️ labels or tags  
-- 🔍 search  
-- 🔔 reminders  
-- 🗂️ note archiving  
-
-Future additions:
-
-- 📷 OCR from images  
-- ✍️ handwriting support  
-- 🤖 AI summaries  
-
----
-
-# 📈 6.4 Habit Tracker
-
-Users track daily routines.
-
-Features:
-
-- 📅 daily habits  
-- 📆 weekly habits  
-- 🔥 habit streaks  
-- 🔔 reminders  
-- 📊 completion analytics  
-- 🏷️ categories  
-
-Examples:
-
-- 🏋️ exercise  
-- 📚 reading  
-- 📖 Quran  
-- 🎓 studying  
-- 💧 hydration  
-
-Advanced features:
-
-- 🤖 AI habit suggestions  
-- 📉 habit success predictions  
-
----
-
-# 🕌 6.5 Prayer & Islamic Features
-
-Core features:
-
-- 🕌 prayer times by location  
-- 🔔 athan notifications  
-- 🧭 qibla direction  
-- 📊 prayer tracking  
-- ❗ missed prayer tracking  
-- 📖 Quran reading goals  
-- 📿 dhikr reminders  
-
-Advanced features:
-
-- 🌙 Ramadan mode  
-- 🥗 fasting tracker  
-- ⏰ suhoor reminders  
-- 🍽️ iftar reminders  
-- 🕌 taraweeh tracking  
-- 📅 Islamic calendar events  
-- 🧭 masjid locator  
-
----
-
-# 🎙️ 6.6 AI Voice Assistant (Arabic + English)
-
-One of the **most powerful features**.
-
-Users control the app using voice.
-
-### English Examples
-```
-Add task: finish project tomorrow at 7
-Start a 25 minute focus session
-What is the next prayer?
-```
-
-### Arabic Examples
-```
-أضف مهمة: إنهاء المشروع غداً الساعة ٧
-ابدأ جلسة تركيز 25 دقيقة
-ما هي الصلاة القادمة؟
-```
-
-Future capabilities:
-
-- 🎙️ voice journaling  
-- 🧭 voice navigation  
-- 🤖 voice summaries  
-
----
-
-# 📊 6.7 Smart Dashboard
-
-Dashboard widgets include:
-
-- 👋 greeting and date  
-- 🕌 next prayer  
-- 📋 top tasks  
-- 🎯 focus shortcut  
-- 📈 habit progress  
-- 📓 journal prompt  
-- ⭐ productivity score  
-
-Users can customize layout and themes.
-
----
-
-# 🤖 6.8 AI Daily Planner
-
-The AI generates **a daily schedule automatically**.
-
-Inputs:
-
-- tasks  
-- deadlines  
-- habits  
-- prayer times  
-- working hours  
-
-### Example
-```
-6:00 Fajr
-7:00 Review notes
-9:00 Deep work
-12:15 Dhuhr
-2:00 Meeting
-5:00 Gym
-7:00 Quran reading
-9:00 Reflection journal
-```
-
----
-
-# 📓 6.9 Journal & Reflection System
-
-Features:
-
-- 🌅 morning intention  
-- 🌙 evening reflection  
-- 🙏 gratitude journaling  
-- 😊 mood tracking  
-- 🎙️ voice journaling  
-
-AI can summarize daily activity.
-
----
-
-# 📈 6.10 Analytics & Insights
-
-Analytics include:
-
-- ⏱️ focus hours  
-- 📋 tasks completed  
-- 🔥 habit streaks  
-- 🕌 prayer consistency  
-- 📊 productivity score  
-- 📉 mood vs productivity trends  
-
-Insights help users **optimize their life patterns**.
-
----
-
-# 🔔 6.11 Notification System
-
-Reminder types include:
-
-- ⏰ task reminders  
-- 🔁 habit reminders  
-- 🕌 prayer notifications  
-- 🎯 focus prompts  
-- 🌙 bedtime reminders  
-- 🤖 AI suggestions  
-
----
-
-# ☁️ 6.12 Cloud Sync
-
-Users can:
-
-- 🔐 create accounts  
-- 🔄 sync across devices  
-- 💾 backup data  
-- ♻️ restore data  
-
----
-
-# ⚙️ 7. Technology Stack
-
-The system will use a **modern scalable architecture**.
-
----
-
-# 📱 Mobile Application
-
-Framework:
-
-**Flutter**
-
-Language:
-
-**Dart**
-
-Reasons:
-
-- cross-platform development  
-- strong UI performance  
-- fast development  
-- excellent Arabic support  
-
----
-
-# ⚡ Backend API
-
-Framework:
-
-**FastAPI**
-
-Language:
-
-**Python**
-
-Reasons:
-
-- extremely fast API  
-- modern async architecture  
-- strong AI integration  
-- high developer productivity  
-
----
-
-# 🗄️ Database
-
-Database:
-
-**PostgreSQL**
-
-Reasons:
-
-- powerful relational database  
-- reliability  
-- scalability  
-- strong indexing and analytics  
-
----
-
-# 🐳 Containerization
-
-Infrastructure:
-
-**Docker**
-
-Reasons:
-
-- consistent deployment environment  
-- simplified backend deployment  
-- scalable architecture  
-- easier cloud hosting  
-
----
-
-# 🔐 Authentication
-
-System:
-
-**JWT Authentication**
-
-Login methods:
-
-- email/password  
-- Google login  
-
----
-
-# ☁️ Cloud Infrastructure
-
-Possible platforms:
-
-- AWS  
-- Google Cloud  
-- DigitalOcean  
-
----
-
-# 🔔 Notifications
-
-Services:
-
-- Firebase Cloud Messaging  
-- Local notifications in Flutter  
-
----
-
-# 🎙️ Voice Recognition
-
-Possible engines:
-
-- Google Speech API  
-- Whisper AI  
-
-Supports:
-
-- Arabic  
-- English  
-
----
-
-# 🧠 Productivity Methodology (GTD Integration)
-
-Smart Life Planner is heavily inspired by the productivity framework introduced in the book:
-
-**Getting Things Done — David Allen**
-
-This methodology provides a structured workflow for managing tasks, projects, and responsibilities while reducing mental stress.
-
-Core idea:
-
-> Your brain is for **having ideas, not holding them**.
-
-Smart Life Planner transforms this philosophy into a **digital AI-powered system**.
-
----
-
-# 🔄 GTD Workflow Integration
-
-The GTD methodology consists of **five stages**, which are directly integrated into the Smart Life Planner architecture.
-
-| GTD Step | Description | Implementation |
-|------|------|------|
-| Capture | Collect everything in your mind | Quick Capture System |
-| Clarify | Define what the item means | AI Task Understanding |
-| Organize | Categorize tasks and projects | Smart Task Manager |
-| Reflect | Review system regularly | AI Weekly Review |
-| Engage | Decide what to do next | AI Decision Engine |
-
----
-
-# 📥 Capture System
-
-Users can capture ideas instantly through multiple input methods.
-
-Supported capture methods:
-
-- typing
-- voice input
-- checklist creation
-- quick reminders
-
-Example:
-```
-Finish machine learning assignment tomorrow evening
-```
-
-The system automatically extracts:
-
-- task title
-- deadline
-- priority
-- estimated effort
-
-This eliminates **mental overload** and ensures **no idea is forgotten**.
-
----
-
-# 🧠 Clarify System
-
-The application analyzes captured inputs using **Natural Language Processing (NLP)**.
-
-Example input:
-```
-Study control engineering
-```
-
-Converted structure:
-```
-Project: Control Engineering
-Next Action: Review lecture slides
-Estimated Duration: 45 minutes
-Priority: Medium
-```
-
----
-
-# 📂 Organization System
-
-Tasks are organized automatically into structured categories inspired by GTD.
-
-| Category | Purpose |
-|------|------|
-| Inbox | newly captured tasks |
-| Next Actions | tasks ready to execute |
-| Projects | multi-step objectives |
-| Waiting For | tasks dependent on others |
-| Someday | future ideas |
-| Calendar | time-specific commitments |
-
----
-
-# 🔁 Reflect System
-
-Smart Life Planner performs automated **weekly productivity reviews**.
-```
-Example summary:
-Tasks completed: 42
-Focus sessions: 18
-Habit success rate: 74%
-
-Suggested improvements:
-Increase study sessions next week.
-```
-
----
-
-# 🎯 Engage System
-
-The system recommends what users should do next based on:
-
+- priorities
+- deadlines
 - available time
-- deadlines
-- priority
-- energy level
-
-Example suggestion:
-```
-You have 30 minutes free.
-
-Suggested task:
-Review Machine Learning Lecture 3
-```
-
----
-
-# 🤖 AI Intelligence System
-
-Smart Life Planner functions as a **Personal AI Assistant**.
-
-The AI system includes multiple intelligent modules designed to help users manage their lives efficiently.
-
----
-
-# 🧠 AI Brain Engine
-
-This module converts natural language into structured tasks.
-
-Capabilities include:
-
-- natural language task parsing
-- voice command interpretation
-- automatic deadline detection
-- priority prediction
-
-Example:
-```Add task: finish database assignment tomorrow at 8 PM```
-
-Converted output:
-```
-Task: Database Assignment
-Deadline: Tomorrow 20:00
-Priority: High
-Estimated duration: 90 minutes
-```
-
----
-
-# ⏱️ AI Smart Scheduler
-
-The scheduler automatically generates daily plans using:
-
-- deadlines
 - habits
+- focus sessions
+- energy level
 - prayer times
-- working hours
-- focus patterns
+- daily rhythm
+- personal routine
 
-Example generated schedule:
-```
-6:00 Fajr
-7:00 Review lecture notes
-9:00 Deep work session
-12:15 Dhuhr
-2:00 Meeting
-5:00 Gym
-7:00 Quran reading
-```
-
-If tasks are missed, the AI **reschedules them automatically**.
+Then it helps users decide what to focus on next, what can be delayed, and how to balance work, self-improvement, and spiritual commitments.
 
 ---
 
-# 📊 Life Analytics Engine
+## 🏗️ Architecture
 
-The analytics system tracks behavioral patterns and productivity trends.
+```text
+┌────────────────────────────────────────────┐
+│              Flutter Mobile App            │
+│       UI · Riverpod · Local Features        │
+└──────────────────────┬─────────────────────┘
+                       │ REST API
+┌──────────────────────▼─────────────────────┐
+│                FastAPI Backend              │
+│ Auth · Tasks · Notes · Habits · Prayer · AI │
+└──────────────────────┬─────────────────────┘
+                       │ SQLAlchemy / Alembic
+┌──────────────────────▼─────────────────────┐
+│                 PostgreSQL DB               │
+│ Users · Tasks · Notes · Habits · Reminders  │
+└────────────────────────────────────────────┘
+```
 
-Examples of insights:
+### Main Mobile Modules
 
-- most productive hours
-- average focus duration
-- habit consistency
-- task completion rates
+- Auth and onboarding
+- Home dashboard
+- Quick Capture
+- Tasks
+- Notes
+- Habits
+- Focus
+- Prayer / Qibla / Ramadan / Quran
+- Profile / Settings / Support
+
+### Main Backend Modules
+
+- Authentication
+- User settings
+- Tasks and projects
+- Notes
+- Habits
+- Focus sessions
+- Prayer and spiritual tools
+- Reminders
+- AI/voice contracts
+- Analytics
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Mobile | Flutter / Dart |
+| State Management | Riverpod |
+| Backend | FastAPI / Python |
+| Database | PostgreSQL |
+| ORM / Migrations | SQLAlchemy + Alembic |
+| Auth | JWT |
+| Notifications | Local notifications + backend reminder model |
+| AI / Voice | AI-assisted parsing and voice capture flows |
+
+---
+
+## 📁 Project Structure
+
+```text
+Smart-Life-Planner/
+├── backend/
+│   ├── app/
+│   │   ├── api/              # FastAPI routes
+│   │   ├── core/             # config, security, shared setup
+│   │   ├── models/           # SQLAlchemy models
+│   │   ├── repositories/     # database access layer
+│   │   ├── schemas/          # Pydantic DTOs
+│   │   └── services/         # business logic and integrations
+│   ├── alembic/              # database migrations
+│   ├── tests/                # backend tests
+│   └── requirements.txt
+│
+├── mobile/
+│   ├── lib/
+│   │   ├── core/             # networking, theme, notifications, shared utilities
+│   │   ├── features/         # auth, home, tasks, notes, habits, prayer, etc.
+│   │   └── routes/           # app routing
+│   ├── assets/               # images, icons, fonts, app assets
+│   ├── test/                 # Flutter tests
+│   └── pubspec.yaml
+│
+├── docs/                     # audits, reliability gates, planning docs
+├── README.md
+└── .gitignore
+```
+
+---
+
+## 🚀 How to Run
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/MahmoudNagiubX/Smart-Life-Planner.git
+cd Smart-Life-Planner
+```
+
+---
+
+## ⚙️ Backend Setup
+
+```bash
+cd backend
+python -m venv .venv
+```
+
+Activate the environment:
+
+```bash
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Create `backend/.env`:
+
+```env
+ENVIRONMENT=development
+DATABASE_URL=postgresql+psycopg2://postgres:YOUR_PASSWORD@localhost:5432/smart_life_planner
+JWT_SECRET_KEY=change_me_to_a_secure_secret
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_gmail_app_password
+SMTP_FROM_EMAIL=your_email@gmail.com
+SMTP_FROM_NAME=Smart Life Planner
+SMTP_USE_TLS=true
+
+GOOGLE_CLIENT_ID=your_google_web_client_id.apps.googleusercontent.com
+```
+
+Run migrations:
+
+```bash
+python -m alembic upgrade head
+```
+
+Start the backend:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Check health:
+
+```text
+http://localhost:8000/health
+```
+
+Expected:
+
+```json
+{"status": "ok"}
+```
+
+---
+
+## 📱 Mobile App Setup
+
+```bash
+cd mobile
+flutter pub get
+```
+
+Run on Android emulator:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+```
+
+Run on a real Android phone:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://YOUR_LAN_IP:8000/api/v1
+```
 
 Example:
-```Your most productive time is 9:00–11:00 AM.```
 
----
-
-# 📍 Context Intelligence System
-
-Tasks are recommended based on environmental context.
-
-| Context Type | Example |
-|------|------|
-| Location | university / home |
-| Device | phone / laptop |
-| Time | morning / night |
-| Energy | high / low focus |
-
-Example:
-```
-You are at university.
-
-Suggested tasks:
-Submit assignment
-Meet project group
+```bash
+flutter run --dart-define=API_BASE_URL=http://192.168.1.8:8000/api/v1
 ```
 
+> A real phone cannot use `127.0.0.1` for the backend. Use your computer LAN IP and keep both devices on the same Wi-Fi.
+
 ---
 
-# 🧠 AI Life Coach
+## 🔑 Google Sign-In Notes
 
-The system assists users with long-term goals.
+Google Sign-In requires external Google Cloud / Firebase configuration:
 
-Example goal:
-```Learn Data Science```
+- Android package name must match the registered app
+- SHA-1 / SHA-256 fingerprints must be added
+- Flutter `default_web_client_id` must match backend `GOOGLE_CLIENT_ID`
+- backend must use the Web OAuth Client ID
 
-Generated roadmap:
+If not configured, the app shows a setup-aware error instead of crashing.
+
+---
+
+## 📧 Email Verification Notes
+
+For Gmail SMTP, use a Google App Password, not your normal Gmail password.
+
+For local/college demos, keep:
+
+```env
+ENVIRONMENT=development
 ```
-Python Fundamentals
-Statistics
-Machine Learning
-Projects
-Portfolio Development
+
+Development mode allows safe verification/reset codes for testing.
+
+---
+
+## 🧪 Testing
+
+Backend tests:
+
+```bash
+cd backend
+python -m pytest
 ```
---- 
 
-# 🏗️ System Architecture
+Migration checks:
 
-The project follows a **modular architecture**.
-
-### Layers
-
-- Presentation Layer (Flutter UI)  
-- Application Logic Layer  
-- API Layer (FastAPI)  
-- Data Layer (PostgreSQL)  
-
-### Modules
-
-- authentication module  
-- task management module  
-- notes module  
-- habits module  
-- focus module  
-- prayer module  
-- voice assistant module  
-- AI planner module  
-- analytics module  
-
----
-
-# 🚀 MVP Version
-
-The first release should include:
-
-- onboarding  
-- dashboard  
-- task manager  
-- notes  
-- focus timer  
-- prayer times  
-- habit tracker  
-- voice task creation  
-- notifications  
-
----
-
-# 💰 Monetization Strategy
-
-Revenue models include:
-
-### 🆓 Free Version
-
-- tasks  
-- notes  
-- focus timer  
-- prayer times  
-- limited habits  
-
-### 💎 Premium Version
-
-- AI planner  
-- advanced analytics  
-- unlimited habits  
-- voice assistant upgrades  
-- cloud sync enhancements  
-- custom themes
-
----
-
-# 🚀 Advanced AI Features
-
-Smart Life Planner integrates **20 AI-powered capabilities**.
-
----
-
-# 🧠 AI Assistant Features
-
-1. Natural Language Task Creation  
-2. Voice Brain Dump System  
-3. AI Task Breakdown  
-4. Priority Prediction Engine  
-
----
-
-# ⏱️ Scheduling Intelligence
-
-5. Automatic Daily Planning  
-6. Dynamic Schedule Adjustment  
-7. Energy-Based Scheduling  
-8. Time Estimation AI  
-
----
-
-# 📊 Productivity Analytics
-
-9. Productivity Dashboard  
-10. Focus Score Calculation  
-11. Habit Tracking AI  
-12. Burnout Detection  
-
----
-
-# 📍 Context Awareness
-
-13. Location-Based Tasks  
-14. Device-Based Recommendations  
-15. Time Context Awareness  
-16. Weather-Based Suggestions  
-
----
-
-# 🤖 Life Coaching
-
-17. Goal Decomposition AI  
-18. Study Planner AI  
-19. Motivation Engine  
-20. Weekly Life Review  
-
----
-
-# 🧠 AI Algorithms
-
-The system will utilize several algorithms and models.
-
-| Algorithm | Purpose |
-|------|------|
-| NLP parsing | task understanding |
-| priority scoring | ranking tasks |
-| scheduling algorithms | daily planning |
-| habit analysis | behavioral pattern detection |
-| recommendation systems | task suggestions |
-
-Example priority calculation:
+```bash
+python -m alembic heads
+python -m alembic current
 ```
-Priority Score =
-(deadline_weight × urgency)
-- (goal_weight × importance)
-- (effort_weight × task_size)
+
+Flutter analysis and tests:
+
+```bash
+cd mobile
+flutter analyze
+flutter test
 ```
 
 ---
 
-# 🌍 Competitive Advantage
+## ✅ Current Status
 
-Most productivity applications only manage tasks.
+Smart Life Planner is prepared as a **college submission / demo-ready MVP**.
 
-Examples include:
+Stable demo flows include:
 
-- Todoist
-- TickTick
-- Notion
+- register / login / email verification
+- onboarding
+- dashboard
+- quick capture and voice actions
+- tasks and calendar
+- notes
+- habits
+- focus
+- prayer, Qibla, Quran Goal, Ramadan Mode
+- profile, settings, support, and logout
 
-These platforms lack **deep AI automation**.
+Known caveats:
 
-Smart Life Planner introduces:
-
-- AI scheduling
-- productivity insights
-- life coaching
-- habit intelligence
-- spiritual integration
-
-This transforms the application into a:
-
-**Personal Life Operating System**
+- Google Sign-In requires correct external OAuth setup
+- real SMTP requires a Gmail App Password or another mail provider
+- advanced AI Life Coach detail pages are deferred
+- standalone journal route is deferred
+- some advanced smart-note AI/OCR actions are future work depending on the active build
 
 ---
 
-# 🌟 Final System Vision
+## 🧠 Algorithms Used
 
-Smart Life Planner combines:
+| Algorithm / Technique | Used For |
+|---|---|
+| Rule-based classification | GTD buckets, Eisenhower Matrix, prayer states |
+| Weighted scoring | priorities and smart suggestions |
+| Time-window checks | reminders, prayer-aware planning, focus blocks |
+| Sequential counting | habit streaks and focus streaks |
+| Aggregation | dashboard, analytics, weekly summaries |
+| Great-circle bearing formula | Qibla direction |
+| NLP / information extraction | voice capture and quick task parsing |
+| State-machine logic | auth flow, focus sessions, reminder lifecycle |
+| Defensive parsing | stable mobile handling for old/null data |
 
-- productivity management
-- personal development
-- AI automation
-- lifestyle organization
-- spiritual routines
-
-into a unified intelligent ecosystem.
-
-Goal:
-```
-AI helps users plan their life,
-not just manage tasks.
-```
-
-Smart Life Planner becomes:
-
-**Your Personal AI Life Assistant**
 ---
+
+## 🧭 Future Work
+
+- full AI Life Coach screens
+- standalone Journal system
+- advanced OCR and handwriting support
+- offline sync and conflict resolution
+- production monitoring and crash analytics
+- cloud deployment
+- app-store assets
+- premium/subscription foundation
+
+---
+
+## 👨‍💻 Author
+
+<div align="center">
+
+### Mahmoud Nagiub
+
+**AI & ML Engineer · Data Scientist & Analyst · Software Engineering Student**
+
+[![GitHub](https://img.shields.io/badge/GitHub-MahmoudNagiubX-181717?style=for-the-badge&logo=github)](https://github.com/MahmoudNagiubX)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](#)
+[![Portfolio](https://img.shields.io/badge/Portfolio-Coming%20Soon-6C5CE7?style=for-the-badge)](#)
+
+</div>
+
+---
+
+## 📄 License
+
+This project was developed as an academic software engineering project. Add your preferred license depending on your repository plan.
+
+---
+
+<div align="center">
+
+## ⭐ Smart Life Planner
+
+**Plan better. Focus deeper. Grow consistently. Live a balanced life.**
+
+</div>
