@@ -21,7 +21,7 @@
 <br />
 
 **Built by [Mahmoud Nagiub](https://github.com/MahmoudNagiubX)**  
-AI & ML Engineer · Data Scientist & Analyst · Software Engineering Student
+Software Engineering Student · AI & Software Engineering
 
 </div>
 
@@ -32,7 +32,7 @@ AI & ML Engineer · Data Scientist & Analyst · Software Engineering Student
 - [Overview](#-overview)
 - [Why Smart Life Planner?](#-why-smart-life-planner)
 - [Key Features](#-key-features)
-- [HumanAware Scheduling Automation Engine](#-humanaware-scheduling-automation-engine)
+- [H-ASAE Scheduling Engine](#-h-asae-scheduling-engine)
 - [Architecture](#-architecture)
 - [Project Structure](#-project-structure)
 - [How to Run](#-how-to-run)
@@ -85,7 +85,7 @@ Most productivity tools solve only one part of life:
 
 - Email/password registration and login
 - Email verification and password reset codes
-- Google Sign-In support with setup-aware error handling
+- Google and Apple Sign-In support with setup-aware configuration checks
 - Profile, settings, support, and delete-account flow
 
 ### 🧭 Personalized Onboarding
@@ -164,9 +164,9 @@ The reminder system supports task, note, habit, prayer, and Ramadan reminders wi
 
 ---
 
-## 🧠 HumanAware Scheduling Automation Engine
+## 🧠 H-ASAE Scheduling Engine
 
-The **HumanAware Scheduling Automation Engine** is the intelligence layer behind Smart Life Planner.
+The **Human-Aware Adaptive Scheduling & Automation Engine (H-ASAE)** is the deterministic, explainable planning layer behind Smart Life Planner. Rather than relying on an opaque model, it combines rule-based eligibility, weighted task scoring, overload detection, prayer-aware time constraints, and user-confirmed schedule generation.
 
 Traditional task apps usually ask:
 
@@ -249,7 +249,7 @@ Then it helps users decide what to focus on next, what can be delayed, and how t
 | ORM / Migrations | SQLAlchemy + Alembic |
 | Auth | JWT |
 | Notifications | Local notifications + backend reminder model |
-| AI / Voice | AI-assisted parsing and voice capture flows |
+| AI / Voice | Groq API, Whisper Large v3 Turbo, Llama task parsing, and deterministic H-ASAE scheduling |
 
 ---
 
@@ -327,9 +327,10 @@ Create `backend/.env`:
 ```env
 ENVIRONMENT=development
 DATABASE_URL=postgresql+psycopg2://postgres:YOUR_PASSWORD@localhost:5432/smart_life_planner
-JWT_SECRET_KEY=change_me_to_a_secure_secret
-JWT_ALGORITHM=HS256
+SECRET_KEY=change_me_to_a_secure_secret
+ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=1440
+GROQ_API_KEY=your_groq_api_key
 
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -340,6 +341,7 @@ SMTP_FROM_NAME=Smart Life Planner
 SMTP_USE_TLS=true
 
 GOOGLE_CLIENT_ID=your_google_web_client_id.apps.googleusercontent.com
+APPLE_APP_BUNDLE_ID=com.yourcompany.smartlifeplanner
 ```
 
 Run migrations:
@@ -363,7 +365,7 @@ http://localhost:8000/health
 Expected:
 
 ```json
-{"status": "ok"}
+{"status": "ok", "service": "smart-life-planner-api"}
 ```
 
 ---
@@ -397,16 +399,24 @@ flutter run --dart-define=API_BASE_URL=http://192.168.1.8:8000/api/v1
 
 ---
 
-## 🔑 Google Sign-In Notes
+## 🔑 Social Sign-In Notes
 
-Google Sign-In requires external Google Cloud / Firebase configuration:
+Google and Apple sign-in require external provider configuration.
+
+For Google:
 
 - Android package name must match the registered app
 - SHA-1 / SHA-256 fingerprints must be added
 - Flutter `default_web_client_id` must match backend `GOOGLE_CLIENT_ID`
-- backend must use the Web OAuth Client ID
+- the backend must use the Web OAuth Client ID
 
-If not configured, the app shows a setup-aware error instead of crashing.
+For Apple:
+
+- set `APPLE_APP_BUNDLE_ID` to the iOS bundle ID
+- enable the Sign in with Apple capability for the iOS app
+- display the Apple button only on supported platforms
+
+When provider settings are missing or invalid, the backend returns setup-aware errors instead of silently accepting unverified tokens.
 
 ---
 
@@ -470,6 +480,7 @@ Stable demo flows include:
 Known caveats:
 
 - Google Sign-In requires correct external OAuth setup
+- Apple Sign-In requires the correct bundle ID and Apple capability configuration
 - real SMTP requires a Gmail App Password or another mail provider
 - advanced AI Life Coach detail pages are deferred
 - standalone journal route is deferred
@@ -512,11 +523,10 @@ Known caveats:
 
 ### Mahmoud Nagiub
 
-**AI & ML Engineer · Data Scientist & Analyst · Software Engineering Student**
+**Software Engineering Student · AI & Software Engineering**
 
 [![GitHub](https://img.shields.io/badge/GitHub-MahmoudNagiubX-181717?style=for-the-badge&logo=github)](https://github.com/MahmoudNagiubX)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](#)
-[![Portfolio](https://img.shields.io/badge/Portfolio-Coming%20Soon-6C5CE7?style=for-the-badge)](#)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mahmoudnagiubb/)
 
 </div>
 
@@ -524,7 +534,7 @@ Known caveats:
 
 ## 📄 License
 
-This project was developed as an academic software engineering project. Add your preferred license depending on your repository plan.
+No open-source license is currently declared for this repository. Until a license file is added, the source is publicly viewable, but reuse, modification, and redistribution permissions are not granted.
 
 ---
 
