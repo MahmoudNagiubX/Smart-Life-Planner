@@ -38,7 +38,6 @@ Software Engineering Student · AI & Software Engineering
 - [How to Run](#-how-to-run)
 - [Testing](#-testing)
 - [Current Status](#-current-status)
-- [Future Work](#-future-work)
 - [Author](#-author)
 
 ---
@@ -504,19 +503,6 @@ Known caveats:
 
 ---
 
-## 🧭 Future Work
-
-- full AI Life Coach screens
-- standalone Journal system
-- advanced OCR and handwriting support
-- offline sync and conflict resolution
-- production monitoring and crash analytics
-- cloud deployment
-- app-store assets
-- premium/subscription foundation
-
----
-
 ## 👨‍💻 Author
 
 <div align="center">
@@ -529,12 +515,6 @@ Known caveats:
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mahmoudnagiubb/)
 
 </div>
-
----
-
-## 📄 License
-
-No open-source license is currently declared for this repository. Until a license file is added, the source is publicly viewable, but reuse, modification, and redistribution permissions are not granted.
 
 ---
 
